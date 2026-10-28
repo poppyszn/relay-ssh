@@ -18,7 +18,7 @@ if [ -n "$hits" ]; then echo "$hits"; bad "terminal-emulation or TUI import in G
 if grep -q 'highWater' session.go && grep -q '"ack"' session.go; then good "flow control present (highWater + ack)"; else bad "flow control missing from session.go"; fi
 
 # The socket must stay on loopback and be token- and Origin-guarded.
-if grep -q '127.0.0.1:0' terminal.go && grep -q 'allowedOrigins' terminal.go && grep -q 'Token' terminal.go; then
+if grep -q '127.0.0.1:0' terminal.go && grep -q 'allowedOrigin(' terminal.go && grep -q 'Token' terminal.go; then
   good "terminal socket is loopback + token + origin guarded"
 else bad "terminal socket guard missing"; fi
 

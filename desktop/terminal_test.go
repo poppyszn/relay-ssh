@@ -29,7 +29,7 @@ func TestLocalShellWorksFromEveryAppOrigin(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("SHELL", "/bin/sh")
-	for _, origin := range []string{"wails://localhost", "http://wails.localhost", "http://localhost:9245", "http://127.0.0.1:9245"} {
+	for _, origin := range []string{"wails://localhost", "http://wails.localhost", "wails://localhost:9245", "http://localhost:9245", "http://127.0.0.1:9245"} {
 		t.Run(origin, func(t *testing.T) {
 			c, err := dial(t, svc, origin, svc.endpoint.Token)
 			if err != nil {
@@ -50,6 +50,13 @@ func TestLocalShellWorksFromEveryAppOrigin(t *testing.T) {
 				got.Write(data)
 			}
 		})
+	}
+}
+
+func TestDevOriginFollowsViteSource(t *testing.T) {
+	t.Setenv("WAILS_VITE_PORT", "9345")
+	if !allowedOrigin("wails://localhost:9345") || !allowedOrigin("http://localhost:9345") || allowedOrigin("http://localhost:9245") {
+		t.Error("dev origin should follow WAILS_VITE_PORT")
 	}
 }
 
