@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/super-ssh-v2/internal/core"
 	"github.com/poppyszn/super-ssh-v2/internal/paths"
 )
 
@@ -181,7 +182,7 @@ func TestRestoreLegacyPlaintextBackup(t *testing.T) {
 	}
 	gz := gzip.NewWriter(f)
 	tw := tar.NewWriter(gz)
-	if err := addFileToTar(tw, pSrc.StoreFile, "connections.toml"); err != nil {
+	if err := core.AddFileToTar(tw, pSrc.StoreFile, "connections.toml"); err != nil {
 		t.Fatal(err)
 	}
 	tw.Close()

@@ -123,6 +123,17 @@ Proposed layout, to be evaluated and confirmed by Claude Code:
 - **D4:** terminal transport (Wails events versus loopback WebSocket). Decide from spike measurements.
 - **D5:** Wails version.
 
+## 9a. Decisions made (2026-10-29)
+
+The owner delegated D2 to D5 with the instruction to use the latest stable tech. D1 is treated as accepted on that basis; the owner can still veto it.
+
+- **D1:** accepted. The CLI keeps every invariant; the desktop app has its own (Section 5).
+- **D2:** `desktop/` with its own `go.mod`, tied by `go.work`. Go's `internal/` rule is path-based, so a module whose import path sits under `github.com/poppyszn/super-ssh-v2/` can import `internal/core`; confirm in Phase 1. Phase 0 extracted the UI-free logic into `internal/core` (profile resolve/remove, ssh_config import, backup/restore, doctor checks); `internal/cmd` is now a thin prompt/print layer over it.
+- **D3:** shell out to `sftp`/`scp`, as preferred above.
+- **D4:** open until the Phase 1 spike measures Wails events against a loopback WebSocket.
+- **D5:** Wails **v3.0.0** (stable, released 2026-10-26). Frontend: Svelte 5, Vite 8, TypeScript, `@xterm/xterm` 6.0 with `@xterm/addon-webgl`, `-fit`, `-search`. Re-verify versions at the start of Phase 1.
+- Name check (Section 2a) is still to do in Phase 0.
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/super-ssh-v2/internal/core"
 	"github.com/poppyszn/super-ssh-v2/internal/paths"
 	"github.com/poppyszn/super-ssh-v2/internal/style"
 )
@@ -85,7 +86,7 @@ func Add(p paths.Paths, args []string) error {
 	if err := config.Save(p.StoreFile, s); err != nil {
 		return fmt.Errorf("saving profile: %w", err)
 	}
-	if err := regenerateConfig(p, s); err != nil {
+	if err := core.Regenerate(p, s); err != nil {
 		return err
 	}
 	fmt.Printf("%s Profile %s added.\n", style.Success("✓"), style.Bold(name))

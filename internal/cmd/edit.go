@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/super-ssh-v2/internal/core"
 	"github.com/poppyszn/super-ssh-v2/internal/paths"
 	"github.com/poppyszn/super-ssh-v2/internal/style"
 )
@@ -22,7 +23,7 @@ func EditCmd(p paths.Paths, args []string) error {
 		return err
 	}
 	name := args[0]
-	prof, ok := resolveProfile(s, name)
+	prof, ok := core.ResolveProfile(s, name)
 	if !ok {
 		return fmt.Errorf("profile %q not found", name)
 	}
@@ -128,7 +129,7 @@ func EditCmd(p paths.Paths, args []string) error {
 	if err := config.Save(p.StoreFile, s); err != nil {
 		return fmt.Errorf("saving profile: %w", err)
 	}
-	if err := regenerateConfig(p, s); err != nil {
+	if err := core.Regenerate(p, s); err != nil {
 		return err
 	}
 	fmt.Printf("%s Profile %s updated.\n", style.Success("✓"), style.Bold(edited.Name))
