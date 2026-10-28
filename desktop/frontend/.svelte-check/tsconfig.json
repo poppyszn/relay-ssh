@@ -25,6 +25,9 @@
     "svelte/bindings"
   ],
   "exclude": [
-    "../src/App.svelte"
+    "../src/App.svelte",
+    "../src/Palette.svelte",
+    "../src/ProfileForm.svelte",
+    "../src/Sidebar.svelte"
   ]
 }

@@ -28,7 +28,7 @@ func main() {
 	app = application.New(application.Options{
 		Name:        "Relay",
 		Description: "SSH connection manager and terminal",
-		Services:    []application.Service{application.NewService(term)},
+		Services:    []application.Service{application.NewService(term), application.NewService(&ProfilesService{})},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
 		Mac:         application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
 	})
