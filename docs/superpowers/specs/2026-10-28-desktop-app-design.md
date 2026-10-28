@@ -134,6 +134,26 @@ The owner delegated D2 to D5 with the instruction to use the latest stable tech.
 - **D5:** Wails **v3.0.0** (stable, released 2026-10-26). Frontend: Svelte 5, Vite 8, TypeScript, `@xterm/xterm` 6.0 with `@xterm/addon-webgl`, `-fit`, `-search`. Re-verify versions at the start of Phase 1.
 - Name check (Section 2a) is still to do in Phase 0.
 
+## 9b. Phase 1 spike results (2026-10-29, macOS 26.6, Apple silicon, Wails 3.0.0, WKWebView)
+
+Code: `desktop/` (Go PTY + loopback WebSocket + xterm.js 6 with WebGL). Benchmark: `RELAY_BENCH=run` / `RELAY_BENCH=idle` on the built binary, run inside the real Wails window.
+
+| Target | Result |
+| --- | --- |
+| `seq 1 5000000` (59 MB, 5M lines) completes, UI stays responsive | 9.2 s; worst timer lag 16 ms, worst frame gap 35 ms. A bare PTY read of the same output takes 4.3 s, because `seq` writes one line per `write()`. |
+| `cat` of 200 MB does not freeze the window | 2.6 s; worst timer lag 13 ms, worst frame gap 29 ms |
+| Select 100k lines | 44 ms (`selectAll` + `getSelection`, 100k scrollback) |
+| Typing stays instant | echo round trip median 1 ms idle, 1 ms after a flood |
+| Five idle sessions near 0% CPU | about 0.5% total (app + 5 shells + WebKit processes), four sessions in hidden tabs |
+
+Findings:
+- **D4 decided: loopback WebSocket.** It works from the `wails://localhost` origin under WKWebView (no mixed-content or CSP block). Wails events were not measured because the WebSocket already meets every target.
+- WebGL renderer loads in WKWebView. WebView2 and WebKitGTK are untested.
+- The PTY reader must coalesce: one frame per read cost 13.2 s for `seq`, coalescing cut it to 9.2 s.
+- The webview's own Origin is `wails://localhost`; the socket checks an exact Origin allow-list, since the WebSocket library's host comparison cannot match a custom scheme.
+- Windows will need ConPTY instead of `creack/pty`.
+- Gate: **go.**
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.

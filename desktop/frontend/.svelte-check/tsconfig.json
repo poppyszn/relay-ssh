@@ -1,0 +1,30 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDirs": [
+      "..",
+      "svelte"
+    ],
+    "allowArbitraryExtensions": true,
+    "noEmit": true,
+    "incremental": false,
+    "tsBuildInfoFile": "tsbuildinfo.json"
+  },
+  "files": [
+    "../node_modules/svelte-check/dist/src/svelte-shims-v4.d.ts",
+    "../node_modules/svelte/svelte-html.d.ts"
+  ],
+  "include": [
+    "../src/**/*.ts",
+    "../src/**/*.js",
+    "../src/**/*.svelte",
+    "../bindings",
+    "svelte/src/**/*.ts",
+    "svelte/src/**/*.js",
+    "svelte/src/**/*.d.svelte.ts",
+    "svelte/bindings"
+  ],
+  "exclude": [
+    "../src/App.svelte"
+  ]
+}
