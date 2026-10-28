@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/super-ssh-v2/internal/core"
 	"github.com/poppyszn/super-ssh-v2/internal/paths"
 )
 
@@ -12,9 +13,9 @@ func TestResolveProfileByBareName(t *testing.T) {
 	s := config.Store{Version: config.Version, Profiles: []config.Profile{
 		{Name: "dev-app-server", Host: "h", User: "u", Port: 22, Auth: config.AuthAgent, Folder: "Acme"},
 	}}
-	prof, ok := resolveProfile(s, "dev-app-server")
+	prof, ok := core.ResolveProfile(s, "dev-app-server")
 	if !ok || prof.Name != "dev-app-server" {
-		t.Errorf("resolveProfile(bare name) = %+v, %v", prof, ok)
+		t.Errorf("core.ResolveProfile(bare name) = %+v, %v", prof, ok)
 	}
 }
 
@@ -22,9 +23,9 @@ func TestResolveProfileByFolderQualifiedName(t *testing.T) {
 	s := config.Store{Version: config.Version, Profiles: []config.Profile{
 		{Name: "dev-app-server", Host: "h", User: "u", Port: 22, Auth: config.AuthAgent, Folder: "Acme"},
 	}}
-	prof, ok := resolveProfile(s, "Acme/dev-app-server")
+	prof, ok := core.ResolveProfile(s, "Acme/dev-app-server")
 	if !ok || prof.Name != "dev-app-server" {
-		t.Errorf("resolveProfile(folder/name) = %+v, %v, want dev-app-server found", prof, ok)
+		t.Errorf("core.ResolveProfile(folder/name) = %+v, %v, want dev-app-server found", prof, ok)
 	}
 }
 
@@ -32,17 +33,17 @@ func TestResolveProfileRejectsWrongFolder(t *testing.T) {
 	s := config.Store{Version: config.Version, Profiles: []config.Profile{
 		{Name: "dev-app-server", Host: "h", User: "u", Port: 22, Auth: config.AuthAgent, Folder: "Acme"},
 	}}
-	if _, ok := resolveProfile(s, "WrongFolder/dev-app-server"); ok {
+	if _, ok := core.ResolveProfile(s, "WrongFolder/dev-app-server"); ok {
 		t.Error("resolveProfile should reject a name with the wrong folder prefix")
 	}
 }
 
 func TestResolveProfileRejectsUnknownName(t *testing.T) {
 	s := config.Store{Version: config.Version}
-	if _, ok := resolveProfile(s, "nonexistent"); ok {
+	if _, ok := core.ResolveProfile(s, "nonexistent"); ok {
 		t.Error("resolveProfile should reject a name that doesn't exist")
 	}
-	if _, ok := resolveProfile(s, "Acme/nonexistent"); ok {
+	if _, ok := core.ResolveProfile(s, "Acme/nonexistent"); ok {
 		t.Error("resolveProfile should reject a folder/name pair that doesn't exist")
 	}
 }

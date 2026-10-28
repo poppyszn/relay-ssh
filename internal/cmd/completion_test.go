@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/super-ssh-v2/internal/core"
 	"github.com/poppyszn/super-ssh-v2/internal/paths"
 )
 
@@ -69,7 +70,7 @@ func TestListProfileAddressesAreResolvable(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, addr := range addrs {
-		if _, ok := resolveProfile(s, addr); !ok {
+		if _, ok := core.ResolveProfile(s, addr); !ok {
 			t.Errorf("completion offered %q but resolveProfile can't find it", addr)
 		}
 	}
