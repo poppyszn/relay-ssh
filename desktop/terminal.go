@@ -17,15 +17,25 @@ import (
 	"github.com/poppyszn/super-ssh-v2/internal/paths"
 )
 
-// allowedOrigins are the only pages permitted to open a terminal socket:
-// the packaged app on macOS/Linux, on Windows, and the Vite dev server.
-var allowedOrigins = map[string]bool{
-	"wails://localhost":      true,
-	"http://wails.localhost": true,
-	// Wails dev loads the Vite server as "localhost"; the 127.0.0.1 form covers
-	// opening the dev server in a plain browser.
-	"http://localhost:9245": true,
-	"http://127.0.0.1:9245": true,
+// allowedOrigins are the only pages permitted to open a terminal socket: the
+// packaged app on macOS/Linux, on Windows, and the Vite dev server. Wails dev
+// reports its page as "wails://localhost:<port>" (and "http://localhost:<port>"
+// or 127.0.0.1 for a plain browser) where the port is WAILS_VITE_PORT.
+func allowedOrigin(origin string) bool {
+	switch origin {
+	case "wails://localhost", "http://wails.localhost":
+		return true
+	}
+	port := os.Getenv("WAILS_VITE_PORT")
+	if port == "" {
+		port = "9245"
+	}
+	for _, o := range []string{"wails://localhost:", "http://localhost:", "http://127.0.0.1:"} {
+		if origin == o+port {
+			return true
+		}
+	}
+	return false
 }
 
 // Endpoint is what the frontend needs to open a terminal socket.
@@ -82,7 +92,7 @@ func (t *TerminalService) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	cols, _ := strconv.Atoi(q.Get("cols"))
 	rows, _ := strconv.Atoi(q.Get("rows"))
-	if origin := r.Header.Get("Origin"); !allowedOrigins[origin] {
+	if origin := r.Header.Get("Origin"); !allowedOrigin(origin) {
 		log.Printf("terminal socket: rejected origin %q", origin)
 		http.Error(w, "bad origin", http.StatusForbidden)
 		return

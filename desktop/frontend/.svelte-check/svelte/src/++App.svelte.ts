@@ -85,8 +85,32 @@ function $$render() {
     }
   }
 
+  // RELAY_BENCH=smoke: drive the same path as the UI (load profiles, press
+  // "Local shell", run a command) and report what happened, so a build can be
+  // verified without clicking.
+  async function smoke() {
+    const out: Record<string, unknown> = { origin: location.origin };
+    try {
+      await refresh();
+      out.profiles = profiles.length;
+      await connect(null);
+      out.banner = banner;
+      out.connected = session?.ws.readyState === WebSocket.OPEN;
+      session?.ws.send(new TextEncoder().encode("echo smoke-$((6*7))\n"));
+      for (let i = 0; i < 50 && !out.found; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        const b = session?.term.buffer.active;
+        for (let y = 0; b && y < b.length; y++) if (b.getLine(y)?.translateToString().includes("smoke-42")) out.found = true;
+      }
+    } catch (e) {
+      out.error = String(e);
+    }
+    await TerminalService.ReportBench(JSON.stringify(out));
+  }
+
   onMount(async () => {
     const mode = await TerminalService.BenchMode();
+    if (mode === "smoke") return smoke();
     if (mode) return runBench(host, mode);
     await refresh();
   });
