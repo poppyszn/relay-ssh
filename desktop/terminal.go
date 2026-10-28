@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -21,7 +22,10 @@ import (
 var allowedOrigins = map[string]bool{
 	"wails://localhost":      true,
 	"http://wails.localhost": true,
-	"http://127.0.0.1:9245":  true,
+	// Wails dev loads the Vite server as "localhost"; the 127.0.0.1 form covers
+	// opening the dev server in a plain browser.
+	"http://localhost:9245": true,
+	"http://127.0.0.1:9245": true,
 }
 
 // Endpoint is what the frontend needs to open a terminal socket.
@@ -78,7 +82,8 @@ func (t *TerminalService) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	cols, _ := strconv.Atoi(q.Get("cols"))
 	rows, _ := strconv.Atoi(q.Get("rows"))
-	if !allowedOrigins[r.Header.Get("Origin")] {
+	if origin := r.Header.Get("Origin"); !allowedOrigins[origin] {
+		log.Printf("terminal socket: rejected origin %q", origin)
 		http.Error(w, "bad origin", http.StatusForbidden)
 		return
 	}
