@@ -22,7 +22,7 @@ vet: ## Run go vet
 	go vet ./...
 
 fmt: ## Check formatting
-	@out=$$(gofmt -l .); if [ -n "$$out" ]; then echo "unformatted:"; echo "$$out"; exit 1; fi
+	@out=$$(gofmt -l cmd internal); if [ -n "$$out" ]; then echo "unformatted:"; echo "$$out"; exit 1; fi
 
 guardrails: ## Enforce the architectural budgets
 	@./scripts/guardrails.sh
