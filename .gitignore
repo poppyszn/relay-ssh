@@ -1,0 +1,7 @@
+/sssh
+/dist/
+*.tmp-*
+*.sssh
+.DS_Store
+*.tar.gz.age
+.claude/
