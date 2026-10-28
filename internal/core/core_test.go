@@ -118,3 +118,54 @@ func TestDiagnoseReportsStaleConfigAsWarn(t *testing.T) {
 		t.Error("stale generated config should warn")
 	}
 }
+
+func TestSaveProfileAddsUpdatesAndRenames(t *testing.T) {
+	p := newStore(t, agentProfile("bastion", ""), agentProfile("db", ""))
+
+	// add
+	web := agentProfile("web", "prod")
+	web.Jump = "bastion"
+	if err := SaveProfile(p, "", web); err != nil {
+		t.Fatal(err)
+	}
+	if err := SaveProfile(p, "", web); err == nil {
+		t.Error("adding a duplicate name should fail")
+	}
+
+	// update in place
+	web.Host = "new-host"
+	if err := SaveProfile(p, "web", web); err != nil {
+		t.Fatal(err)
+	}
+
+	// rename a jump target: dependents follow it
+	renamed := agentProfile("gateway", "")
+	if err := SaveProfile(p, "bastion", renamed); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := config.Load(p.StoreFile)
+	got, _ := s.Find("web")
+	if got.Host != "new-host" || got.Jump != "gateway" {
+		t.Errorf("web = %+v, want host new-host and jump gateway", got)
+	}
+	if _, ok := s.Find("bastion"); ok {
+		t.Error("old name should be gone after rename")
+	}
+
+	// renaming onto another profile's name, or an invalid profile, must not touch the store
+	if err := SaveProfile(p, "db", agentProfile("gateway", "")); err == nil {
+		t.Error("rename onto an existing name should fail")
+	}
+	bad := agentProfile("db", "")
+	bad.Port = 0
+	if err := SaveProfile(p, "db", bad); err == nil {
+		t.Error("invalid profile should fail")
+	}
+	if err := SaveProfile(p, "ghost", agentProfile("x", "")); err == nil {
+		t.Error("updating an unknown profile should fail")
+	}
+	gen, _ := os.ReadFile(p.GenConfig)
+	if !strings.Contains(string(gen), "Host gateway") {
+		t.Errorf("generated config not regenerated:\n%s", gen)
+	}
+}

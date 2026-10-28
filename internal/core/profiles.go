@@ -65,3 +65,44 @@ func RemoveProfile(p paths.Paths, name string) (config.Profile, error) {
 	}
 	return target, Regenerate(p, s)
 }
+
+// SaveProfile adds a profile (oldName == "") or replaces the one called
+// oldName, renaming it if prof.Name differs. A rename also repoints every other
+// profile's Jump at the new name. The store is validated before anything is
+// written, so a rejected change leaves connections.toml untouched.
+func SaveProfile(p paths.Paths, oldName string, prof config.Profile) error {
+	s, err := config.Load(p.StoreFile)
+	if err != nil {
+		return err
+	}
+	if oldName == "" {
+		if _, taken := s.Find(prof.Name); taken {
+			return fmt.Errorf("profile %q already exists", prof.Name)
+		}
+		s.Profiles = append(s.Profiles, prof)
+	} else {
+		if _, ok := s.Find(oldName); !ok {
+			return fmt.Errorf("profile %q not found", oldName)
+		}
+		if _, taken := s.Find(prof.Name); taken && prof.Name != oldName {
+			return fmt.Errorf("profile %q already exists", prof.Name)
+		}
+		profiles := make([]config.Profile, len(s.Profiles))
+		for i, cur := range s.Profiles {
+			switch {
+			case cur.Name == oldName:
+				profiles[i] = prof
+			case cur.Jump == oldName:
+				cur.Jump = prof.Name
+				profiles[i] = cur
+			default:
+				profiles[i] = cur
+			}
+		}
+		s.Profiles = profiles
+	}
+	if err := config.Save(p.StoreFile, s); err != nil {
+		return err
+	}
+	return Regenerate(p, s)
+}

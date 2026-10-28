@@ -154,6 +154,14 @@ Findings:
 - Windows will need ConPTY instead of `creack/pty`.
 - Gate: **go.**
 
+## 9c. Phase 2 status and design direction (2026-10-29)
+
+Built: sidebar tree (folders, tags, search with `#tag` prefix filter), create/edit/delete form including jump host, agent forwarding and tunnels, quick-open palette (Cmd/Ctrl+K), New connection (Cmd/Ctrl+N). All changes go through `internal/core` (`SaveProfile`, `RemoveProfile`), so the CLI sees them. Renaming a profile repoints other profiles' jump references; deleting a jump host still in use is refused.
+
+Visual direction (owner-provided reference, a Windows terminal with a deep navy-teal theme): dark navy surfaces, slim tab strip with close buttons, rounded chrome, muted chips. The reference's per-command blocks (a header with working directory, git branch and duration; red-tinted failed commands) are the model for Phase 3. They must be built in the frontend with xterm markers/decorations driven by shell-integration escape sequences (OSC 133), never by Go parsing the stream. Needs a remote shell that emits them, so treat it as an optional enhancement with a plain terminal as the fallback.
+
+Known gaps: only one terminal at a time (tabs are Phase 3); no import-from-`ssh_config` or key picker in the UI yet.
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.
