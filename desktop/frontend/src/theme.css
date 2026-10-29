@@ -50,9 +50,11 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .kbd { font: 11px var(--sans); color: var(--muted); border: 1px solid var(--floatline); border-radius: 3px; padding: 0 5px; }
 .drag { --wails-draggable: drag; }
 .nodrag { --wails-draggable: no-drag; }
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #2a3a52; border: 2px solid transparent; background-clip: content-box; }
-::-webkit-scrollbar-track { background: transparent; }
+/* Slim, flat scrollbars that sit flush against the window edge (no inset track). */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: #34455f; min-height: 32px; }
+::-webkit-scrollbar-thumb:hover { background: #4a6285; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
 
 /* Command blocks: xterm decorations drawn over the terminal (see blocks.ts). */
 /* xterm paints its scroll layer black, which shows as a border around the padded terminal. */
@@ -63,3 +65,10 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .relay-block.err { background: rgba(240, 123, 134, 0.12); border-top-color: rgba(240, 123, 134, 0.7); border-bottom: 1px solid rgba(240, 123, 134, 0.7); box-shadow: inset 3px 0 var(--err); }
 .relay-badge { pointer-events: none; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; font: 500 11px var(--sans); color: var(--muted); }
 .relay-badge.err { color: var(--err-text); }
+
+/* xterm 6 draws its own scrollbar inside the padded terminal. Slim it to a 5px slider
+   (with a 10px grab area) and push it out to the pane's right edge, through the padding. */
+.xterm .xterm-scrollable-element > .scrollbar.vertical { width: 10px !important; right: -24px !important; }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider { width: 5px !important; left: auto !important; right: 0 !important; background: rgba(211, 220, 234, 0.16); }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover { background: rgba(211, 220, 234, 0.34); }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active { background: rgba(211, 220, 234, 0.45); }
