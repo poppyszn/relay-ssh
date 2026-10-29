@@ -13,6 +13,8 @@ const uid = (p: string) => `${p}${++seq}`;
 class Workspace {
   tabs = $state<Tab[]>([]);
   activeId = $state("");
+  /** The pane whose find bar is open, if any. */
+  searchPane = $state("");
   panes = $state<Record<string, PaneInfo>>({});
   private els = new Map<string, HTMLElement>();
   private sessions = new Map<string, Session>();
@@ -101,6 +103,21 @@ class Workspace {
     return this.start(id);
   }
 
+  toggleSearch() {
+    const id = this.focusedPane;
+    this.searchPane = !id || this.searchPane === id ? "" : id;
+  }
+  closeSearch() {
+    const id = this.searchPane;
+    this.searchPane = "";
+    if (id) this.sessions.get(id)?.term.focus();
+  }
+
+  /** Pushes the current theme, font and density to every open terminal. */
+  applySettings() {
+    for (const s of this.sessions.values()) s.applySettings();
+  }
+
   focus(id: string) {
     const tab = this.tabs.find((t) => P.leaves(t.root).includes(id));
     if (!tab) return;
@@ -118,6 +135,7 @@ class Workspace {
     this.sessions.delete(id);
     this.els.delete(id);
     delete this.panes[id];
+    if (this.searchPane === id) this.searchPane = "";
     if (!root || !next) return this.dropTab(tab.id);
     tab.root = root;
     if (tab.focus === id) tab.focus = next;

@@ -174,7 +174,9 @@ Layout follows the owner's Warp reference (2026-10-29): content is anchored to t
 
 Scrollbar: xterm 6 draws its own scrollbar, so it is restyled in `theme.css` to a 5px slider with a 10px grab area, pushed out through the terminal padding to the pane's right edge.
 
-Remaining: scrollback search, themes and font settings, a clipboard check in the real window, the block options menu and Relay-drawn header (section 9e), and Windows ConPTY.
+Done (stage C): scrollback search (xterm search addon; find bar with match count, previous/next, match case; Cmd/Ctrl+F from the Shell menu; Enter and Shift+Enter step through matches; Esc closes). Settings panel (Cmd+, or the gear): three dark themes (Midnight, Graphite, Obsidian), font (JetBrains Mono or system monospace), size, line spacing, copy on select, cursor blink. Themes set CSS variables on the page and the xterm theme on every open terminal, live; settings persist in localStorage (best effort). Also fixed: a failed connection left a half-built terminal and its WebGL context in the pane, and the ack timer and resize observer were never cleaned up on close.
+
+Remaining: a clipboard check in the real window (native Edit menu copy/paste is expected to work; copy on select is the explicit fallback), a light theme, the block options menu and Relay-drawn header (section 9e), Windows ConPTY, and Phases 4 and 5.
 
 ## 9e. Backlog notes from the owner (2026-10-29)
 

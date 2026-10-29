@@ -41,14 +41,14 @@
   .tabs { display: flex; min-width: 0; overflow: hidden; }
   .tab { display: flex; align-items: center; height: 40px; min-width: 140px; max-width: 240px; border-right: 1px solid var(--line); color: var(--muted); }
   .tab.active { background: var(--bg); color: var(--text); box-shadow: inset 0 2px var(--accent); margin-bottom: -1px; height: 41px; }
-  .tab:not(.active):hover { background: #141d2a; }
+  .tab:not(.active):hover { background: var(--hover); }
   .main { all: unset; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0 0 0 16px; height: 100%; cursor: pointer; font-weight: 500; }
   .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .x { all: unset; width: 28px; height: 100%; display: grid; place-items: center; font-size: 16px; cursor: pointer; opacity: 0.6; }
   .x:hover { opacity: 1; color: var(--text); }
   .plus { all: unset; width: 40px; height: 40px; display: grid; place-items: center; font-size: 18px; color: var(--muted); cursor: pointer; border-right: 1px solid var(--line); }
-  .plus:hover { color: var(--text); background: #141d2a; }
+  .plus:hover { color: var(--text); background: var(--hover); }
   .tools { margin-left: auto; display: flex; }
   .tools button { all: unset; width: 40px; height: 40px; display: grid; place-items: center; color: var(--muted); border-left: 1px solid var(--line); cursor: pointer; }
-  .tools button:hover { color: var(--text); background: #141d2a; }
+  .tools button:hover { color: var(--text); background: var(--hover); }
 </style>

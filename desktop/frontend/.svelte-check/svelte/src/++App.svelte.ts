@@ -1,6 +1,6 @@
 ///<reference types="svelte" />
 ;
-import { onMount } from "svelte";
+import { onMount, tick } from "svelte";
 import { Events } from "@wailsio/runtime";
 import { runBench } from "./bench";
 import { blankProfile } from "./lib";
@@ -12,9 +12,13 @@ import StatusBar from "./StatusBar.svelte";
 import PaneView from "./PaneView.svelte";
 import Palette from "./Palette.svelte";
 import ProfileForm from "./ProfileForm.svelte";
+import SettingsPanel from "./SettingsPanel.svelte";
+import { settings } from "./settings.svelte";
 import { ProfilesService, TerminalService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 function $$render() {
 
+  
+  
   
   
   
@@ -34,6 +38,7 @@ function $$render() {
   let banner = $state("");
   let palette = $state(false);
   let sidebar = $state(true);
+  let settingsOpen = $state(false);
   let form = $state<{ initial: Profile; oldName: string } | null>(null);
   let confirmDelete = $state<Profile | null>(null);
   let benchHost = $state<HTMLElement>();
@@ -76,6 +81,8 @@ function $$render() {
       case "next-tab": return ws.cycle(1);
       case "prev-tab": return ws.cycle(-1);
       case "toggle-sidebar": return (sidebar = !sidebar);
+      case "find": return ws.toggleSearch();
+      case "settings": return (settingsOpen = !settingsOpen);
       case "enable-blocks": return ws.focusedPane && ws.enableBlocks(ws.focusedPane);
     }
   }
@@ -100,10 +107,16 @@ function $$render() {
   // terminal control keys. On macOS the native menu owns the shortcuts.
   function keydown(e: KeyboardEvent) {
     if (mac || !e.ctrlKey || !e.shiftKey) return;
-    const map: Record<string, string> = { T: "new-tab", N: "new-connection", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar" };
+    const map: Record<string, string> = { T: "new-tab", N: "new-connection", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar", F: "find", ",": "settings" };
     const id = map[e.key.toUpperCase()];
     if (id) { e.preventDefault(); run(id); }
   }
+
+  // Theme, font and density apply to the page and to every open terminal, and persist.
+  $effect(() => {
+    settings.apply();
+    ws.applySettings();
+  });
 
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
@@ -187,6 +200,37 @@ function $$render() {
       out.okBlocks = overlaid(".relay-block.ok");
       out.errBlocks = overlaid(".relay-block.err");
       out.badges = [...document.querySelectorAll(".relay-badge")].map((b) => b.textContent);
+      // scrollback search through the real find bar
+      ws.focus(live);
+      ws.toggleSearch();
+      await tick();
+      const find = document.querySelector<HTMLInputElement>('[aria-label="Find in scrollback"]');
+      if (find) {
+        find.value = "block-ok";
+        find.dispatchEvent(new Event("input", { bubbles: true }));
+        for (let i = 0; i < 30 && !/of/.test(document.querySelector("[role=search] .count")?.textContent ?? ""); i++) await new Promise((r) => setTimeout(r, 100));
+      }
+      out.search = { opened: !!find, count: document.querySelector("[role=search] .count")?.textContent ?? null };
+      ws.closeSearch();
+      await tick();
+      out.searchClosed = !document.querySelector('[aria-label="Find in scrollback"]');
+      // settings apply to the page chrome and to live terminals, then restore
+      const before = { theme: settings.theme, size: settings.fontSize };
+      const colsBefore = ws.session(live)?.term.cols;
+      settings.theme = "obsidian";
+      settings.fontSize = 17;
+      await tick();
+      await new Promise((r) => setTimeout(r, 300));
+      const t2 = ws.session(live)?.term;
+      out.settings = {
+        cssTerm: getComputedStyle(document.documentElement).getPropertyValue("--term").trim(),
+        xtermBg: (t2?.options.theme as { background?: string } | undefined)?.background,
+        fontSize: t2?.options.fontSize,
+        colsChanged: t2?.cols !== colsBefore,
+      };
+      settings.theme = before.theme;
+      settings.fontSize = before.size;
+      await tick();
       // ended pane -> reconnect
       const victim = panes[0];
       ws.session(victim)?.ws.close();
@@ -209,7 +253,7 @@ async () => {
  { svelteHTML.createElement("svelte:window", {  "onkeydown":keydown,});}
 
  { svelteHTML.createElement("div", { "class":`app`,});
-   { const $$_raBbaT1C = __sveltets_2_ensureComponent(TabBar); new $$_raBbaT1C({ target: __sveltets_2_any(), props: {    "onsidebar":() => (sidebar = !sidebar),"onsettings":() => (banner = "Settings arrive with themes and fonts."),}});}
+   { const $$_raBbaT1C = __sveltets_2_ensureComponent(TabBar); new $$_raBbaT1C({ target: __sveltets_2_any(), props: {    "onsidebar":() => (sidebar = !sidebar),"onsettings":() => (settingsOpen = !settingsOpen),}});}
    { svelteHTML.createElement("div", { "class":`body`,});
     if(sidebar){
        { const $$_rabediS2C = __sveltets_2_ensureComponent(Sidebar); new $$_rabediS2C({ target: __sveltets_2_any(), props: {           profiles,"active":open,"onconnect":(p) => connect(p),"onnew":() => run("new-connection"),"onedit":(p) => (form = { initial: p, oldName: p.name }),"onpalette":() => (palette = true),}});}
@@ -227,9 +271,10 @@ async () => {
        }
      }
    }
-   { const $$_raBsutatS1C = __sveltets_2_ensureComponent(StatusBar); new $$_raBsutatS1C({ target: __sveltets_2_any(), props: {   profiles,"themeName":`Midnight`,}});}
+   { const $$_raBsutatS1C = __sveltets_2_ensureComponent(StatusBar); new $$_raBsutatS1C({ target: __sveltets_2_any(), props: {   profiles,"themeName":settings.themeDef.name,}});}
  }
 
+if(settingsOpen){ { const $$_lenaPsgnitteS0C = __sveltets_2_ensureComponent(SettingsPanel); new $$_lenaPsgnitteS0C({ target: __sveltets_2_any(), props: {  "onclose":() => (settingsOpen = false),}});}}
 if(palette){ { const $$_ettelaP0C = __sveltets_2_ensureComponent(Palette); new $$_ettelaP0C({ target: __sveltets_2_any(), props: {          profiles,"active":open,actions,"onconnect":connect,"onaction":run,"onclose":() => (palette = false),}});}}
 if(form){
    { const $$_mroFeliforP0C = __sveltets_2_ensureComponent(ProfileForm); new $$_mroFeliforP0C({ target: __sveltets_2_any(), props: {            "initial":form.initial,"oldName":form.oldName,profiles,folders,"onsave":save,"ondelete":() => (confirmDelete = profiles.find((p) => p.name === form!.oldName) ?? null),"oncancel":() => (form = null),}});}

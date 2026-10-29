@@ -1,20 +1,15 @@
 import { Terminal, type IDisposable } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { SearchAddon } from "@xterm/addon-search";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { BlockTracker } from "./blocks";
+import { settings } from "./settings.svelte";
 import "@xterm/xterm/css/xterm.css";
 import { TerminalService } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 
 // Ack to Go after this many bytes have been parsed by xterm. It must stay well
 // below Go's high watermark (1 MiB) or the pipe could stall waiting for an ack.
 const ACK_BATCH = 128 * 1024;
-
-// Matches theme.css: deep navy background, soft blue accent.
-const THEME = {
-  background: "#1b2634", foreground: "#d3dcea", cursor: "#f07b86", selectionBackground: "#2d4466",
-  black: "#1f2a3a", red: "#f07b86", green: "#9ad07a", yellow: "#e6c07b", blue: "#4aa8ee", magenta: "#c792ea", cyan: "#56d4dd", white: "#d3dcea",
-  brightBlack: "#5c6b82", brightRed: "#ff939d", brightGreen: "#b4e394", brightYellow: "#f3d398", brightBlue: "#7cc0f5", brightMagenta: "#d9aaf2", brightCyan: "#7ee3ea", brightWhite: "#ffffff",
-};
 
 /**
  * Keeps content at the bottom of the pane until the buffer fills, the way a
@@ -57,6 +52,10 @@ export interface Session {
   term: Terminal;
   ws: WebSocket;
   webgl: boolean;
+  fit: FitAddon;
+  search: SearchAddon;
+  /** Re-reads theme, font, size and density from settings and refits. */
+  applySettings(): void;
   /** Called with each raw chunk before it is written to xterm. */
   onChunk?: (data: Uint8Array) => void;
   /** Called once, when the shell first emits prompt markers (command blocks are active). */
@@ -65,11 +64,13 @@ export interface Session {
 }
 
 export async function openSession(el: HTMLElement, target: string, scrollback = 10000): Promise<Session> {
-  await document.fonts.load('400 13px "JetBrains Mono"').catch(() => []);
+  await document.fonts.load(`400 ${settings.fontSize}px "JetBrains Mono"`).catch(() => []);
   const ep = await TerminalService.Endpoint();
-  const term = new Terminal({ scrollback, fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace', fontSize: 14, lineHeight: 1.25, allowProposedApi: true, cursorBlink: true, theme: THEME });
+  const term = new Terminal({ scrollback, allowProposedApi: true, ...settings.xterm });
   const fit = new FitAddon();
+  const search = new SearchAddon();
   term.loadAddon(fit);
+  term.loadAddon(search);
   term.open(el);
   let webgl = false;
   try {
@@ -85,17 +86,31 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
   const q = new URLSearchParams({ token: ep.token, target, cols: String(term.cols), rows: String(term.rows) });
   const ws = new WebSocket(`${ep.url}?${q}`);
   ws.binaryType = "arraybuffer";
-  await new Promise<void>((res, rej) => {
-    ws.onopen = () => res();
-    ws.onerror = () => rej(new Error("terminal socket failed (origin, token or CSP)"));
-  });
+  try {
+    await new Promise<void>((res, rej) => {
+      ws.onopen = () => res();
+      ws.onerror = () => rej(new Error("terminal socket failed (origin, token or CSP)"));
+    });
+  } catch (e) {
+    // Don't leave a half-built terminal (and its WebGL context) in the pane.
+    term.dispose();
+    throw e;
+  }
 
   const enc = new TextEncoder();
-  const s: Session = { term, ws, webgl, dispose: () => { ws.close(); term.dispose(); } };
+  const s: Session = {
+    term, ws, webgl, fit, search,
+    applySettings() {
+      Object.assign(term.options, settings.xterm);
+      fit.fit();
+    },
+    dispose: () => { ws.close(); term.dispose(); },
+  };
   const tracker = new BlockTracker(term as never, () => s.onBlocks?.());
   const anchor = anchorBottom(term);
-  const dispose = s.dispose;
-  s.dispose = () => { tracker.dispose(); anchor.dispose(); dispose(); };
+  term.onSelectionChange(() => {
+    if (settings.copyOnSelect && term.hasSelection()) navigator.clipboard?.writeText(term.getSelection()).catch(() => {});
+  });
   let unacked = 0;
   ws.onmessage = (e) => {
     const data = new Uint8Array(e.data as ArrayBuffer);
@@ -109,7 +124,7 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
     });
   };
   // Flush the remainder when the stream goes quiet so Go's counter never drifts.
-  setInterval(() => {
+  const flush = setInterval(() => {
     if (unacked > 0 && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ t: "ack", n: unacked }));
       unacked = 0;
@@ -117,6 +132,9 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
   }, 50);
   term.onData((d) => ws.send(enc.encode(d)));
   term.onResize(({ cols, rows }) => ws.send(JSON.stringify({ t: "resize", c: cols, r: rows })));
-  new ResizeObserver(() => fit.fit()).observe(el);
+  const resize = new ResizeObserver(() => fit.fit());
+  resize.observe(el);
+  const dispose = s.dispose;
+  s.dispose = () => { clearInterval(flush); resize.disconnect(); tracker.dispose(); anchor.dispose(); dispose(); };
   return s;
 }

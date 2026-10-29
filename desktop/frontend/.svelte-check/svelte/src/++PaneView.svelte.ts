@@ -5,9 +5,11 @@ import { isLeaf } from "./panes";
 import { ws } from "./workspace.svelte";
 import type { Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 import PaneView from "./PaneView.svelte";
+import SearchBar from "./SearchBar.svelte";
 
 ;type $$ComponentProps =  { node: Node; tabId: string; multi: boolean; profiles: Profile[] };function $$render() {
 
+  
   
   
   
@@ -51,6 +53,7 @@ if(isLeaf(node)){
        }
     }
      {const $$action_0 = __sveltets_2_ensureAction(attach(svelteHTML.mapElementTag('div'),(node.id)));{ svelteHTML.createElement("div", __sveltets_2_union($$action_0), {   "class":`term`,}); }}
+    if(ws.searchPane === node.id && ws.session(node.id)){ { const $$_raBhcraeS1C = __sveltets_2_ensureComponent(SearchBar); new $$_raBhcraeS1C({ target: __sveltets_2_any(), props: {    "session":ws.session(node.id)!,"onclose":() => ws.closeSearch(),}});}}
     if(info?.ended){
        { svelteHTML.createElement("div", {   "class":`ended`,"role":`alert`,});
          { svelteHTML.createElement("div", {}); { svelteHTML.createElement("strong", {});info.error ? "Could not connect" : "Session ended"; } { svelteHTML.createElement("span", {});info.error || `Press Enter to reconnect to ${info.target ?? "local shell"}`; } }
