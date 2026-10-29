@@ -41,9 +41,9 @@ type session struct {
 	closed   bool
 }
 
-func startSession(argv []string, cols, rows uint16) (*session, error) {
+func startSession(argv, env []string, cols, rows uint16) (*session, error) {
 	cmd := exec.Command(argv[0], argv[1:]...)
-	cmd.Env = append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor")
+	cmd.Env = append(append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor"), env...)
 	f, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: cols, Rows: rows})
 	if err != nil {
 		return nil, err

@@ -168,7 +168,9 @@ Design: the approved Claude Design canvas (flat structure with square tabs, edge
 
 Done (stage A/B): tab strip as the macOS title bar, flat sidebar, status bar, quick open with actions, redesigned connection form with a live preview from the real generator (`ProfilesService.Preview`) and a native key-file picker, tabs, split panes (drag to resize, per-pane headers when split), reconnect (button and Enter), native app menu with shortcuts (Cmd on macOS; Ctrl+Shift elsewhere so Ctrl+D and Ctrl+W still reach the shell). Verified under `wails3 dev` with `RELAY_BENCH=smoke`: tabs, splits, a command in every pane, dropped session detected, reconnect, close pane.
 
-Remaining: scrollback search, themes and font settings, clipboard check in the real window, and command blocks (OSC 133 markers drawn as xterm decorations in the frontend; needs shell integration injected for local shells and an explicit opt-in snippet for remote shells).
+Done (stage D, command blocks): the shell prints OSC 133 markers (A prompt start, B prompt end, D;exit) and the frontend (`blocks.ts`) draws each command as an xterm decoration: top divider, green or red left stripe, red tint on failure, and a right-aligned `exit N · duration` badge. Go never reads the markers. Local zsh and bash get the hooks injected (wrapper `ZDOTDIR` / `--rcfile`, user's own startup files sourced first, nothing modified). Remote hosts: a Shell menu / palette action "Enable command blocks in this session" types a visible one-liner into the user's bash or zsh; it is never sent automatically. Type-ahead and full-screen programs are handled; tests cover the marker state machine, and `RELAY_BENCH=smoke` verifies a green and a red block in the real window.
+
+Remaining: scrollback search, themes and font settings, a clipboard check in the real window, and Windows ConPTY.
 
 ## 10. Working agreement (carried over from the CLI)
 

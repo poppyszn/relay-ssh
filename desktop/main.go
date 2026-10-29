@@ -77,6 +77,8 @@ func buildMenu(app *application.App) *application.Menu {
 	shell.Add("Split Right").SetAccelerator(acc("Cmd+D", "Ctrl+Shift+D")).OnClick(send("split-right"))
 	shell.Add("Split Down").SetAccelerator(acc("Cmd+Shift+D", "Ctrl+Alt+D")).OnClick(send("split-down"))
 	shell.AddSeparator()
+	shell.Add("Enable Command Blocks (this session)").OnClick(send("enable-blocks"))
+	shell.AddSeparator()
 	shell.Add("Close Pane").SetAccelerator(acc("Cmd+W", "Ctrl+Shift+W")).OnClick(send("close"))
 	shell.Add("Close Tab").SetAccelerator(acc("Cmd+Shift+W", "Ctrl+Alt+W")).OnClick(send("close-tab"))
 	shell.Add("Next Tab").SetAccelerator(acc("Cmd+Shift+]", "Ctrl+Tab")).OnClick(send("next-tab"))

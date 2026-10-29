@@ -1,6 +1,7 @@
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
+import { BlockTracker } from "./blocks";
 import "@xterm/xterm/css/xterm.css";
 import { TerminalService } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 
@@ -21,6 +22,8 @@ export interface Session {
   webgl: boolean;
   /** Called with each raw chunk before it is written to xterm. */
   onChunk?: (data: Uint8Array) => void;
+  /** Called once, when the shell first emits prompt markers (command blocks are active). */
+  onBlocks?: () => void;
   dispose(): void;
 }
 
@@ -52,6 +55,9 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
 
   const enc = new TextEncoder();
   const s: Session = { term, ws, webgl, dispose: () => { ws.close(); term.dispose(); } };
+  const tracker = new BlockTracker(term as never, () => s.onBlocks?.());
+  const dispose = s.dispose;
+  s.dispose = () => { tracker.dispose(); dispose(); };
   let unacked = 0;
   ws.onmessage = (e) => {
     const data = new Uint8Array(e.data as ArrayBuffer);

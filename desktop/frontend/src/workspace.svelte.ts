@@ -1,9 +1,10 @@
 import { tick } from "svelte";
 import { openSession, type Session } from "./terminal";
 import * as P from "./panes";
+import { TerminalService } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 
 export interface Tab { id: string; root: P.Node; focus: string }
-export interface PaneInfo { target: string | null; ended: boolean; error: string }
+export interface PaneInfo { target: string | null; ended: boolean; error: string; blocks: boolean }
 
 let seq = 0;
 const uid = (p: string) => `${p}${++seq}`;
@@ -43,7 +44,7 @@ class Workspace {
   async openTab(target: string | null) {
     const id = uid("p");
     const tab: Tab = { id: uid("t"), root: { id }, focus: id };
-    this.panes[id] = { target, ended: false, error: "" };
+    this.panes[id] = { target, ended: false, error: "", blocks: false };
     this.tabs.push(tab);
     this.activeId = tab.id;
     await this.start(id);
@@ -54,7 +55,7 @@ class Workspace {
     const tab = this.active;
     if (!tab) return this.openTab(target ?? null);
     const id = uid("p");
-    this.panes[id] = { target: target !== undefined ? target : (this.panes[tab.focus]?.target ?? null), ended: false, error: "" };
+    this.panes[id] = { target: target !== undefined ? target : (this.panes[tab.focus]?.target ?? null), ended: false, error: "", blocks: false };
     tab.root = P.splitLeaf(tab.root, tab.focus, id, dir, uid("s"));
     tab.focus = id;
     await this.start(id);
@@ -67,6 +68,7 @@ class Workspace {
     if (!info) return;
     info.ended = false;
     info.error = "";
+    info.blocks = false;
     this.sessions.get(id)?.dispose();
     this.els.get(id)?.replaceChildren();
     try {
@@ -77,12 +79,22 @@ class Workspace {
       s.term.onData((d) => {
         if (this.sessions.get(id) === s && this.panes[id]?.ended && d.includes("\r")) this.start(id);
       });
+      s.onBlocks = () => { if (this.panes[id]) this.panes[id].blocks = true; };
       this.sessions.set(id, s);
       if (this.focusedPane === id) s.term.focus();
     } catch (e) {
       info.error = String(e);
       info.ended = true;
     }
+  }
+
+  /** Types the shell-integration snippet into a remote shell, on the user's request. */
+  async enableBlocks(id: string) {
+    const s = this.sessions.get(id);
+    if (!s || this.panes[id]?.ended) return;
+    const snippet = await TerminalService.IntegrationSnippet();
+    s.ws.send(new TextEncoder().encode(snippet));
+    s.term.focus();
   }
 
   reconnect(id: string) {

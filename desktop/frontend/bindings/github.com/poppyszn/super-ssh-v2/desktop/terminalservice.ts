@@ -30,6 +30,13 @@ export function Endpoint(): $CancellablePromise<$models.Endpoint> {
 }
 
 /**
+ * IntegrationSnippet returns the one-liner for remote shells. Bound to the frontend.
+ */
+export function IntegrationSnippet(): $CancellablePromise<string> {
+    return $Call.ByID(738699694);
+}
+
+/**
  * ReportBench receives the frontend's benchmark JSON. Bound to the frontend.
  */
 export function ReportBench(result: string): $CancellablePromise<void> {

@@ -23,6 +23,7 @@ async () => {
      { svelteHTML.createElement("span", { "class":`seg`,}); { svelteHTML.createElement("span", {   "class":`dot`,});!info.ended;info.ended; }info.ended ? "Disconnected" : "Connected"; }
      { svelteHTML.createElement("span", { "class":`seg mono`,});prof ? `${prof.user}@${prof.host}:${prof.port}` : "local shell"; }
     if(prof?.jump){ { svelteHTML.createElement("span", { "class":`seg`,}); prof.jump; }}
+    if(info.blocks){ { svelteHTML.createElement("span", { "class":`seg ok`,});  }}
   }else{
      { svelteHTML.createElement("span", { "class":`seg`,});  }
   }
