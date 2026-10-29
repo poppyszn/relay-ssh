@@ -183,6 +183,16 @@ Remaining: a clipboard check in the real window (native Edit menu copy/paste is 
 - **Per-block options menu (later):** a three-dot button on every command block, like Warp's, opening actions such as copy command, copy output, copy all (command plus output), and likely more (for example re-run, share, collapse). Blocks already know their start and command markers; the output range is the rows between the command row and the block end, so copy actions can read it from the xterm buffer without Go involvement. Needs a hover affordance on the block overlay (the overlay is `pointer-events: none` today, so the button needs its own hit area), keyboard access, and tests for the range extraction.
 - **Relay-drawn block header (later):** a dim header line (path, git branch, duration) instead of the user's own prompt, optional because it means Relay draws its own prompt in local shells.
 
+## 9f. Phase 4 progress (2026-10-29)
+
+Done: a Tools dialog (wrench in the tab bar, Shell menu, or palette) over a `ToolsService` that is a thin layer on `internal/core`:
+- **Health**: the doctor checks with one-click "Fix N issues" (regenerate config, restore the Include block) and a re-check.
+- **Backup and restore**: passphrase-encrypted backup via a native save dialog (written 0600, removed on failure, passphrase never stored); restore via a native open dialog with an explicit confirm because it replaces current data.
+- **Import**: `~/.ssh/config` Host entries become connections. Fixed along the way: adjacent Host blocks with no blank line were skipped, one incomplete entry aborted the whole import, and entries without HostName or User now get ssh's defaults (alias, current user). Bad entries are skipped and reported. The CLI line budget went 2900 to 3000 for this (recorded in CLAUDE.md).
+- **Keys**: adopted keys (in backups) and private keys found in ~/.ssh with the connections that use each; Adopt copies a key into the vault and repoints connections at it; Generate opens a local tab with `ssh-keygen` typed but not run, so passphrase prompts stay in the terminal (no passphrase ever passes through argv).
+
+Remaining in Phase 4: port forward management (start and stop forwards at runtime) and the file browser (D3: shell out to `sftp`/`scp`).
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.

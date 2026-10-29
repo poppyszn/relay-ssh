@@ -3,13 +3,19 @@
 
 import * as ProfilesService from "./profilesservice.js";
 import * as TerminalService from "./terminalservice.js";
+import * as ToolsService from "./toolsservice.js";
 export {
     ProfilesService,
-    TerminalService
+    TerminalService,
+    ToolsService
 };
 
 export type {
     Endpoint,
+    FixReport,
+    HealthCheck,
+    ImportReport,
+    KeyInfo,
     PreviewResult,
     Profile,
     TunnelDTO

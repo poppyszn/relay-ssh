@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/poppyszn/super-ssh-v2/internal/core"
 )
 
 func TestFindKeyFilesDetectsPrivateKeys(t *testing.T) {
@@ -18,7 +20,7 @@ func TestFindKeyFilesDetectsPrivateKeys(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "authorized_keys"), "ssh-ed25519 AAAA...")
 	writeFile(t, filepath.Join(dir, "notes.txt"), "just some notes")
 
-	got := findKeyFiles(dir)
+	got := core.FindKeyFiles(dir)
 	if len(got) != 2 {
 		t.Fatalf("findKeyFiles = %v, want 2 keys", got)
 	}
@@ -34,31 +36,16 @@ func TestFindKeyFilesIgnoresDirectories(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeFile(t, filepath.Join(dir, "id_ed25519"), "-----BEGIN OPENSSH PRIVATE KEY-----\n")
-	got := findKeyFiles(dir)
+	got := core.FindKeyFiles(dir)
 	if len(got) != 1 {
 		t.Errorf("findKeyFiles should skip directories, got %v", got)
 	}
 }
 
 func TestFindKeyFilesOnMissingDir(t *testing.T) {
-	got := findKeyFiles(filepath.Join(t.TempDir(), "nonexistent"))
+	got := core.FindKeyFiles(filepath.Join(t.TempDir(), "nonexistent"))
 	if got != nil {
 		t.Errorf("findKeyFiles on missing dir = %v, want nil", got)
-	}
-}
-
-func TestLooksLikePrivateKey(t *testing.T) {
-	dir := t.TempDir()
-	keyPath := filepath.Join(dir, "key")
-	writeFile(t, keyPath, "-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n")
-	if !looksLikePrivateKey(keyPath) {
-		t.Error("looksLikePrivateKey should detect a real key file")
-	}
-
-	notKeyPath := filepath.Join(dir, "not-key")
-	writeFile(t, notKeyPath, "just some text\n")
-	if looksLikePrivateKey(notKeyPath) {
-		t.Error("looksLikePrivateKey should reject a non-key file")
 	}
 }
 

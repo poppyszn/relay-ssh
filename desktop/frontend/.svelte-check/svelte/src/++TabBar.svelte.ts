@@ -3,12 +3,12 @@
 import { ws } from "./workspace.svelte";
 import { leaves } from "./panes";
 
-;type $$ComponentProps =  { onsidebar: () => void; onsettings: () => void };function $$render() {
+;type $$ComponentProps =  { onsidebar: () => void; onsettings: () => void; ontools: () => void };function $$render() {
 
   
   
 
-  let { onsidebar, onsettings }:/*Ωignore_startΩ*/$$ComponentProps/*Ωignore_endΩ*/ = $props();
+  let { onsidebar, onsettings, ontools }:/*Ωignore_startΩ*/$$ComponentProps/*Ωignore_endΩ*/ = $props();
   const mac = navigator.userAgent.includes("Mac");
 
   function status(t: (typeof ws.tabs)[number]) {
@@ -35,6 +35,9 @@ async () => {
    { svelteHTML.createElement("div", { "class":`tools nodrag`,});
      { svelteHTML.createElement("button", {     "aria-label":`Toggle connections`,"title":`Toggle connections`,"onclick":onsidebar,});
        { svelteHTML.createElement("svg", {                 "width":`16`,"height":`16`,"viewBox":`0 0 24 24`,"fill":`none`,"stroke":`currentColor`,"stroke-width":`2`,"stroke-linecap":`round`,"stroke-linejoin":`round`,"aria-hidden":`true`,}); { svelteHTML.createElement("rect", {          "x":`3`,"y":`4`,"width":`18`,"height":`16`,"rx":`2`,});} { svelteHTML.createElement("path", {  "d":`M9 4v16`,});} }
+     }
+     { svelteHTML.createElement("button", {     "aria-label":`Tools`,"title":`Tools: health, backup, import, keys`,"onclick":ontools,});
+       { svelteHTML.createElement("svg", {                 "width":`16`,"height":`16`,"viewBox":`0 0 24 24`,"fill":`none`,"stroke":`currentColor`,"stroke-width":`2`,"stroke-linecap":`round`,"stroke-linejoin":`round`,"aria-hidden":`true`,}); { svelteHTML.createElement("path", {  "d":`M14.7 6.3a4 4 0 0 0-5.4 5.2L3 17.8V21h3.2l6.3-6.3a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.4-.6-.6-2.4z`,});} }
      }
      { svelteHTML.createElement("button", {     "aria-label":`Settings`,"title":`Settings`,"onclick":onsettings,});
        { svelteHTML.createElement("svg", {                 "width":`16`,"height":`16`,"viewBox":`0 0 24 24`,"fill":`none`,"stroke":`currentColor`,"stroke-width":`2`,"stroke-linecap":`round`,"stroke-linejoin":`round`,"aria-hidden":`true`,}); { svelteHTML.createElement("circle", {      "cx":`12`,"cy":`12`,"r":`3`,});} { svelteHTML.createElement("path", {  "d":`M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1`,});} }

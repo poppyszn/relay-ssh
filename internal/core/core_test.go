@@ -169,3 +169,32 @@ func TestSaveProfileAddsUpdatesAndRenames(t *testing.T) {
 		t.Errorf("generated config not regenerated:\n%s", gen)
 	}
 }
+
+func TestImportHandlesAdjacentHostsDefaultsAndSkipsBadEntries(t *testing.T) {
+	p := newStore(t)
+	in := "Host first\n  HostName 1.1.1.1\n  User a\nHost second\n  HostName 2.2.2.2\n  User b\n" + // no blank line between blocks
+		"Host bare\n" + // no HostName or User: ssh falls back to the alias and the current user
+		"Host bad:name\n  HostName 3.3.3.3\n  User c\n" + // colon is not allowed in a profile name
+		"Host *.internal\n  User wild\n" +
+		"Host last\n  HostName 4.4.4.4\n  User d\n"
+	res, err := ImportSSHConfigDetailed(p, strings.NewReader(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(res.Added, ","); got != "first,second,bare,last" {
+		t.Errorf("added = %q, want first,second,bare,last", got)
+	}
+	if len(res.Skipped) != 1 || !strings.Contains(res.Skipped[0], "bad:name") {
+		t.Errorf("skipped = %v, want only bad:name", res.Skipped)
+	}
+	s, _ := config.Load(p.StoreFile)
+	bare, ok := s.Find("bare")
+	if !ok || bare.Host != "bare" || bare.User == "" || bare.Port != 22 {
+		t.Errorf("bare = %+v, want host=alias, a user, port 22", bare)
+	}
+	// the legacy entry point still reports a count
+	n, err := ImportSSHConfig(newStore(t), strings.NewReader("Host x\n  HostName 9.9.9.9\n  User u\n"))
+	if err != nil || n != 1 {
+		t.Errorf("ImportSSHConfig = %d, %v", n, err)
+	}
+}
