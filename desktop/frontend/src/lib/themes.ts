@@ -67,7 +67,7 @@ export const THEMES: Record<string, ThemeDef> = {
     vars: derive({
       ...darkBase,
       strip: "#0f1620", rail: "#16202d", bar: "#131c28", bg: "#19232f", term: "#1b2634", line: "#243044", line2: "#2a3649", field: "#111a25", fieldline: "#2a384d",
-      float: "#1a2534", floatline: "#34445c", text: "#d3dcea", text2: "#b3bfd0", muted: "#8d9bb0", dim: "#7d8ba0", accent: "#3b9ae1", "accent-text": "#7fb2ee",
+      float: "#1a2534", floatline: "#34445c", text: "#d3dcea", text2: "#b3bfd0", muted: "#8d9bb0", dim: "#7f8da2", accent: "#3b9ae1", "accent-text": "#7fb2ee",
       hover: "#1a2535", active: "#1f2b3b", foot: "#172130", divider: "#3d4f6b",
     }),
     term: { ...ansiDark, background: "#1b2634", foreground: "#d3dcea", cursor: "#f07b86", selectionBackground: "#2d4466" },
@@ -77,7 +77,7 @@ export const THEMES: Record<string, ThemeDef> = {
     vars: derive({
       ...darkBase,
       strip: "#111214", rail: "#17181b", bar: "#141517", bg: "#1b1c20", term: "#1e1f24", line: "#2a2c32", line2: "#33353c", field: "#131417", fieldline: "#34363d",
-      float: "#202227", floatline: "#3a3d45", text: "#dcdde0", text2: "#b5b7bd", muted: "#8e9098", dim: "#7a7c84", accent: "#4d9de0", "accent-text": "#86b8ec",
+      float: "#202227", floatline: "#3a3d45", text: "#dcdde0", text2: "#b5b7bd", muted: "#8e9098", dim: "#868890", accent: "#4d9de0", "accent-text": "#86b8ec",
       hover: "#202126", active: "#272930", foot: "#1a1b1f", divider: "#44474f", "accent-hover": "#5eaaea", "dot-off": "#474a52",
     }),
     term: { ...ansiDark, black: "#2a2c32", background: "#1e1f24", foreground: "#dcdde0", cursor: "#f07b86", selectionBackground: "#3a4150", brightBlack: "#6a6d76" },
@@ -87,7 +87,7 @@ export const THEMES: Record<string, ThemeDef> = {
     vars: derive({
       ...darkBase,
       strip: "#000000", rail: "#0b0b0b", bar: "#050505", bg: "#0a0a0a", term: "#0b0b0c", line: "#1c1c1e", line2: "#262629", field: "#070707", fieldline: "#2a2a2d",
-      float: "#141415", floatline: "#303033", text: "#e6e6e6", text2: "#bdbdbd", muted: "#8a8a8e", dim: "#77777b", accent: "#2fa3d9", "accent-text": "#6cc4ec",
+      float: "#141415", floatline: "#303033", text: "#e6e6e6", text2: "#bdbdbd", muted: "#8a8a8e", dim: "#7e7e82", accent: "#2fa3d9", "accent-text": "#6cc4ec",
       hover: "#121213", active: "#19191b", foot: "#0d0d0e", divider: "#2e2e32", "accent-hover": "#44b2e4", "dot-off": "#3a3a3e",
     }),
     term: { ...ansiDark, black: "#1c1c1e", background: "#0b0b0c", foreground: "#e6e6e6", cursor: "#2fa3d9", selectionBackground: "#26384a", brightBlack: "#5e5e63" },
@@ -99,7 +99,7 @@ export const THEMES: Record<string, ThemeDef> = {
       strong: "#0f1a28", "on-accent": "#ffffff", "on-err": "#ffffff", scrim: "rgba(20, 30, 45, 0.38)", shadow: "rgba(20, 35, 60, 0.2)", band: "rgba(15, 26, 40, 0.035)",
       ok: "#1f7a4a", err: "#c4283e", "err-text": "#b3203a", warn: "#946200", "stripe-ok": "#3da06a", "dot-off": "#b4bfcf", "switch-thumb": "#ffffff", "accent-hover": "#1a69b0",
       strip: "#e4e9f0", rail: "#eef2f7", bar: "#e8edf3", bg: "#f5f7fa", term: "#fbfcfe", line: "#dce3ec", line2: "#d2dae6", field: "#ffffff", fieldline: "#c3cddb",
-      float: "#ffffff", floatline: "#c9d2df", text: "#1b2634", text2: "#364559", muted: "#536175", dim: "#687689", accent: "#1f72bd", "accent-text": "#1a64aa",
+      float: "#ffffff", floatline: "#c9d2df", text: "#1b2634", text2: "#364559", muted: "#536175", dim: "#5c6a7e", accent: "#1f72bd", "accent-text": "#1a64aa",
       hover: "#e8eef5", active: "#dde8f4", foot: "#edf1f6", divider: "#c0cad9",
     }),
     term: { ...ansiLight, background: "#fbfcfe", foreground: "#1b2634", cursor: "#c4283e", cursorAccent: "#fbfcfe", selectionBackground: "#cfe2f6" },
