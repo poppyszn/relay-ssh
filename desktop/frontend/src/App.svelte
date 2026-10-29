@@ -20,19 +20,23 @@
   import FilesPanel from "./FilesPanel.svelte";
   import ForwardsPanel from "./ForwardsPanel.svelte";
   import SnippetsPanel from "./SnippetsPanel.svelte";
+  import VaultPanel from "./VaultPanel.svelte";
   import { settings } from "./settings.svelte";
   import { sb } from "./foldertree.svelte";
-  import { FilesService, ForwardsService, ProfilesService, SnippetsService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { vault } from "./vault.svelte";
+  import { FilesService, ForwardsService, ProfilesService, SnippetsService, TerminalService, ToolsService, VaultService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
   const mac = navigator.userAgent.includes("Mac");
   let profiles = $state<Profile[]>([]);
   let folders = $state<string[]>([]);
-  let toolsTab = $state<"health" | "backup" | "import" | "keys">("health");
+  let toolsTab = $state<"health" | "backup" | "import" | "keys" | "vault">("health");
   let banner = $state("");
   let palette = $state(false);
   let sidebar = $state(true);
   let settingsOpen = $state(false);
   let toolsOpen = $state(false);
+  let vaultOpen = $state(false);
+  let unlockConnect = $state<{ profile: Profile; split: boolean } | null>(null);
   let filesTarget = $state("");
   let forwardsTarget = $state("");
   let snippetsOpen = $state(false);
@@ -74,6 +78,14 @@
   async function connect(p: Profile, split = false) {
     palette = false;
     banner = "";
+    if (p.auth === "password" && vault.exists && !vault.unlocked && vault.hasRemembered(p.name)) {
+      unlockConnect = { profile: p, split };
+      return;
+    }
+    await doConnect(p, split);
+  }
+
+  async function doConnect(p: Profile, split = false) {
     if (split && ws.active) await ws.split("row", p.name);
     else await ws.openTab(p.name);
   }
@@ -95,6 +107,7 @@
       case "find": return ws.toggleSearch();
       case "settings": return (settingsOpen = !settingsOpen);
       case "tools": return (toolsTab = "health", toolsOpen = !toolsOpen);
+      case "vault": return (vaultOpen = !vaultOpen);
       case "files": return openFiles();
       case "forwards": return openForwards();
       case "snippets": return (snippetsOpen = !snippetsOpen);
@@ -181,6 +194,8 @@
     sb.onPaneToTab = (id, tab) => ws.movePaneToTab(id, tab);
     sb.onPaneMove = (id, target, edge) => ws.movePane(id, target, edge);
     sb.onPaneDrop = (name, paneId, edge) => { banner = ""; return edge === "center" ? ws.openTab(name) : ws.splitAt(paneId, edge, name); };
+    vault.refresh();
+    VaultService.SetIdleTimeout(settings.vaultTimeout).catch(() => {});
     (async () => {
       customChrome = await TerminalService.CustomChrome();
       document.documentElement.classList.toggle("custom-chrome", customChrome);
@@ -773,18 +788,40 @@
       </div>
     </main>
   </div>
-  <StatusBar {profiles} themeName={settings.label} />
+  <StatusBar {profiles} themeName={settings.label} onvault={() => (vaultOpen = true)} />
 </div>
 
 {#if snippetsOpen}<SnippetsPanel into={ws.panes[ws.focusedPane] ? (ws.panes[ws.focusedPane].target ?? "Local shell") : ""} onuse={(c, run) => ws.typeSnippet(c, run)} onclose={() => (snippetsOpen = false)} />{/if}
 {#if forwardsTarget}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/if}
 {#if filesTarget}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/if}
-{#if toolsOpen}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/if}
+{#if toolsOpen}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} onvault={() => { toolsOpen = false; vaultOpen = true; }} />{/if}
 {#if ws.blockMenu}<BlockMenu block={ws.blockMenu.block} rect={ws.blockMenu.rect} oncopy={copied} onclose={() => (ws.blockMenu = null)} />{/if}
 {#if toast}<div class="toast" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>{toast}</div>{/if}
 {#if settingsOpen}<SettingsPanel onclose={() => (settingsOpen = false)} />{/if}
 <DragGhost />
 {#if palette}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/if}
+{#if vaultOpen}
+  <VaultPanel mode="auto" onclose={() => (vaultOpen = false)} />
+{/if}
+{#if unlockConnect}
+  <VaultPanel
+    mode="unlock-connect"
+    connName={unlockConnect.profile.name}
+    onsuccess={async () => {
+      const { profile, split } = unlockConnect!;
+      unlockConnect = null;
+      await doConnect(profile, split);
+    }}
+    onskip={async () => {
+      const { profile, split } = unlockConnect!;
+      unlockConnect = null;
+      await doConnect(profile, split);
+    }}
+    onclose={() => {
+      unlockConnect = null;
+    }}
+  />
+{/if}
 {#if form}
   <ProfileForm initial={form.initial} oldName={form.oldName} {profiles} {folders} onsave={save} ondelete={() => (confirmDelete = profiles.find((p) => p.name === form!.oldName) ?? null)} oncancel={() => (form = null)} />
 {/if}
