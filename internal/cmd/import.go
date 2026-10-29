@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/poppyszn/super-ssh-v2/internal/core"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/core"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 // ImportCmd parses ~/.ssh/config and creates profiles from Host entries.

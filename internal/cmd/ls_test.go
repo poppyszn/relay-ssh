@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 func TestLsEmptyStore(t *testing.T) {

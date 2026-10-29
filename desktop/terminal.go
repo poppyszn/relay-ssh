@@ -12,9 +12,9 @@ import (
 	"strings"
 
 	"github.com/coder/websocket"
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/core"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/core"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 // allowedOrigins are the only pages permitted to open a terminal socket: the

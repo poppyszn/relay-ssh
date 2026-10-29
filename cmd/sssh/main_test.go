@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 func TestRunUnknownProfileName(t *testing.T) {

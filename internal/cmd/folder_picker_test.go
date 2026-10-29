@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 func storeWithFolders() config.Store {

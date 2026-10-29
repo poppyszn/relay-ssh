@@ -1,7 +1,7 @@
 import { tick } from "svelte";
 import { openSession, type Session } from "./terminal";
 import * as P from "./panes";
-import { TerminalService } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 export interface Tab { id: string; root: P.Node; focus: string }
 export interface PaneInfo { target: string | null; ended: boolean; error: string; blocks: boolean }

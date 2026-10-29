@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
-	"github.com/poppyszn/super-ssh-v2/internal/sshconfig"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 )
 
 // TestAddRegeneratesConfigWithoutRequiringSync guards a real reported bug:

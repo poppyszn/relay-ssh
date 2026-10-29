@@ -1,6 +1,6 @@
 ///<reference types="svelte" />
 ;
-import { FilesService, type FileEntry } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import { FilesService, type FileEntry } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 ;type $$ComponentProps =  { target: string; onclose: () => void };function $$render() {
 

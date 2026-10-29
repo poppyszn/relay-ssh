@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/core"
+	"github.com/poppyszn/relay-ssh/internal/core"
 )
 
 func TestFindKeyFilesDetectsPrivateKeys(t *testing.T) {

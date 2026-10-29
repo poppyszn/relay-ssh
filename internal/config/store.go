@@ -11,7 +11,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/poppyszn/super-ssh-v2/internal/fsutil"
+	"github.com/poppyszn/relay-ssh/internal/fsutil"
 )
 
 // Load reads connections.toml.

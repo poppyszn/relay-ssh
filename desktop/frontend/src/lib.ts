@@ -1,4 +1,4 @@
-import type { Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 export interface FolderNode {
   /** Full folder path, "" for profiles with no folder. */

@@ -14,7 +14,7 @@ export {
     ToolsService
 };
 
-export type {
+export {
     Endpoint,
     FileEntry,
     FixReport,

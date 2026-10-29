@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ProfilesService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+  import { ProfilesService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
   let { initial, oldName, profiles, folders, onsave, ondelete, oncancel }: {
     initial: Profile;

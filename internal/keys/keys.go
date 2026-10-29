@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/fsutil"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/fsutil"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 // Adopt copies a key file into ~/.ssh/sssh.d/keys/ at 0600, or validates that

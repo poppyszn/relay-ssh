@@ -1,6 +1,6 @@
 ///<reference types="svelte" />
 ;
-import type { Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 import type { TreeNode } from "./lib";
 import { dragSource, sb } from "./foldertree.svelte";
 import ConnRow from "./ConnRow.svelte";

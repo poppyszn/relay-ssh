@@ -1,11 +1,11 @@
-module github.com/poppyszn/super-ssh-v2/desktop
+module github.com/poppyszn/relay-ssh/desktop
 
 go 1.27.0
 
 require (
 	github.com/coder/websocket v1.8.15
 	github.com/creack/pty v1.1.24
-	github.com/poppyszn/super-ssh-v2 v0.0.0
+	github.com/poppyszn/relay-ssh v0.0.0
 	github.com/wailsapp/wails/v3 v3.0.0
 )
 
@@ -22,4 +22,4 @@ require (
 	golang.org/x/sys v0.48.0 // indirect
 )
 
-replace github.com/poppyszn/super-ssh-v2 => ../
+replace github.com/poppyszn/relay-ssh => ../

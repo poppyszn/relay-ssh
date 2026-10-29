@@ -9,7 +9,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -40,15 +40,19 @@ export function DeleteFolder(path: string): $CancellablePromise<void> {
 /**
  * Folders returns every folder, including empty ones and ancestors.
  */
-export function Folders(): $CancellablePromise<string[] | null> {
-    return $Call.ByID(3534440916);
+export function Folders(): $CancellablePromise<string[]> {
+    return $Call.ByID(3534440916).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 /**
  * List returns every saved profile, sorted by name.
  */
-export function List(): $CancellablePromise<$models.Profile[] | null> {
-    return $Call.ByID(1858099955);
+export function List(): $CancellablePromise<$models.Profile[]> {
+    return $Call.ByID(1858099955).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
 /**
@@ -71,7 +75,9 @@ export function PickKeyFile(): $CancellablePromise<string> {
  * added when oldName is empty) without writing anything.
  */
 export function Preview(oldName: string, prof: $models.Profile): $CancellablePromise<$models.PreviewResult> {
-    return $Call.ByID(2053742877, oldName, prof);
+    return $Call.ByID(2053742877, oldName, prof).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 /**
@@ -88,3 +94,9 @@ export function RenameFolder($from: string, to: string): $CancellablePromise<voi
 export function Save(oldName: string, prof: $models.Profile): $CancellablePromise<void> {
     return $Call.ByID(3186380550, oldName, prof);
 }
+
+// Private type creation functions
+const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = $models.Profile.createFrom;
+const $$createType2 = $Create.Array($$createType1);
+const $$createType3 = $models.PreviewResult.createFrom;

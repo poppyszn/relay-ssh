@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/style"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/style"
 )
 
 func promptTunnels(in *bufio.Scanner) ([]config.Tunnel, error) {

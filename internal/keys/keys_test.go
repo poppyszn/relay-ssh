@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 func TestAdoptCopiesKeyAtCorrectMode(t *testing.T) {

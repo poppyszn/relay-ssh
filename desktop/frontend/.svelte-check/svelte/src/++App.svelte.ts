@@ -18,7 +18,7 @@ import FilesPanel from "./FilesPanel.svelte";
 import ForwardsPanel from "./ForwardsPanel.svelte";
 import { settings } from "./settings.svelte";
 import { sb } from "./foldertree.svelte";
-import { FilesService, ForwardsService, ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import { FilesService, ForwardsService, ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 function $$render() {
 
   

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+  import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
   import { dragSource, sb } from "./foldertree.svelte";
 
   let { profile, depth, live, current, onconnect, onedit }: {

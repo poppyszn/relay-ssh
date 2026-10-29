@@ -3,9 +3,9 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/poppyszn/super-ssh-v2/internal/core"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
-	"github.com/poppyszn/super-ssh-v2/internal/style"
+	"github.com/poppyszn/relay-ssh/internal/core"
+	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/style"
 )
 
 // DoctorCmd checks installation health, optionally applying deterministic fixes with --fix.
