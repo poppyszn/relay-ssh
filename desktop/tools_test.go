@@ -165,3 +165,23 @@ func TestAdoptAskForTheKeysPassphrase(t *testing.T) {
 		t.Errorf("a key without a passphrase needs none: %v", err)
 	}
 }
+
+// Folders made by an older version (or by hand) can be world-readable. The app tightens them when it
+// starts, not only the first time something is written.
+func TestStartupTightensDirectoryPermissions(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("SSSH_HOME", home)
+	for _, d := range []string{".config/sssh", ".ssh/sssh.d/keys"} {
+		if err := os.MkdirAll(filepath.Join(home, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		_ = os.Chmod(filepath.Join(home, d), 0o755)
+	}
+	prepareDirs()
+	for _, d := range []string{".config/sssh", ".ssh/sssh.d/keys"} {
+		info, err := os.Stat(filepath.Join(home, d))
+		if err != nil || info.Mode().Perm() != 0o700 {
+			t.Errorf("%s = %v, %v (want 0700)", d, info, err)
+		}
+	}
+}

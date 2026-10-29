@@ -202,6 +202,8 @@
     const jsErrors: string[] = [];
     window.addEventListener("error", (e) => jsErrors.push(e.message));
     window.addEventListener("unhandledrejection", (e) => jsErrors.push(String(e.reason)));
+    // the Content-Security-Policy must not block anything the app needs
+    document.addEventListener("securitypolicyviolation", (e) => jsErrors.push(`CSP blocked ${e.violatedDirective}: ${e.blockedURI}`));
     out.jsErrors = jsErrors;
     const seen = (id: string, text: string) => {
       const b = ws.session(id)?.term.buffer.active;

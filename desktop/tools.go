@@ -56,6 +56,14 @@ func setup() (paths.Paths, error) {
 	return p, paths.EnsureDirs(p)
 }
 
+// prepareDirs tightens the folders Relay writes into (0700) at startup, including ones an older
+// version made world-readable, instead of waiting for the first write.
+func prepareDirs() {
+	if p, err := paths.Default(); err == nil {
+		_ = paths.EnsureDirs(p)
+	}
+}
+
 func toChecks(cs []core.Check) []HealthCheck {
 	out := make([]HealthCheck, 0, len(cs))
 	for _, c := range cs {
