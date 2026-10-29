@@ -84,12 +84,13 @@ export class BlockTracker {
     const label = (failed ? `exit ${code} · ` : "") + formatDuration(Date.now() - t0);
 
     term.registerDecoration({ marker: start, x: 0, width: term.cols, height, layer: "top" })?.onRender((el) => {
-      // Append, never replace: xterm puts its own positioning class on this element.
-      el.className = `${el.className} relay-block ${failed ? "err" : "ok"}`.trim();
+      // classList, never className: xterm's own positioning class lives on this element,
+      // and onRender fires on every redraw.
+      el.classList.add("relay-block", failed ? "err" : "ok");
     });
     // x: 1, not 0: xterm applies the right anchor only for a non-zero offset.
     term.registerDecoration({ marker: cmd, anchor: "right", x: 1, width: 24, height: 1, layer: "top" })?.onRender((el) => {
-      el.className = `${el.className} relay-badge ${failed ? "err" : "ok"}`.trim();
+      el.classList.add("relay-badge", failed ? "err" : "ok");
       el.textContent = label;
     });
   }

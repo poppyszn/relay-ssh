@@ -152,6 +152,23 @@ function $$render() {
       out.blocksActive = ws.panes[live]?.blocks === true;
       // visible means positioned over the terminal, not merely present in the DOM
       const overlaid = (sel: string) => [...document.querySelectorAll<HTMLElement>(sel)].filter((e) => getComputedStyle(e).position === "absolute").length;
+      // geometry and stacking: is each overlay inside the terminal and topmost at its centre?
+      const probe = (e: HTMLElement) => {
+        const r = e.getBoundingClientRect();
+        const prev = e.style.pointerEvents;
+        e.style.pointerEvents = "auto";
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        e.style.pointerEvents = prev;
+        return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height), topmost: top === e, covered: top ? top.tagName + "." + top.className : null, z: getComputedStyle(e).zIndex };
+      };
+      const term = ws.session(live)?.term;
+      const screen = document.querySelector<HTMLElement>(".tabview.on .xterm-screen");
+      const sr = screen?.getBoundingClientRect();
+      out.webgl = ws.session(live)?.webgl;
+      out.screen = sr ? { x: Math.round(sr.left), y: Math.round(sr.top), w: Math.round(sr.width), h: Math.round(sr.height) } : null;
+      out.cols = term?.cols;
+      out.probes = [...document.querySelectorAll<HTMLElement>(".tabview.on .relay-block, .tabview.on .relay-badge")].map((e) => ({ cls: e.className, ...probe(e) }));
+      out.canvases = [...document.querySelectorAll<HTMLElement>(".tabview.on .xterm-screen canvas")].map((c) => ({ cls: c.className, z: getComputedStyle(c).zIndex, pos: getComputedStyle(c).position }));
       out.okBlocks = overlaid(".relay-block.ok");
       out.errBlocks = overlaid(".relay-block.err");
       out.badges = [...document.querySelectorAll(".relay-badge")].map((b) => b.textContent);
