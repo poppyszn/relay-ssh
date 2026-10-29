@@ -13,10 +13,12 @@ import PaneView from "./PaneView.svelte";
 import Palette from "./Palette.svelte";
 import ProfileForm from "./ProfileForm.svelte";
 import SettingsPanel from "./SettingsPanel.svelte";
+import ToolsPanel from "./ToolsPanel.svelte";
 import { settings } from "./settings.svelte";
-import { ProfilesService, TerminalService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import { ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 function $$render() {
 
+  
   
   
   
@@ -39,6 +41,7 @@ function $$render() {
   let palette = $state(false);
   let sidebar = $state(true);
   let settingsOpen = $state(false);
+  let toolsOpen = $state(false);
   let form = $state<{ initial: Profile; oldName: string } | null>(null);
   let confirmDelete = $state<Profile | null>(null);
   let benchHost = $state<HTMLElement>();
@@ -50,6 +53,7 @@ function $$render() {
     { id: "new-tab", label: "New local tab", hint: mac ? "⌘T" : "Ctrl+Shift+T" },
     { id: "split-right", label: "Split pane right", hint: mac ? "⌘D" : "Ctrl+Shift+D" },
     { id: "split-down", label: "Split pane down", hint: mac ? "⇧⌘D" : "Ctrl+Alt+D" },
+    { id: "tools", label: "Open tools: health, backup, import, keys", hint: "" },
     { id: "enable-blocks", label: "Enable command blocks in this session", hint: "" },
   ];
 
@@ -83,8 +87,17 @@ function $$render() {
       case "toggle-sidebar": return (sidebar = !sidebar);
       case "find": return ws.toggleSearch();
       case "settings": return (settingsOpen = !settingsOpen);
+      case "tools": return (toolsOpen = !toolsOpen);
       case "enable-blocks": return ws.focusedPane && ws.enableBlocks(ws.focusedPane);
     }
+  }
+
+  // Opens a local tab with the ssh-keygen command typed but not run, so the user
+  // answers its prompts (including the passphrase) in the terminal and presses Enter.
+  async function generateKey() {
+    toolsOpen = false;
+    await ws.openTab(null);
+    ws.session(ws.focusedPane)?.ws.send(new TextEncoder().encode("ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_relay"));
   }
 
   async function save(prof: Profile) {
@@ -231,6 +244,22 @@ function $$render() {
       settings.theme = before.theme;
       settings.fontSize = before.size;
       await tick();
+      // tools: the real panel against the real backend
+      toolsOpen = true;
+      await tick();
+      for (let i = 0; i < 30 && !document.querySelector(".checks li"); i++) await new Promise((r) => setTimeout(r, 100));
+      const healthRows = document.querySelectorAll(".checks li").length;
+      [...document.querySelectorAll<HTMLElement>("[aria-label=Tools] nav button")].find((b) => b.textContent === "Keys")?.click();
+      for (let i = 0; i < 30 && !document.querySelector(".keys li"); i++) await new Promise((r) => setTimeout(r, 100));
+      const keyRows = document.querySelectorAll(".keys li").length;
+      toolsOpen = false;
+      await tick();
+      // backup then restore through the bindings; the profile count must survive the round trip
+      const countBefore = (await ProfilesService.List())?.length;
+      const dest = "/tmp/relay-smoke-backup";
+      await ToolsService.Backup(dest, "smoke-pass");
+      await ToolsService.Restore(dest + ".age", "smoke-pass");
+      out.tools = { healthRows, keyRows, profilesBefore: countBefore, profilesAfter: (await ProfilesService.List())?.length, needsPass: await ToolsService.NeedsPassphrase(dest + ".age") };
       // ended pane -> reconnect
       const victim = panes[0];
       ws.session(victim)?.ws.close();
@@ -253,7 +282,7 @@ async () => {
  { svelteHTML.createElement("svelte:window", {  "onkeydown":keydown,});}
 
  { svelteHTML.createElement("div", { "class":`app`,});
-   { const $$_raBbaT1C = __sveltets_2_ensureComponent(TabBar); new $$_raBbaT1C({ target: __sveltets_2_any(), props: {    "onsidebar":() => (sidebar = !sidebar),"onsettings":() => (settingsOpen = !settingsOpen),}});}
+   { const $$_raBbaT1C = __sveltets_2_ensureComponent(TabBar); new $$_raBbaT1C({ target: __sveltets_2_any(), props: {      "onsidebar":() => (sidebar = !sidebar),"onsettings":() => (settingsOpen = !settingsOpen),"ontools":() => (toolsOpen = !toolsOpen),}});}
    { svelteHTML.createElement("div", { "class":`body`,});
     if(sidebar){
        { const $$_rabediS2C = __sveltets_2_ensureComponent(Sidebar); new $$_rabediS2C({ target: __sveltets_2_any(), props: {           profiles,"active":open,"onconnect":(p) => connect(p),"onnew":() => run("new-connection"),"onedit":(p) => (form = { initial: p, oldName: p.name }),"onpalette":() => (palette = true),}});}
@@ -274,6 +303,7 @@ async () => {
    { const $$_raBsutatS1C = __sveltets_2_ensureComponent(StatusBar); new $$_raBsutatS1C({ target: __sveltets_2_any(), props: {   profiles,"themeName":settings.themeDef.name,}});}
  }
 
+if(toolsOpen){ { const $$_lenaPslooT0C = __sveltets_2_ensureComponent(ToolsPanel); new $$_lenaPslooT0C({ target: __sveltets_2_any(), props: {      "onclose":() => (toolsOpen = false),"onchanged":refresh,"ongenerate":generateKey,}});}}
 if(settingsOpen){ { const $$_lenaPsgnitteS0C = __sveltets_2_ensureComponent(SettingsPanel); new $$_lenaPsgnitteS0C({ target: __sveltets_2_any(), props: {  "onclose":() => (settingsOpen = false),}});}}
 if(palette){ { const $$_ettelaP0C = __sveltets_2_ensureComponent(Palette); new $$_ettelaP0C({ target: __sveltets_2_any(), props: {          profiles,"active":open,actions,"onconnect":connect,"onaction":run,"onclose":() => (palette = false),}});}}
 if(form){

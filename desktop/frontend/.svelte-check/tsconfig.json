@@ -33,6 +33,7 @@
     "../src/SettingsPanel.svelte",
     "../src/Sidebar.svelte",
     "../src/StatusBar.svelte",
-    "../src/TabBar.svelte"
+    "../src/TabBar.svelte",
+    "../src/ToolsPanel.svelte"
   ]
 }

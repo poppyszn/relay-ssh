@@ -60,7 +60,7 @@ that structurally impossible. Do not weaken it.
 | --- | --- |
 | Direct dependencies | 2 |
 | Lines per `.go` file | 400 |
-| Non-test Go lines, whole repo | 2900 |
+| Non-test Go lines, whole repo | 3000 |
 | `syscall.Exec` call sites | 1, in `internal/launch` |
 | TUI / SSH-protocol / PTY imports | 0 |
 
@@ -77,6 +77,15 @@ entry, and (in progress at the time of this bump) hidden passphrase entry for
 `backup`/`restore` and shell tab-completion for profile names -- pushed past
 2500 on genuine feature work, not scope creep. 2900 leaves headroom for the
 in-progress items without needing a second bump immediately after this one.
+
+**2900 -> 3000, 2026-10-29.** The shared `internal/core` package (UI-free logic
+the CLI and the Relay desktop app both call) gained a real `ssh_config` import:
+adjacent `Host` blocks with no blank line between them were silently skipped,
+one incomplete entry aborted the whole import, and entries without `HostName` or
+`User` failed validation instead of getting ssh's own defaults. The fix parses
+blocks properly, applies ssh's defaults, and reports what was skipped and why.
+It is tested, fixes two real bugs, and the `desktop/` code is excluded from this
+count. 3000 leaves about 65 lines of headroom.
 
 ## How to work
 

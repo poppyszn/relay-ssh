@@ -9,6 +9,33 @@ export interface Endpoint {
     "token": string;
 }
 
+export interface FixReport {
+    "errors": string[] | null;
+    "checks": HealthCheck[] | null;
+}
+
+export interface HealthCheck {
+    "name": string;
+
+    /**
+     * ok | warn | fail
+     */
+    "status": string;
+    "detail": string;
+}
+
+export interface ImportReport {
+    "added": string[] | null;
+    "skipped": string[] | null;
+}
+
+export interface KeyInfo {
+    "name": string;
+    "path": string;
+    "adopted": boolean;
+    "usedBy": string[] | null;
+}
+
 /**
  * PreviewResult is the form's live preview: the exact Host block the profile
  * would generate, and the reason it cannot be saved yet, if any.

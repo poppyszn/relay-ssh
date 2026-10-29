@@ -12,8 +12,9 @@
   import Palette from "./Palette.svelte";
   import ProfileForm from "./ProfileForm.svelte";
   import SettingsPanel from "./SettingsPanel.svelte";
+  import ToolsPanel from "./ToolsPanel.svelte";
   import { settings } from "./settings.svelte";
-  import { ProfilesService, TerminalService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+  import { ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 
   const mac = navigator.userAgent.includes("Mac");
   let profiles = $state<Profile[]>([]);
@@ -21,6 +22,7 @@
   let palette = $state(false);
   let sidebar = $state(true);
   let settingsOpen = $state(false);
+  let toolsOpen = $state(false);
   let form = $state<{ initial: Profile; oldName: string } | null>(null);
   let confirmDelete = $state<Profile | null>(null);
   let benchHost = $state<HTMLElement>();
@@ -32,6 +34,7 @@
     { id: "new-tab", label: "New local tab", hint: mac ? "⌘T" : "Ctrl+Shift+T" },
     { id: "split-right", label: "Split pane right", hint: mac ? "⌘D" : "Ctrl+Shift+D" },
     { id: "split-down", label: "Split pane down", hint: mac ? "⇧⌘D" : "Ctrl+Alt+D" },
+    { id: "tools", label: "Open tools: health, backup, import, keys", hint: "" },
     { id: "enable-blocks", label: "Enable command blocks in this session", hint: "" },
   ];
 
@@ -65,8 +68,17 @@
       case "toggle-sidebar": return (sidebar = !sidebar);
       case "find": return ws.toggleSearch();
       case "settings": return (settingsOpen = !settingsOpen);
+      case "tools": return (toolsOpen = !toolsOpen);
       case "enable-blocks": return ws.focusedPane && ws.enableBlocks(ws.focusedPane);
     }
+  }
+
+  // Opens a local tab with the ssh-keygen command typed but not run, so the user
+  // answers its prompts (including the passphrase) in the terminal and presses Enter.
+  async function generateKey() {
+    toolsOpen = false;
+    await ws.openTab(null);
+    ws.session(ws.focusedPane)?.ws.send(new TextEncoder().encode("ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_relay"));
   }
 
   async function save(prof: Profile) {
@@ -213,6 +225,22 @@
       settings.theme = before.theme;
       settings.fontSize = before.size;
       await tick();
+      // tools: the real panel against the real backend
+      toolsOpen = true;
+      await tick();
+      for (let i = 0; i < 30 && !document.querySelector(".checks li"); i++) await new Promise((r) => setTimeout(r, 100));
+      const healthRows = document.querySelectorAll(".checks li").length;
+      [...document.querySelectorAll<HTMLElement>("[aria-label=Tools] nav button")].find((b) => b.textContent === "Keys")?.click();
+      for (let i = 0; i < 30 && !document.querySelector(".keys li"); i++) await new Promise((r) => setTimeout(r, 100));
+      const keyRows = document.querySelectorAll(".keys li").length;
+      toolsOpen = false;
+      await tick();
+      // backup then restore through the bindings; the profile count must survive the round trip
+      const countBefore = (await ProfilesService.List())?.length;
+      const dest = "/tmp/relay-smoke-backup";
+      await ToolsService.Backup(dest, "smoke-pass");
+      await ToolsService.Restore(dest + ".age", "smoke-pass");
+      out.tools = { healthRows, keyRows, profilesBefore: countBefore, profilesAfter: (await ProfilesService.List())?.length, needsPass: await ToolsService.NeedsPassphrase(dest + ".age") };
       // ended pane -> reconnect
       const victim = panes[0];
       ws.session(victim)?.ws.close();
@@ -234,7 +262,7 @@
 <svelte:window onkeydown={keydown} />
 
 <div class="app">
-  <TabBar onsidebar={() => (sidebar = !sidebar)} onsettings={() => (settingsOpen = !settingsOpen)} />
+  <TabBar onsidebar={() => (sidebar = !sidebar)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => (toolsOpen = !toolsOpen)} />
   <div class="body">
     {#if sidebar}
       <Sidebar {profiles} active={open} onconnect={(p) => connect(p)} onnew={() => run("new-connection")} onedit={(p) => (form = { initial: p, oldName: p.name })} onpalette={() => (palette = true)} />
@@ -255,6 +283,7 @@
   <StatusBar {profiles} themeName={settings.themeDef.name} />
 </div>
 
+{#if toolsOpen}<ToolsPanel onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/if}
 {#if settingsOpen}<SettingsPanel onclose={() => (settingsOpen = false)} />{/if}
 {#if palette}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/if}
 {#if form}

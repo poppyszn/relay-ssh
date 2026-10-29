@@ -29,7 +29,7 @@ func main() {
 	app = application.New(application.Options{
 		Name:        "Relay",
 		Description: "SSH connection manager and terminal",
-		Services:    []application.Service{application.NewService(term), application.NewService(&ProfilesService{})},
+		Services:    []application.Service{application.NewService(term), application.NewService(&ProfilesService{}), application.NewService(&ToolsService{})},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
 		Mac:         application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
 	})
@@ -73,6 +73,7 @@ func buildMenu(app *application.App) *application.Menu {
 	shell.Add("New Tab").SetAccelerator(acc("Cmd+T", "Ctrl+Shift+T")).OnClick(send("new-tab"))
 	shell.Add("New Connection…").SetAccelerator(acc("Cmd+N", "Ctrl+Shift+N")).OnClick(send("new-connection"))
 	shell.Add("Find…").SetAccelerator(acc("Cmd+F", "Ctrl+Shift+F")).OnClick(send("find"))
+	shell.Add("Tools…").OnClick(send("tools"))
 	shell.Add("Settings…").SetAccelerator(acc("Cmd+,", "Ctrl+Shift+,")).OnClick(send("settings"))
 	shell.Add("Quick Open…").SetAccelerator(acc("Cmd+K", "Ctrl+Shift+K")).OnClick(send("quick-open"))
 	shell.AddSeparator()
