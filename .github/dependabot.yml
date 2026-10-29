@@ -1,0 +1,19 @@
+# Weekly update pull requests, so a fixed dependency or Go release reaches the project without anyone
+# having to remember to look. Actions are pinned by commit, so Dependabot is what keeps them current.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: gomod
+    directory: /desktop
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /desktop/frontend
+    schedule: { interval: weekly }
+    groups:
+      frontend:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
