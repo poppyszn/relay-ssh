@@ -151,6 +151,9 @@ forward_agent = true
 - [ ] Windows (ConPTY, no connection sharing) and Linux builds
 - [x] CI for the desktop app (macOS, on GitHub)
 - [ ] Signed and notarized macOS releases, installers
+- [ ] DevOps: environment tags with coloured tabs; AWS SSM (SSH over SSM and EC2 import); Kubernetes contexts
+  pinned per tab with port forwards; a host-key manager for `known_hosts`
+- [ ] Encrypted vault for opt-in SSH password auto-fill
 - [x] Per-block menu: copy command, output, or both
 - [x] Light theme (Daylight) and System, which follows the OS
 - [x] Block header: directory and git branch on every block
