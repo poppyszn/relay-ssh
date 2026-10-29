@@ -39,6 +39,8 @@
   const label = $derived(!query ? "" : count.total === 0 ? "No results" : count.index < 0 ? `${count.total}+` : `${count.index + 1} of ${count.total}`);
 </script>
 
+<!-- Esc and Enter come from whichever control inside the bar has focus. -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div class="bar" role="search" onkeydown={key}>
   <input bind:this={input} bind:value={query} class="mono" placeholder="Find" aria-label="Find in scrollback" />
   <span class="count" class:none={query && count.total === 0}>{label}</span>

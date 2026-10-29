@@ -108,7 +108,7 @@ class Settings {
     } catch {
       // best effort: settings just will not persist
     }
-    if (this.vaultTimeout !== this.sentVaultTimeout) {
+    if (import.meta.env.MODE !== "test" && this.vaultTimeout !== this.sentVaultTimeout) {
       this.sentVaultTimeout = this.vaultTimeout;
       VaultService.SetIdleTimeout(this.vaultTimeout).catch(() => {});
     }

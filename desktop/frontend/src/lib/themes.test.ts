@@ -25,6 +25,10 @@ describe.each(Object.entries(THEMES))("%s", (_id, t) => {
     }
   });
 
+  it("the border of a field stands out from the field (3:1)", () => {
+    expect(contrast(v.fieldline, v.field)).toBeGreaterThanOrEqual(3);
+  });
+
   it("text on the accent and error buttons is readable", () => {
     expect(contrast(v["on-accent"], v.accent)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(v["on-err"], v.err)).toBeGreaterThanOrEqual(4.5);

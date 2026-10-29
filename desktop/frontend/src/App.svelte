@@ -69,6 +69,8 @@
     { id: "forwards", label: "Manage port forwards on this connection", hint: mac ? "⇧⌘P" : "Ctrl+Shift+P" },
     { id: "tools", label: "Open tools: health, backup, import, keys", hint: "" },
     { id: "snippets", label: "Snippets", hint: mac ? "⇧⌘S" : "Ctrl+Shift+S" },
+    { id: "settings", label: "Open settings", hint: mac ? "⌘," : "Ctrl+Shift+," },
+    { id: "vault", label: "Open vault settings", hint: "" },
     { id: "enable-blocks", label: "Enable command blocks in this session", hint: "" },
   ];
 
