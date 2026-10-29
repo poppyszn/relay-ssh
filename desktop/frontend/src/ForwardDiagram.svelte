@@ -68,8 +68,8 @@
   .diagram { margin: 0; padding: 16px 20px 14px; background: var(--rail); border: 1px solid var(--line2); }
   .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
   .node { width: 168px; flex: none; display: grid; justify-items: center; gap: 3px; text-align: center; }
-  .icon { color: var(--accent-text); padding: 9px; box-sizing: content-box; width: 34px; height: 34px; background: var(--accent-soft); border: 1px solid rgba(59, 154, 225, 0.35); border-radius: 8px; }
-  .t { font-weight: 600; color: #fff; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; }
+  .icon { color: var(--accent-text); padding: 9px; box-sizing: content-box; width: 34px; height: 34px; background: var(--accent-soft); border: 1px solid var(--accent-edge); border-radius: 8px; }
+  .t { font-weight: 600; color: var(--strong); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 4px; }
   .s { font-size: 11.5px; color: var(--text2); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .r { font-size: 11px; color: var(--muted); }
   .link { flex: 1; min-width: 40px; display: grid; justify-items: center; gap: 3px; padding-top: 26px; font-size: 10.5px; color: var(--muted); text-align: center; }

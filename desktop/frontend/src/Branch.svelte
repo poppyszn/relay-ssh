@@ -72,23 +72,23 @@
 <style>
   .head { position: relative; display: flex; align-items: center; gap: 4px; height: 32px; padding-right: 6px; color: var(--text2); user-select: none; }
   .head:hover { background: var(--hover); }
-  .head.sel { background: rgba(59, 154, 225, 0.08); box-shadow: inset 2px 0 var(--accent); }
-  .head.ok { background: rgba(59, 154, 225, 0.16); outline: 1px dashed var(--accent); outline-offset: -1px; }
+  .head.sel { background: var(--accent-faint); box-shadow: inset 2px 0 var(--accent); }
+  .head.ok { background: var(--accent-hl); outline: 1px dashed var(--accent); outline-offset: -1px; }
   .head.bad { outline: 1px dashed var(--err); outline-offset: -1px; cursor: not-allowed; }
   .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); pointer-events: none; }
   .caret { all: unset; width: 16px; height: 22px; display: grid; place-items: center; color: var(--dim); cursor: pointer; transition: transform 0.1s; }
   .name { all: unset; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 100%; cursor: default; font-weight: 600; }
   .ico { color: var(--accent-text); flex: none; }
-  .ico.empty { color: #5c6b82; }
+  .ico.empty { color: var(--dim); }
   .label-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .count { font-size: 11px; color: var(--dim); }
   .more { all: unset; width: 24px; height: 24px; display: none; place-items: center; border-radius: 4px; color: var(--muted); cursor: pointer; }
   .head:hover .more, .more:focus-visible { display: grid; }
   .head:hover .count { display: none; }
-  .more:hover { background: var(--line); color: #fff; }
+  .more:hover { background: var(--line); color: var(--strong); }
   .edit { flex: 1; min-width: 0; height: 24px; padding: 0 8px; font-size: 13px; font-weight: 500; }
   .new { display: flex; align-items: center; gap: 8px; height: 36px; padding-right: 12px; background: var(--hover); color: var(--accent-text); }
-  .pop { position: absolute; right: 6px; top: 30px; z-index: 20; min-width: 150px; background: var(--float); border: 1px solid var(--floatline); border-radius: 6px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); padding: 4px 0; }
+  .pop { position: absolute; right: 6px; top: 30px; z-index: 20; min-width: 150px; background: var(--float); border: 1px solid var(--floatline); border-radius: 6px; box-shadow: 0 12px 30px var(--shadow); padding: 4px 0; }
   .pop button { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 7px 14px; cursor: pointer; }
   .pop button:hover { background: var(--hover); }
   .pop .danger { color: var(--err-text); }

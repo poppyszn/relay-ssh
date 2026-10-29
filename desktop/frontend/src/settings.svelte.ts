@@ -1,46 +1,11 @@
-import type { ITheme } from "@xterm/xterm";
+import { THEMES, type ThemeDef } from "./themes";
 
-export interface ThemeDef {
-  name: string;
-  /** CSS custom properties applied to :root (without the leading --). */
-  vars: Record<string, string>;
-  term: ITheme;
-}
+export { THEMES };
 
-const ansi = {
-  black: "#1f2a3a", red: "#f07b86", green: "#9ad07a", yellow: "#e6c07b", blue: "#4aa8ee", magenta: "#c792ea", cyan: "#56d4dd", white: "#d3dcea",
-  brightBlack: "#5c6b82", brightRed: "#ff939d", brightGreen: "#b4e394", brightYellow: "#f3d398", brightBlue: "#7cc0f5", brightMagenta: "#d9aaf2", brightCyan: "#7ee3ea", brightWhite: "#ffffff",
-};
-
-export const THEMES: Record<string, ThemeDef> = {
-  midnight: {
-    name: "Midnight",
-    vars: {
-      strip: "#0f1620", rail: "#16202d", bar: "#131c28", bg: "#19232f", term: "#1b2634", line: "#243044", line2: "#2a3649", field: "#111a25", fieldline: "#2a384d",
-      float: "#1a2534", floatline: "#34445c", text: "#d3dcea", text2: "#b3bfd0", muted: "#8d9bb0", dim: "#7d8ba0", accent: "#3b9ae1", "accent-text": "#7fb2ee",
-      "accent-soft": "rgba(59, 154, 225, 0.14)", hover: "#1a2535", active: "#1f2b3b", foot: "#172130", divider: "#3d4f6b",
-    },
-    term: { ...ansi, background: "#1b2634", foreground: "#d3dcea", cursor: "#f07b86", selectionBackground: "#2d4466" },
-  },
-  graphite: {
-    name: "Graphite",
-    vars: {
-      strip: "#111214", rail: "#17181b", bar: "#141517", bg: "#1b1c20", term: "#1e1f24", line: "#2a2c32", line2: "#33353c", field: "#131417", fieldline: "#34363d",
-      float: "#202227", floatline: "#3a3d45", text: "#dcdde0", text2: "#b5b7bd", muted: "#8e9098", dim: "#7a7c84", accent: "#4d9de0", "accent-text": "#86b8ec",
-      "accent-soft": "rgba(77, 157, 224, 0.15)", hover: "#202126", active: "#272930", foot: "#1a1b1f", divider: "#44474f",
-    },
-    term: { ...ansi, black: "#2a2c32", background: "#1e1f24", foreground: "#dcdde0", cursor: "#f07b86", selectionBackground: "#3a4150", brightBlack: "#6a6d76" },
-  },
-  obsidian: {
-    name: "Obsidian",
-    vars: {
-      strip: "#000000", rail: "#0b0b0b", bar: "#050505", bg: "#0a0a0a", term: "#0b0b0c", line: "#1c1c1e", line2: "#262629", field: "#070707", fieldline: "#2a2a2d",
-      float: "#141415", floatline: "#303033", text: "#e6e6e6", text2: "#bdbdbd", muted: "#8a8a8e", dim: "#77777b", accent: "#2fa3d9", "accent-text": "#6cc4ec",
-      "accent-soft": "rgba(47, 163, 217, 0.15)", hover: "#121213", active: "#19191b", foot: "#0d0d0e", divider: "#2e2e32",
-    },
-    term: { ...ansi, black: "#1c1c1e", background: "#0b0b0c", foreground: "#e6e6e6", cursor: "#2fa3d9", selectionBackground: "#26384a", brightBlack: "#5e5e63" },
-  },
-};
+/** The "system" theme follows the macOS light or dark appearance. */
+export const SYSTEM = "system";
+const SYSTEM_LIGHT = "daylight";
+const SYSTEM_DARK = "midnight";
 
 export const FONTS: Record<string, { name: string; stack: string }> = {
   jetbrains: { name: "JetBrains Mono", stack: '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace' },
@@ -74,7 +39,7 @@ class Settings {
 
   constructor() {
     const s = load();
-    if (s.theme && THEMES[s.theme]) this.theme = s.theme;
+    if (s.theme && (THEMES[s.theme] || s.theme === SYSTEM)) this.theme = s.theme;
     if (s.font && FONTS[s.font]) this.font = s.font;
     if (typeof s.fontSize === "number" && s.fontSize >= 10 && s.fontSize <= 24) this.fontSize = s.fontSize;
     if (s.density && DENSITY[s.density]) this.density = s.density;
@@ -82,7 +47,18 @@ class Settings {
     if (typeof s.cursorBlink === "boolean") this.cursorBlink = s.cursorBlink;
   }
 
-  get themeDef(): ThemeDef { return THEMES[this.theme]; }
+  /** Whether macOS is currently in light mode; only consulted for the "system" theme. */
+  systemLight = $state(typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: light)").matches);
+
+  /** The theme actually in use: "system" resolves to Daylight or Midnight. */
+  get resolved(): string {
+    return this.theme === SYSTEM ? (this.systemLight ? SYSTEM_LIGHT : SYSTEM_DARK) : this.theme;
+  }
+  get themeDef(): ThemeDef { return THEMES[this.resolved]; }
+  /** Name for the status bar. */
+  get label(): string {
+    return this.theme === SYSTEM ? `System (${THEMES[this.resolved].name})` : this.themeDef.name;
+  }
 
   /** Options xterm needs, for new terminals and live updates alike. */
   get xterm() {
@@ -97,7 +73,9 @@ class Settings {
 
   /** Applies the theme to the page chrome and persists everything. */
   apply() {
-    for (const [k, v] of Object.entries(this.themeDef.vars)) document.documentElement.style.setProperty(`--${k}`, v);
+    const root = document.documentElement;
+    for (const [k, v] of Object.entries(this.themeDef.vars)) root.style.setProperty(`--${k}`, v);
+    root.style.colorScheme = this.themeDef.scheme; // native scrollbars, inputs and the selection colour follow
     const saved: Saved = { theme: this.theme, font: this.font, fontSize: this.fontSize, density: this.density, copyOnSelect: this.copyOnSelect, cursorBlink: this.cursorBlink };
     try {
       localStorage.setItem(KEY, JSON.stringify(saved));
@@ -108,3 +86,8 @@ class Settings {
 }
 
 export const settings = new Settings();
+
+// Follow macOS appearance changes while the "system" theme is selected.
+if (typeof matchMedia === "function") {
+  matchMedia("(prefers-color-scheme: light)").addEventListener("change", (e) => (settings.systemLight = e.matches));
+}

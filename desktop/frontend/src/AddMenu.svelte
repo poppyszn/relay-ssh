@@ -56,14 +56,14 @@
 </div>
 
 <style>
-  .menu { position: absolute; right: 12px; top: 46px; width: 300px; z-index: 30; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55); overflow: hidden; outline: none; }
+  .menu { position: absolute; right: 12px; top: 46px; width: 300px; z-index: 30; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 18px 50px var(--shadow); overflow: hidden; outline: none; }
   .head { padding: 10px 14px 6px; }
   .sep { height: 1px; background: var(--line2); margin: 6px 0; }
   .item { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 12px; padding: 9px 14px; cursor: pointer; }
-  .item.hl { background: rgba(59, 154, 225, 0.16); box-shadow: inset 3px 0 var(--accent); }
+  .item.hl { background: var(--accent-hl); box-shadow: inset 3px 0 var(--accent); }
   .ico { width: 30px; height: 30px; display: grid; place-items: center; background: var(--line); border-radius: 6px; color: var(--text2); flex: none; }
-  .hl .ico { background: rgba(59, 154, 225, 0.18); color: var(--accent-text); }
+  .hl .ico { background: var(--accent-ring); color: var(--accent-text); }
   .txt { display: grid; gap: 1px; flex: 1; min-width: 0; }
-  .t { color: #fff; font-weight: 500; }
-  .s { font-size: 11.5px; color: #9aa8bd; }
+  .t { color: var(--strong); font-weight: 500; }
+  .s { font-size: 11.5px; color: var(--muted); }
 </style>

@@ -38,13 +38,13 @@
   .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); pointer-events: none; }
   .main { all: unset; flex: 1; min-width: 0; padding: 7px 0; display: grid; gap: 2px; cursor: default; }
   .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: #3a4a62; flex: none; }
-  .dot.live { background: var(--ok); box-shadow: 0 0 0 3px rgba(154, 208, 122, 0.18); }
-  .name { font-weight: 600; color: #e7edf7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tag { font-size: 10px; color: #9aa8bd; background: var(--line); padding: 0 6px; border-radius: 3px; flex: none; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dot-off); flex: none; }
+  .dot.live { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-glow); }
+  .name { font-weight: 600; color: var(--strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tag { font-size: 10px; color: var(--muted); background: var(--line); padding: 0 6px; border-radius: 3px; flex: none; }
   .jump { display: flex; align-items: center; gap: 3px; font-size: 10.5px; color: var(--dim); flex: none; }
   .host { padding-left: 16px; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .edit { all: unset; width: 28px; display: none; place-items: center; color: var(--muted); cursor: pointer; }
   .row:hover .edit, .edit:focus-visible { display: grid; }
-  .edit:hover { color: #fff; }
+  .edit:hover { color: var(--strong); }
 </style>

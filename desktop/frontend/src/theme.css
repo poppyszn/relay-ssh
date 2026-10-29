@@ -30,6 +30,11 @@
   --active: #1f2b3b;
   --foot: #172130;
   --divider: #3d4f6b;
+  /* Defaults for the first paint; settings.svelte.ts sets every theme variable at startup. */
+  --strong: #ffffff; --on-accent: #06131f; --on-err: #1a0508; --scrim: rgba(6, 10, 16, 0.62); --shadow: rgba(0, 0, 0, 0.5); --band: rgba(255, 255, 255, 0.028);
+  --warn: #e6c07b; --stripe-ok: #4f9b6e; --dot-off: #3a4a62; --switch-thumb: #cfd8e6; --accent-hover: #4aa8ee;
+  --accent-hl: rgba(59, 154, 225, 0.16); --accent-ring: rgba(59, 154, 225, 0.18); --accent-faint: rgba(59, 154, 225, 0.08); --accent-edge: rgba(59, 154, 225, 0.5);
+  --ok-bg: rgba(154, 208, 122, 0.08); --ok-edge: rgba(154, 208, 122, 0.4); --ok-glow: rgba(154, 208, 122, 0.18); --err-edge: rgba(240, 123, 134, 0.6);
   --window-radius: 10px;
   --sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
@@ -39,31 +44,32 @@ html, body, #app { height: 100%; margin: 0; color: var(--text); font: 13px/1.45 
 /* The window is transparent when Relay draws its own frame, so the page paints the
    background and rounds the corners itself (keep in step with windowRadius in main.go). */
 html, body { background: transparent; }
+html { color-scheme: dark; }
 #app { background: var(--bg); }
 .custom-chrome #app { border-radius: var(--window-radius); }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 input, select { background: var(--field); border: 1px solid var(--fieldline); border-radius: 4px; padding: 0 11px; height: 36px; min-width: 0; }
-input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 154, 225, 0.18); }
+input:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .mono { font-family: var(--mono); }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: #3a4a62; flex: none; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dot-off); flex: none; }
 .dot.ok { background: var(--ok); }
 .dot.err { background: var(--err); }
 .chip { font-size: 11px; line-height: 1.5; padding: 0 7px; border-radius: 3px; background: var(--line); color: var(--text2); }
 .label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
 .btn { background: var(--line); border: 1px solid var(--floatline); border-radius: 4px; padding: 8px 16px; }
 .btn:hover { border-color: var(--accent); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #06131f; font-weight: 600; }
-.btn.primary:hover { background: #4aa8ee; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
+.btn.primary:hover { background: var(--accent-hover); }
 .btn.danger { color: var(--err-text); background: none; border-color: transparent; }
 .kbd { font: 11px var(--sans); color: var(--muted); border: 1px solid var(--floatline); border-radius: 3px; padding: 0 5px; }
 .drag { --wails-draggable: drag; }
 .nodrag { --wails-draggable: no-drag; }
 /* Slim, flat scrollbars that sit flush against the window edge (no inset track). */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-thumb { background: #34455f; min-height: 32px; }
-::-webkit-scrollbar-thumb:hover { background: #4a6285; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text) 24%, transparent); min-height: 32px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--text) 42%, transparent); }
 ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
 
 /* Command blocks: xterm decorations drawn over the terminal (see blocks.ts). */
@@ -71,18 +77,18 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .xterm .xterm-viewport { background-color: var(--term) !important; }
 /* Blocks run edge to edge: they bleed through the terminal padding to the pane edges
    (--bleed-l/-r are measured in terminal.ts). */
-.relay-block { pointer-events: none; margin-left: calc(-1 * var(--bleed-l, 24px)); width: calc(100% + var(--bleed-l, 24px) + var(--bleed-r, 24px)) !important; background: rgba(255, 255, 255, 0.028); border-top: 1px solid var(--divider); box-shadow: inset 3px 0 #4f9b6e; }
-.relay-block.err { background: rgba(240, 123, 134, 0.12); border-top-color: rgba(240, 123, 134, 0.7); border-bottom: 1px solid rgba(240, 123, 134, 0.7); box-shadow: inset 3px 0 var(--err); }
+.relay-block { pointer-events: none; margin-left: calc(-1 * var(--bleed-l, 24px)); width: calc(100% + var(--bleed-l, 24px) + var(--bleed-r, 24px)) !important; background: var(--band); border-top: 1px solid var(--divider); box-shadow: inset 3px 0 var(--stripe-ok); }
+.relay-block.err { background: color-mix(in srgb, var(--err) 12%, transparent); border-top-color: var(--err-edge); border-bottom: 1px solid var(--err-edge); box-shadow: inset 3px 0 var(--err); }
 /* !important: xterm sets display:block inline on decoration elements. */
 .relay-badge { pointer-events: none; display: flex !important; align-items: center; justify-content: flex-end; gap: 4px; padding-right: 2px; font: 500 11px var(--sans); color: var(--muted); }
 .relay-badge .block-menu { pointer-events: auto; width: 22px; height: 20px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--muted); opacity: 0; cursor: pointer; }
 .relay-badge.hot .block-menu, .relay-badge .block-menu:focus-visible { opacity: 1; }
-.relay-badge .block-menu:hover { background: var(--line); color: #fff; }
+.relay-badge .block-menu:hover { background: var(--line); color: var(--strong); }
 .relay-badge.err { color: var(--err-text); }
 
 /* xterm 6 draws its own scrollbar inside the padded terminal. Slim it to a 5px slider
    (with a 10px grab area) and push it out to the pane's right edge, through the padding. */
 .xterm .xterm-scrollable-element > .scrollbar.vertical { width: 10px !important; right: -24px !important; }
-.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider { width: 5px !important; left: auto !important; right: 0 !important; background: rgba(211, 220, 234, 0.16); }
-.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover { background: rgba(211, 220, 234, 0.34); }
-.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active { background: rgba(211, 220, 234, 0.45); }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider { width: 5px !important; left: auto !important; right: 0 !important; background: color-mix(in srgb, var(--text) 16%, transparent); }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover { background: color-mix(in srgb, var(--text) 34%, transparent); }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active { background: color-mix(in srgb, var(--text) 45%, transparent); }

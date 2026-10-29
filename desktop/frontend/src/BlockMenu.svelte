@@ -59,10 +59,10 @@
 </div>
 
 <style>
-  .menu { position: fixed; z-index: 40; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55); padding: 4px 0; outline: none; }
+  .menu { position: fixed; z-index: 40; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 14px 40px var(--shadow); padding: 4px 0; outline: none; }
   .item { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 14px; cursor: pointer; color: var(--text); }
   .item svg { color: var(--muted); flex: none; }
-  .item.hl:not(:disabled) { background: rgba(59, 154, 225, 0.16); box-shadow: inset 3px 0 var(--accent); }
+  .item.hl:not(:disabled) { background: var(--accent-hl); box-shadow: inset 3px 0 var(--accent); }
   .item.hl:not(:disabled) svg { color: var(--accent-text); }
   .item:disabled { opacity: 0.45; cursor: default; }
   .none { margin-left: auto; font-size: 11px; color: var(--dim); }
