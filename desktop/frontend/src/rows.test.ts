@@ -72,10 +72,13 @@ describe("opening a connection", () => {
     el.dispatchEvent(e);
   };
 
-  it("a single click only selects the row", () => {
+  it("a single click selects the row and asks to show its open session, without opening anything", () => {
     const { opened, target, c, main } = mk();
+    const shown: string[] = [];
+    sb.onFocusConnection = (n) => shown.push(n);
     click(main, 1);
     flushSync();
+    expect(shown).toEqual(["web"]);
     expect(opened).toEqual([]);
     expect(sb.selectedConn).toBe("web");
     expect(target.querySelector(".row.selected")).not.toBeNull();

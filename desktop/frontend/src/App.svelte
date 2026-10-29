@@ -2,7 +2,7 @@
   import { onMount, tick } from "svelte";
   import { Clipboard, Events } from "@wailsio/runtime";
   import { runBench } from "./bench";
-  import { blankProfile } from "./lib";
+  import { blankProfile, nextSession } from "./lib";
   import { ws } from "./workspace.svelte";
   import { leaves } from "./panes";
   import TabBar from "./TabBar.svelte";
@@ -172,6 +172,11 @@
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     ws.blocksMode = (name) => profiles.find((p) => p.name === name)?.blocks;
+    sb.onFocusConnection = (name) => {
+      const ids = ws.tabs.flatMap((t) => leaves(t.root)).filter((id) => ws.panes[id]?.target === name);
+      const id = nextSession(ids, ws.focusedPane);
+      if (id) ws.focus(id);
+    };
     sb.onPaneToTab = (id, tab) => ws.movePaneToTab(id, tab);
     sb.onPaneMove = (id, target, edge) => ws.movePane(id, target, edge);
     sb.onPaneDrop = (name, paneId, edge) => { banner = ""; return edge === "center" ? ws.openTab(name) : ws.splitAt(paneId, edge, name); };
@@ -564,13 +569,17 @@
             pill: document.querySelector(".tabview.on .hint strong")?.textContent ?? null,
           };
           // double-click opens a new tab; a single click does not
+          ws.select(ws.tabs.find((t) => leaves(t.root).every((id) => ws.panes[id]?.target === null))!.id); // a tab with only local shells
+          await tick();
+          const awayFrom = ws.panes[ws.focusedPane]?.target;
           const tabsA = ws.tabs.length;
           rowBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
           await sleep(200);
+          const jumped = ws.panes[ws.focusedPane]?.target;
           const afterSingle = ws.tabs.length;
           rowBtn.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, detail: 2 }));
           await sleep(400);
-          out.openByClick = { single: afterSingle - tabsA, double: ws.tabs.length - afterSingle, tip: !!document.querySelector(".tip") };
+          out.openByClick = { awayFrom, jumpedTo: jumped, single: afterSingle - tabsA, double: ws.tabs.length - afterSingle, tip: !!document.querySelector(".tip") };
           // dragging a pane by its header moves it, and its session keeps running
           ws.select(tab.id);
           await tick();

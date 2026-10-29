@@ -250,6 +250,10 @@ Done as specified above. Verified against a real throwaway `sshd` in a Go test (
 
 **Dragging across tabs.** A pane dragged by its header onto another tab in the top bar moves there (beside that tab's focused pane; the tab highlights), and onto the + button it becomes a tab of its own. A tab dragged out of the strip onto a terminal that belongs to another tab folds all of its panes in on the side nearest the pointer ("Add tab right"). Sessions keep running through every move. Pure helper `insertBeside` is unit tested; the smoke run drives all three in the real window. Side fix found there: tabs had a fixed minimum width, so past a dozen of them the later tabs were pushed out of reach; they now shrink.
 
+## 9p. Click shows the open session (2026-10-29)
+
+A single click on a connection row selects it and brings up the tab and pane that already has that connection open, if there is one; clicking again while on it moves to the next open session of the same connection (they cycle when there are several). With none open, a single click only selects, and a double-click still opens a new tab. The row's tooltip and the tip under the list say so. The choice of session is a small pure function (`nextSession`); the row calls back through the sidebar store, so Sidebar, Branch and ConnRow gained no new props.
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.

@@ -75,7 +75,7 @@
     {/if}
 
     {#if profiles.length && !sb.learnedOpen && !searching}
-      <p class="tip"><b>Double-click</b> a connection to open it in a new tab. Drag it onto a terminal to split.</p>
+      <p class="tip"><b>Double-click</b> a connection to open it in a new tab. Click one that is open to jump to it. Drag it onto a terminal to split.</p>
     {/if}
 
     {#if sb.drag}

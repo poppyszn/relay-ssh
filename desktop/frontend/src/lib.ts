@@ -156,3 +156,9 @@ export function snippetPreview(command: string): string {
   const first = lines[0].length > 80 ? lines[0].slice(0, 79) + "…" : lines[0];
   return lines.length > 1 ? `${first}  (+${lines.length - 1} line${lines.length === 2 ? "" : "s"})` : first;
 }
+
+/** Which open session a click on a connection should show: the first, or the one after the focused pane when it is already on one. */
+export function nextSession(ids: string[], focused: string): string | undefined {
+  const i = ids.indexOf(focused);
+  return ids.length === 0 ? undefined : ids[(i + 1) % ids.length];
+}

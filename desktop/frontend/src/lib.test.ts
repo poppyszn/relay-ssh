@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blankProfile, blocksWanted, snippetPreview, snippetText, connectingHint, loginQuiet, formatElapsed, groupByFolder, matches, paneEdge, parseTags, reorder, slotAt } from "./lib";
+import { blankProfile, blocksWanted, nextSession, snippetPreview, snippetText, connectingHint, loginQuiet, formatElapsed, groupByFolder, matches, paneEdge, parseTags, reorder, slotAt } from "./lib";
 
 const mk = (o: object) => ({ ...blankProfile(), host: "h", user: "u", ...o }) as ReturnType<typeof blankProfile>;
 
@@ -192,5 +192,20 @@ describe("pane drop zones without a middle", () => {
     expect(paneEdge(r, 200, 150, false)).toMatch(/^(left|right|top|bottom)$/);
     expect(paneEdge(r, 190, 100, false)).toBe("top");
     expect(paneEdge(r, 100, 150, false)).toBe("left");
+  });
+});
+
+describe("jumping to a connection's open session", () => {
+  it("does nothing when the connection has no open session", () => {
+    expect(nextSession([], "p1")).toBeUndefined();
+  });
+  it("goes to its session, or the first when there are several", () => {
+    expect(nextSession(["p4"], "p1")).toBe("p4");
+    expect(nextSession(["p4", "p7"], "p1")).toBe("p4");
+  });
+  it("on a repeat click moves on to the next session, wrapping round", () => {
+    expect(nextSession(["p4", "p7"], "p4")).toBe("p7");
+    expect(nextSession(["p4", "p7"], "p7")).toBe("p4");
+    expect(nextSession(["p4"], "p4")).toBe("p4");
   });
 });
