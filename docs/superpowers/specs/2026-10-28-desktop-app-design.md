@@ -221,6 +221,10 @@ Found while testing this in the real window: the sidebar's "Open now" list rende
 
 The connection filter moved from the sidebar into the top bar (a field left of the tools; its ⌘K badge still opens quick open, Escape or the × clears it, and typing reveals the sidebar if it was hidden). The sidebar no longer has "Folders" and "Unfiled" section bars: connections that are in no folder sit at the top of the list, outside any folder, with the folder tree below them ("Open now" stays above both). The Add menu was positioned with a fixed 300px width in a 268px sidebar and so was cut off on the left; it now fills the sidebar width.
 
+## 9l. Drag fix and split buttons (2026-10-29)
+
+Dragging connections and folders in the sidebar never started with a real mouse: the drag handler ignored presses on any button, and a row's content is a button. The smoke test pressed the row element itself, so it passed. Now the row's name button is the handle and only the caret, the edit and menu buttons, inputs and open menus opt out (`data-nodrag`); the unit tests press the inner buttons and the smoke drives them too. Splitting panes had only a menu item and shortcuts (Shell menu, ⌘D right, ⇧⌘D down, quick-open actions), which nobody could find: the top bar now has Split right and Split down buttons. Not built yet: dragging tabs to reorder them and dragging a connection or tab onto a pane to split.
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.

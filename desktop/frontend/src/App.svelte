@@ -386,7 +386,8 @@
         const drag = async (from: Element, to: Element) => {
           const f = from.getBoundingClientRect(), t = to.getBoundingClientRect();
           const [fx, fy, tx, ty] = [f.left + 60, f.top + f.height / 2, t.left + 80, t.top + t.height / 2];
-          from.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: fx, clientY: fy, pointerId: 1 }));
+          // press the row's own button, as a real mouse does
+          (from.querySelector(".main, .name") ?? from).dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: fx, clientY: fy, pointerId: 1 }));
           window.dispatchEvent(new PointerEvent("pointermove", { clientX: fx + 12, clientY: fy + 12 }));
           window.dispatchEvent(new PointerEvent("pointermove", { clientX: tx, clientY: ty }));
           await tick();
@@ -463,6 +464,13 @@
       out.reconnected = seen(victim, "again-42");
       ws.closePane(panes[1]);
       out.afterClose = ws.tabs.flatMap((t) => leaves(t.root)).length;
+      // the split buttons in the top bar
+      const leafCount = () => ws.tabs.flatMap((t) => leaves(t.root)).length;
+      const leavesBefore = leafCount();
+      document.querySelector<HTMLElement>('[aria-label="Split right"]')?.click();
+      document.querySelector<HTMLElement>('[aria-label="Split down"]')?.click();
+      await new Promise((r) => setTimeout(r, 800));
+      out.splitButtons = leafCount() - leavesBefore;
       // connecting: a saved connection shows a loading screen until ssh first writes, and can be cancelled
       if (box) {
         const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -498,7 +506,7 @@
 <svelte:window onkeydown={keydown} />
 
 <div class="app">
-  <TabBar custom={customChrome} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} />
+  <TabBar custom={customChrome} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsplit={(d) => ws.split(d)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} />
   <div class="body">
     {#if sidebar}
       <Sidebar {profiles} {folders} {open} current={ws.panes[ws.focusedPane]?.target ?? ""} onconnect={(p) => connect(p)} onnew={newConnection} onedit={edit} ontools={(t) => { toolsTab = t; toolsOpen = true; }} onchanged={refresh} />

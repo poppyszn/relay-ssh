@@ -221,7 +221,8 @@ export function dragSource(node: HTMLElement, opts: { kind: DragKind; id: string
     }
   };
   const down = (e: PointerEvent) => {
-    if (e.button !== 0 || (e.target as HTMLElement).closest("button, input")) return;
+    // The row's own buttons are the drag handle (a mouse presses them, not the row); controls opt out.
+    if (e.button !== 0 || (e.target as HTMLElement).closest("[data-nodrag], input, .pop")) return;
     start = { x: e.clientX, y: e.clientY };
     active = false;
     window.addEventListener("pointermove", move);

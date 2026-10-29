@@ -22,7 +22,7 @@
        style="padding-left: {pad}px" title={over && !sb.dropOk ? sb.dropReason : ""}
        use:dragSource={{ kind: "folder", id: node.path, label: node.name }}>
     {#each Array(Math.max(0, depth)) as _, i}<span class="guide" style="left: {18 + 14 * i}px"></span>{/each}
-    <button class="caret" aria-label={expanded ? "Collapse" : "Expand"} onclick={() => sb.toggle(node.path)} style="transform: rotate({expanded ? 90 : 0}deg)">
+    <button class="caret" data-nodrag aria-label={expanded ? "Collapse" : "Expand"} onclick={() => sb.toggle(node.path)} style="transform: rotate({expanded ? 90 : 0}deg)">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
     </button>
     <button class="name" onclick={() => !sb.justDragged && (sb.select(node.path), searching || sb.toggle(node.path))} ondblclick={() => sb.startRename(node.path)}>
@@ -35,7 +35,7 @@
       {:else}<span class="label-text">{node.name}</span>{/if}
     </button>
     <span class="count">{node.count}</span>
-    <button class="more" aria-label="Folder options" onclick={() => (sb.menuFolder = sb.menuFolder === node.path ? "" : node.path)}>
+    <button class="more" data-nodrag aria-label="Folder options" onclick={() => (sb.menuFolder = sb.menuFolder === node.path ? "" : node.path)}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></svg>
     </button>
     {#if sb.menuFolder === node.path}
