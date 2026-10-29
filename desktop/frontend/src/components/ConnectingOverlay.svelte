@@ -24,19 +24,19 @@
   {#if prof?.jump}<p class="route">via {prof.jump}</p>{/if}
   <p class="time">{formatElapsed(ms)}</p>
   <p class="hint" class:on={!!hint}>{hint}</p>
-  <button class="btn" onclick={oncancel}>Cancel</button>
+  <button type="button" class="btn" onclick={oncancel}>Cancel</button>
 </div>
 
 <style>
-  .connecting { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: var(--term); text-align: center; padding: 24px; }
-  h3 { margin: 14px 0 0; font-size: 15px; font-weight: 600; color: var(--strong); }
-  p { margin: 0; font-size: 12px; color: var(--muted); }
-  .mono { font-family: var(--mono); font-size: 11.5px; }
+  .connecting { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: var(--term); text-align: center; padding: var(--s6); }
+  h3 { margin: var(--s4) 0 0; font-size: var(--t-lg); font-weight: 600; color: var(--strong); }
+  p { margin: 0; font-size: var(--t-sm); color: var(--muted); }
+  .mono { font-family: var(--mono); font-size: var(--t-sm); }
   .route { color: var(--dim); }
-  .time { margin-top: 8px; font-variant-numeric: tabular-nums; color: var(--dim); }
-  .hint { max-width: 340px; min-height: 34px; line-height: 1.45; color: var(--warn); opacity: 0; transition: opacity 0.3s; }
+  .time { margin-top: var(--s2); font-variant-numeric: tabular-nums; color: var(--dim); }
+  .hint { max-width: 340px; min-height: 34px; line-height: 1.45; color: var(--warn); opacity: 0; transition: opacity var(--dur-3) var(--ease); }
   .hint.on { opacity: 1; }
-  .btn { margin-top: 10px; }
+  .btn { margin-top: var(--s3); }
   .spin { animation: turn 1s linear infinite; }
   .track { fill: none; stroke: var(--line2); stroke-width: 3; }
   .arc { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 20 76; }

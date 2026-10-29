@@ -10,6 +10,8 @@
   import PaneView from "./components/PaneView.svelte";
   import DragGhost from "./components/DragGhost.svelte";
   import Logo from "./components/Logo.svelte";
+  import Icon from "./components/Icon.svelte";
+  import Modal from "./components/Modal.svelte";
   import BlockMenu from "./components/BlockMenu.svelte";
   import { copyText } from "./lib/clipboard";
   import { settings } from "./state/settings.svelte";
@@ -20,16 +22,16 @@
   const mac = navigator.userAgent.includes("Mac");
   let profiles = $state<Profile[]>([]);
   let folders = $state<string[]>([]);
-  let toolsTab = $state<"health" | "backup" | "import" | "keys" | "vault">("health");
+  let toolsTab = $state<"health" | "backup" | "import" | "keys">("health");
   let banner = $state("");
   let palette = $state(false);
   let sidebar = $state(true);
   let settingsOpen = $state(false);
   let toolsOpen = $state(false);
-  let vaultOpen = $state(false);
+  let settingsSection = $state<"vault" | undefined>(undefined);
   let unlockConnect = $state<{ profile: Profile; split: boolean } | null>(null);
   let VaultPanel = $state<typeof import("./components/VaultPanel.svelte").default | null>(null);
-  $effect(() => { if ((vaultOpen || unlockConnect) && !VaultPanel) import("./components/VaultPanel.svelte").then((m) => (VaultPanel = m.default)); });
+  $effect(() => { if (unlockConnect && !VaultPanel) import("./components/VaultPanel.svelte").then((m) => (VaultPanel = m.default)); });
   let filesTarget = $state("");
   let forwardsTarget = $state("");
   let snippetsOpen = $state(false);
@@ -38,6 +40,13 @@
   let ProfileForm = $state<typeof import("./components/ProfileForm.svelte").default | null>(null);
   $effect(() => { if (form && !ProfileForm) import("./components/ProfileForm.svelte").then((m) => (ProfileForm = m.default)); });
   let confirmDelete = $state<Profile | null>(null);
+  // A modal keeps rendering while it fades out, after its state is already null: feed it the last value.
+  let lastForm: typeof form = null;
+  const formShown = $derived.by(() => (form ? (lastForm = form) : lastForm));
+  let lastDelete: Profile | null = null;
+  const deleting = $derived.by(() => (confirmDelete ? (lastDelete = confirmDelete) : lastDelete));
+  let lastUnlock: typeof unlockConnect = null;
+  const unlocking = $derived.by(() => (unlockConnect ? (lastUnlock = unlockConnect) : lastUnlock));
   let benchHost = $state<HTMLElement>();
   let customChrome = $state(false);
   let toast = $state("");
@@ -81,6 +90,11 @@
     await doConnect(p, split);
   }
 
+  function openSettings(section?: "vault") {
+    settingsSection = section;
+    settingsOpen = section ? true : !settingsOpen;
+  }
+
   async function doConnect(p: Profile, split = false) {
     if (split && ws.active) await ws.split("row", p.name);
     else await ws.openTab(p.name);
@@ -101,9 +115,9 @@
       case "prev-tab": return ws.cycle(-1);
       case "toggle-sidebar": return (sidebar = !sidebar);
       case "find": return ws.toggleSearch();
-      case "settings": return (settingsOpen = !settingsOpen);
+      case "settings": return openSettings();
       case "tools": return (toolsTab = "health", toolsOpen = !toolsOpen);
-      case "vault": return (vaultOpen = !vaultOpen);
+      case "vault": return openSettings("vault");
       case "files": return openFiles();
       case "forwards": return openForwards();
       case "snippets": return (snippetsOpen = !snippetsOpen);
@@ -332,11 +346,11 @@
       // tools: the real panel against the real backend
       toolsOpen = true;
       await tick();
-      for (let i = 0; i < 30 && !document.querySelector(".checks li"); i++) await new Promise((r) => setTimeout(r, 100));
-      const healthRows = document.querySelectorAll(".checks li").length;
-      [...document.querySelectorAll<HTMLElement>("[aria-label=Tools] nav button")].find((b) => b.textContent === "Keys")?.click();
-      for (let i = 0; i < 30 && !document.querySelector(".keys li"); i++) await new Promise((r) => setTimeout(r, 100));
-      const keyRows = document.querySelectorAll(".keys li").length;
+      for (let i = 0; i < 30 && !document.querySelector("[role=dialog] .rows li"); i++) await new Promise((r) => setTimeout(r, 100));
+      const healthRows = document.querySelectorAll("[role=dialog] .rows li").length;
+      [...document.querySelectorAll<HTMLElement>("[aria-label=Tools] [role=tab]")].find((b) => b.textContent === "Keys")?.click();
+      for (let i = 0; i < 30 && !document.querySelector("[role=dialog] li.key"); i++) await new Promise((r) => setTimeout(r, 100));
+      const keyRows = document.querySelectorAll("[role=dialog] li.key").length;
       toolsOpen = false;
       await tick();
       // backup then restore through the bindings; the profile count must survive the round trip
@@ -349,14 +363,14 @@
       {
         const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const setVal = (el: HTMLInputElement, v: string) => { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); };
-        const keyRow = (name: string) => [...document.querySelectorAll<HTMLElement>("[aria-label=Tools] .keys li")].find((li) => li.querySelector(".kname b")?.textContent === name);
+        const keyRow = (name: string) => [...document.querySelectorAll<HTMLElement>("[role=dialog] li.key")].find((li) => li.querySelector(".kname b")?.textContent === name);
         toolsTab = "keys";
         toolsOpen = true;
         await tick();
         for (let i = 0; i < 30 && !keyRow("id_locked"); i++) await wait(100);
         const row0 = keyRow("id_locked");
         const chips = [...(row0?.querySelectorAll(".chip") ?? [])].map((c) => c.textContent);
-        row0?.querySelector<HTMLElement>(".adopt")?.click();
+        [...(row0?.querySelectorAll<HTMLElement>("button") ?? [])].find((x) => /^(Adopt|Remember)/.test(x.textContent?.trim() ?? ""))?.click();
         await wait(500);
         const asked = !!keyRow("id_locked")?.querySelector(".pass input[type=password]");
         const submit = async (pass: string) => {
@@ -366,15 +380,15 @@
           await wait(1500);
         };
         await submit("not-the-passphrase");
-        const wrong = { error: document.querySelector("[aria-label=Tools] .note.bad")?.textContent ?? null, stillAsking: !!keyRow("id_locked")?.querySelector(".pass"), adopted: keyRow("id_locked")?.textContent?.includes("in backups") };
+        const wrong = { error: document.querySelector("[role=dialog] .notice.bad")?.textContent ?? null, stillAsking: !!keyRow("id_locked")?.querySelector(".pass"), adopted: /in backups/i.test(keyRow("id_locked")?.textContent ?? "") };
         await submit("smokepass");
-        const right = { adopted: keyRow("id_locked")?.textContent?.includes("in backups"), asking: !!keyRow("id_locked")?.querySelector(".pass") };
+        const right = { adopted: /in backups/i.test(keyRow("id_locked")?.textContent ?? ""), asking: !!keyRow("id_locked")?.querySelector(".pass") };
         toolsOpen = false;
         await tick();
         newConnection("");
         await tick();
         await wait(500);
-        [...document.querySelectorAll<HTMLElement>('[role=radiogroup] button')].find((b) => b.textContent?.includes("Key file"))?.click();
+        [...document.querySelectorAll<HTMLElement>('[role=dialog] .seg button')].find((b) => b.textContent?.includes("Key file"))?.click();
         await tick();
         const sel = document.querySelector<HTMLSelectElement>('select[aria-label=Key]');
         const options = [...(sel?.querySelectorAll("option") ?? [])].map((o) => o.textContent?.trim());
@@ -395,18 +409,21 @@
         const until = async (probe: () => unknown, ms = 8000) => { for (let t = 0; t < ms && !probe(); t += 50) await wait(50); };
         document.querySelector<HTMLElement>(".vault-btn")?.click();
         await tick();
-        await until(() => document.querySelector("[role=dialog] h2")); // the panel is a lazy chunk
+        await until(() => [...document.querySelectorAll("[role=dialog] h2")].some((h) => h.textContent === "Settings")); // a lazy chunk; a form fading out may still be on screen
 
-        const openTitle = document.querySelector("[role=dialog] h2")?.textContent ?? "";
+        // The status-bar chip opens Settings at its Vault section; creating the vault opens the small prompt on top.
+        const openTitle = [...document.querySelectorAll("[role=dialog] h2")].map((h) => h.textContent).find((t) => t === "Settings") ?? "";
         let created = false;
         if (!stBefore.exists) {
+          [...document.querySelectorAll<HTMLElement>("[role=dialog] button")].find((x) => x.textContent?.trim() === "Create vault")?.click();
+          await until(() => document.querySelector('[role=dialog] input[aria-label="Master password"]'));
           const pass1 = document.querySelector<HTMLInputElement>('[role=dialog] input[aria-label="Master password"]');
           const pass2 = document.querySelector<HTMLInputElement>('[role=dialog] input[aria-label="Confirm master password"]');
           if (pass1 && pass2) {
             setVal(pass1, "smoke-master-pass");
             setVal(pass2, "smoke-master-pass");
             await tick();
-            document.querySelector<HTMLElement>('[role=dialog] form button[type=submit]')?.click();
+            document.querySelector<HTMLElement>('[role=dialog] button[type=submit]')?.click();
             await wait(800);
           }
           const stAfterCreate = await vault.refresh();
@@ -416,7 +433,7 @@
         }
 
         // Close vault dialog if open
-        vaultOpen = false;
+        settingsOpen = false;
         await tick();
         await wait(200);
 
@@ -425,11 +442,11 @@
         await tick();
         await wait(400);
 
-        [...document.querySelectorAll<HTMLElement>('[role=radiogroup] button')].find((b) => b.textContent?.includes("Password"))?.click();
+        [...document.querySelectorAll<HTMLElement>('[role=dialog] .seg button')].find((b) => b.textContent?.includes("Password"))?.click();
         await tick();
         await wait(200);
 
-        const formNote = document.querySelector(".note")?.textContent ?? "";
+        const formNote = document.querySelector("[role=dialog] .hint")?.textContent ?? "";
         const hasCorrectNote = formNote.includes("Stored encrypted in Relay's vault") && !formNote.includes("It is never stored");
 
         const nameInput = document.querySelector<HTMLInputElement>('input[placeholder="web-1"]');
@@ -456,7 +473,7 @@
             edit(savedConn);
             await tick();
             await wait(400);
-            savedBadgeShown = (document.querySelector(".badge-saved")?.textContent ?? "").includes("A password is saved");
+            savedBadgeShown = [...document.querySelectorAll("[role=dialog] .chip.ok")].some((c) => c.textContent?.includes("A password is saved"));
             form = null;
             await tick();
             await wait(200);
@@ -487,11 +504,12 @@
         const rows = [...document.querySelectorAll(".item .name")].map((n) => n.textContent);
         // ssh trusts known_hosts from the passwd home, not $HOME, so a throwaway server
         // is untrusted here: the panel must show the readable host-key message.
-        for (let i = 0; i < 60 && !document.querySelector(".msg.bad"); i++) await new Promise((r) => setTimeout(r, 100));
-        const shown = document.querySelector(".msg.bad")?.textContent ?? null;
+        for (let i = 0; i < 60 && !document.querySelector("[role=dialog] .notice.bad"); i++) await new Promise((r) => setTimeout(r, 100));
+        const shown = document.querySelector("[role=dialog] .notice.bad")?.textContent ?? null;
         filesTarget = "";
         await tick();
-        out.files = { panelRows: rows, error: shown, panelClosed: !document.querySelector("[aria-label=Files][role=dialog]") };
+        await new Promise((r) => setTimeout(r, 400)); // the panel fades out
+        out.files = { panelRows: rows, error: shown, panelClosed: ![...document.querySelectorAll("[role=dialog] h2")].some((h) => h.textContent === "Files") };
       }
       // port forwards: the real panel and service against a live multiplex master started by the harness
       if (box && sshdPort && localPort) {
@@ -652,25 +670,26 @@
         await tick();
         await sleep(300);
         const setValue = (el: HTMLInputElement | HTMLTextAreaElement, v: string) => { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); };
-        document.querySelector<HTMLElement>('[role=dialog][aria-label=Snippets] .bar .btn.primary')?.click();
+        [...document.querySelectorAll<HTMLElement>("[role=dialog] .btn.primary")].find((b) => b.textContent?.trim() === "New snippet")?.click();
         await tick();
-        setValue(document.querySelector<HTMLInputElement>('[role=dialog][aria-label=Snippets] .form input')!, "smoke snippet");
-        setValue(document.querySelector<HTMLTextAreaElement>('[role=dialog][aria-label=Snippets] .form textarea')!, "echo snip-$((6*7))");
-        document.querySelector<HTMLElement>('[role=dialog][aria-label=Snippets] .form button[type=submit]')?.click();
+        await sleep(200);
+        setValue(document.querySelector<HTMLInputElement>('[role=dialog] .form input')!, "smoke snippet");
+        setValue(document.querySelector<HTMLTextAreaElement>('[role=dialog] .form textarea')!, "echo snip-$((6*7))");
+        document.querySelector<HTMLElement>('[role=dialog] button[type=submit]')?.click();
         await sleep(500);
-        const listed = [...document.querySelectorAll("[role=dialog][aria-label=Snippets] .item b")].map((b) => b.textContent);
-        const header = document.querySelector("[role=dialog][aria-label=Snippets] .into")?.textContent;
-        const buttons = [...document.querySelectorAll<HTMLElement>("[role=dialog][aria-label=Snippets] .item .btn")];
+        const listed = [...document.querySelectorAll("[role=dialog] .item .name")].map((b) => b.textContent);
+        const header = document.querySelector("[role=dialog] header .chip")?.textContent;
+        const buttons = [...document.querySelectorAll<HTMLElement>("[role=dialog] .item .btn")];
         buttons.find((b) => b.textContent === "Insert")?.click();
         await sleep(400);
         const tail = () => { const b = ws.session(local)?.term.buffer.active; const out: string[] = []; for (let y = Math.max(0, (b?.length ?? 0) - 40); b && y < b.length; y++) { const t = b.getLine(y)?.translateToString(true); if (t) out.push(t); } return out.slice(-4); };
         const inserted = tail().join("").replace(/\s+/g, "").includes("echosnip-$((6*7))"); // the narrow pane wraps the line
         const ranEarly = seen(local, "snip-42");
-        const closedAfterUse = !document.querySelector("[role=dialog][aria-label=Snippets]");
+        const closedAfterUse = !document.querySelector("[role=dialog]");
         run("snippets");
         await tick();
         await sleep(300);
-        [...document.querySelectorAll<HTMLElement>("[role=dialog][aria-label=Snippets] .item .btn")].find((b) => b.textContent === "Run")?.click();
+        [...document.querySelectorAll<HTMLElement>("[role=dialog] .item .btn")].find((b) => b.textContent === "Run")?.click();
         for (let i = 0; i < 40 && !seen(local, "snip-42"); i++) await sleep(100);
         out.snippets = { listed, header, inserted, ranEarly, ranAfterRun: seen(local, "snip-42"), closedAfterUse, saved: (await SnippetsService.List())?.length };
         await SnippetsService.Delete("smoke snippet");
@@ -878,43 +897,52 @@
 <svelte:window onkeydown={keydown} />
 
 <div class="app">
-  <TabBar custom={customChrome} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsplit={(d) => ws.split(d)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} onsnippets={() => (snippetsOpen = !snippetsOpen)} />
+  <TabBar custom={customChrome} connected={!!ws.panes[ws.focusedPane]?.target} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsplit={(d) => ws.split(d)} onsettings={() => openSettings()} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} onsnippets={() => (snippetsOpen = !snippetsOpen)} />
   <div class="body">
     {#if sidebar}
       <Sidebar {profiles} {folders} {open} current={ws.panes[ws.focusedPane]?.target ?? ""} onconnect={(p) => connect(p)} onnew={newConnection} onedit={edit} ontools={(t) => { toolsTab = t; toolsOpen = true; }} onchanged={refresh} />
     {/if}
     <main>
-      {#if banner}<p class="banner" role="alert">{banner}<button aria-label="Dismiss" onclick={() => (banner = "")}>&times;</button></p>{/if}
+      {#if banner}<div class="notice bad banner" role="alert"><span>{banner}</span><button type="button" class="icon-btn dense" aria-label="Dismiss" onclick={() => (banner = "")}><Icon name="x" size={14} /></button></div>{/if}
       <div class="stage" bind:this={benchHost}>
         {#each ws.tabs as t (t.id)}
           <div class="tabview" class:on={t.id === ws.activeId}>
             <PaneView node={t.root} tabId={t.id} multi={leaves(t.root).length > 1} {profiles} />
           </div>
         {:else}
-          <div class="welcome"><Logo size={72} /><h1>Relay</h1><p>Double-click a connection in the list to open it, or press <span class="kbd">{mac ? "⌘T" : "Ctrl+Shift+T"}</span> for a local shell.</p></div>
+          <div class="welcome">
+            <Logo size={56} />
+            <h1>Relay</h1>
+            <p>{profiles.length ? "Open a connection from the list, or start a local shell." : "Add your first connection, or bring in the hosts you already have."}</p>
+            <div class="actions">
+              {#if profiles.length === 0}
+                <button type="button" class="btn primary" onclick={() => newConnection("")}>New connection</button>
+                <button type="button" class="btn" onclick={() => { toolsTab = "import"; toolsOpen = true; }}>Import from ~/.ssh/config</button>
+              {/if}
+              <button type="button" class="btn" onclick={() => ws.openTab(null)}>Local shell <span class="kbd">{mac ? "⌘T" : "Ctrl+Shift+T"}</span></button>
+            </div>
+            <p class="keys"><span class="kbd">{mac ? "⌘K" : "Ctrl+K"}</span> quick open</p>
+          </div>
         {/each}
       </div>
     </main>
   </div>
-  <StatusBar {profiles} themeName={settings.label} onvault={() => (vaultOpen = true)} />
+  <StatusBar {profiles} themeName={settings.label} onvault={() => openSettings("vault")} />
 </div>
 
 {#if snippetsOpen}{#await import("./components/SnippetsPanel.svelte") then { default: SnippetsPanel }}<SnippetsPanel into={ws.panes[ws.focusedPane] ? (ws.panes[ws.focusedPane].target ?? "Local shell") : ""} onuse={(c, run) => ws.typeSnippet(c, run)} onclose={() => (snippetsOpen = false)} />{/await}{/if}
 {#if forwardsTarget}{#await import("./components/ForwardsPanel.svelte") then { default: ForwardsPanel }}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/await}{/if}
 {#if filesTarget}{#await import("./components/FilesPanel.svelte") then { default: FilesPanel }}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/await}{/if}
-{#if toolsOpen}{#await import("./components/ToolsPanel.svelte") then { default: ToolsPanel }}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} onvault={() => { toolsOpen = false; vaultOpen = true; }} />{/await}{/if}
+{#if toolsOpen}{#await import("./components/ToolsPanel.svelte") then { default: ToolsPanel }}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/await}{/if}
 {#if ws.blockMenu}<BlockMenu block={ws.blockMenu.block} rect={ws.blockMenu.rect} oncopy={copied} onclose={() => (ws.blockMenu = null)} />{/if}
-{#if toast}<div class="toast" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>{toast}</div>{/if}
-{#if settingsOpen}{#await import("./components/SettingsPanel.svelte") then { default: SettingsPanel }}<SettingsPanel onclose={() => (settingsOpen = false)} />{/await}{/if}
+{#if toast}<div class="toast" role="status"><Icon name="check" />{toast}</div>{/if}
+{#if settingsOpen}{#await import("./components/SettingsPanel.svelte") then { default: SettingsPanel }}<SettingsPanel section={settingsSection} onclose={() => { settingsOpen = false; settingsSection = undefined; }} />{/await}{/if}
 <DragGhost />
 {#if palette}{#await import("./components/Palette.svelte") then { default: Palette }}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/await}{/if}
-{#if vaultOpen && VaultPanel}
-  <VaultPanel mode="auto" onclose={() => (vaultOpen = false)} />
-{/if}
 {#if unlockConnect && VaultPanel}
   <VaultPanel
     mode="unlock-connect"
-    connName={unlockConnect.profile.name}
+    connName={unlocking?.profile.name}
     onsuccess={async () => {
       const { profile, split } = unlockConnect!;
       unlockConnect = null;
@@ -931,15 +959,16 @@
   />
 {/if}
 {#if form && ProfileForm}
-  <ProfileForm initial={form.initial} oldName={form.oldName} {profiles} {folders} onsave={save} ondelete={() => (confirmDelete = profiles.find((p) => p.name === form!.oldName) ?? null)} oncancel={() => (form = null)} />
+  <ProfileForm initial={formShown!.initial} oldName={formShown!.oldName} {profiles} {folders} onsave={save} ondelete={() => (confirmDelete = profiles.find((p) => p.name === form!.oldName) ?? null)} oncancel={() => (form = null)} />
 {/if}
 {#if confirmDelete}
-  <div class="scrim" role="presentation" onkeydown={(e) => e.key === "Escape" && (confirmDelete = null)}>
-    <div class="confirm" role="alertdialog" aria-label="Delete connection">
-      <p>Delete <strong>{confirmDelete.name}</strong>? This removes it from connections.toml and your SSH config.</p>
-      <div class="buttons"><button class="btn" onclick={() => (confirmDelete = null)}>Cancel</button><button class="btn primary danger-fill" onclick={() => remove(confirmDelete!)}>Delete</button></div>
-    </div>
-  </div>
+  <Modal title="Delete connection" size="sm" role="alertdialog" onclose={() => (confirmDelete = null)}>
+    <p class="confirm-text">Delete <strong>{deleting?.name}</strong>? This removes it from connections.toml and your SSH config.</p>
+    {#snippet footer()}
+      <button type="button" class="btn" data-autofocus onclick={() => (confirmDelete = null)}>Cancel</button>
+      <button type="button" class="btn danger" onclick={() => remove(confirmDelete!)}>Delete</button>
+    {/snippet}
+  </Modal>
 {/if}
 
 <style>
@@ -949,16 +978,13 @@
   .stage { flex: 1; min-height: 0; position: relative; }
   .tabview { position: absolute; inset: 0; display: none; }
   .tabview.on { display: flex; }
-  .welcome { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: var(--muted); }
-  .welcome h1 { color: var(--text); margin: 14px 0 6px; font-weight: 600; }
-  .welcome { justify-items: center; }
-  .banner { margin: 0; padding: 8px 14px; display: flex; align-items: center; color: var(--err-text); background: var(--err-bg); border-bottom: 1px solid var(--err); }
-  .banner button { all: unset; margin-left: auto; cursor: pointer; font-size: 16px; }
-  .scrim { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; z-index: 30; }
-  .confirm { width: min(420px, 92vw); background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; padding: 18px 20px; }
-  .confirm p { margin: 0 0 16px; }
-  .buttons { display: flex; justify-content: flex-end; gap: 8px; }
-  .toast { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 8px; padding: 9px 16px; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 10px 30px var(--shadow); font-size: 12.5px; color: var(--text); }
-  .toast svg { color: var(--ok); }
-  .danger-fill { background: var(--err); border-color: var(--err); color: var(--on-err); }
+  .welcome { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: var(--s2); text-align: center; color: var(--muted); }
+  .welcome h1 { color: var(--strong); margin: var(--s3) 0 0; font-size: var(--t-xl); font-weight: 600; }
+  .welcome p { margin: 0; max-width: 40ch; }
+  .welcome .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s2); margin-top: var(--s4); }
+  .welcome .keys { margin-top: var(--s2); font-size: var(--t-sm); color: var(--dim); }
+  .banner { margin: var(--s2) var(--s3) 0; justify-content: space-between; align-items: center; }
+  .confirm-text { margin: 0; line-height: 1.5; }
+  .toast { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: var(--z-toast); display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-pop); font-size: var(--t-md); color: var(--text); }
+  .toast :global(svg) { color: var(--ok); }
 </style>

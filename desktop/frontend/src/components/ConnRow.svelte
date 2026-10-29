@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import { dragSource, sb } from "../state/foldertree.svelte";
+  import Icon from "./Icon.svelte";
 
   let { profile, depth, live, current, onconnect, onedit }: {
     profile: Profile;
@@ -17,37 +18,32 @@
 <div class="row" class:current class:selected={sb.selectedConn === profile.name} class:dragging={sb.drag?.kind === "profile" && sb.drag.id === profile.name} style="padding-left: {14 + 14 * depth + 8}px" use:dragSource={{ kind: "profile", id: profile.name, label: profile.name }}>
   {#each Array(Math.max(0, depth)) as _, i}<span class="guide" style="left: {18 + 14 * i}px"></span>{/each}
   <!-- One click selects the row and shows its open session (if any); a double-click (or Enter on the focused row, which arrives with detail 0) opens a new session. -->
-  <button class="main" onclick={(e) => { if (sb.justDragged) return; if (e.detail === 0) onconnect(profile); else { sb.selectedConn = profile.name; sb.onFocusConnection(profile.name); } }}
+  <button type="button" class="main" onclick={(e) => { if (sb.justDragged) return; if (e.detail === 0) onconnect(profile); else { sb.selectedConn = profile.name; sb.onFocusConnection(profile.name); } }}
           ondblclick={() => { if (sb.justDragged) return; sb.learnOpen(); onconnect(profile); }} title={live ? `Click to show ${profile.name}. Double-click to open another tab.` : `Double-click to open ${profile.name} in a new tab`}>
     <span class="l1">
-      <span class="dot" class:live></span>
+      <span class="dot" class:ok={live} class:live></span>
       <span class="name">{profile.name}</span>
-      {#each tags as t}<span class="tag">{t}</span>{/each}
-      {#if profile.jump}<span class="jump" title="Connects through {profile.jump}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h12M13 8l4 4-4 4" /></svg>{profile.jump}</span>{/if}
+      {#each tags as t}<span class="chip">{t}</span>{/each}
+      {#if profile.jump}<span class="jump" title="Connects through {profile.jump}"><Icon name="arrow-right" size={14} />{profile.jump}</span>{/if}
     </span>
     <span class="host mono">{profile.user}@{profile.host}{profile.port !== 22 ? `:${profile.port}` : ""}</span>
   </button>
-  <button class="edit" data-nodrag aria-label="Edit {profile.name}" title="Edit" onclick={() => onedit(profile)}>
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg>
-  </button>
+  <button type="button" class="icon-btn dense edit" data-nodrag aria-label="Edit {profile.name}" title="Edit" onclick={() => onedit(profile)}><Icon name="pencil" size={14} /></button>
 </div>
 
 <style>
-  .row { position: relative; display: flex; align-items: stretch; padding-right: 4px; user-select: none; }
+  .row { position: relative; display: flex; align-items: center; padding-right: var(--s1); user-select: none; transition: background var(--dur-1) var(--ease); }
   .row:hover { background: var(--hover); }
   .row.selected { background: var(--active); }
-  .row.current { background: var(--active); box-shadow: inset 3px 0 var(--accent); }
+  .row.current { background: var(--accent-hl); }
   .row.dragging { opacity: 0.38; }
   .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); pointer-events: none; }
-  .main { all: unset; flex: 1; min-width: 0; padding: 7px 0; display: grid; gap: 2px; cursor: default; }
-  .l1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dot-off); flex: none; }
-  .dot.live { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-glow); }
+  .main { flex: 1; min-width: 0; padding: var(--s2) 0; display: grid; gap: 2px; background: none; border: 0; color: inherit; text-align: left; cursor: default; }
+  .l1 { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
   .name { font-weight: 600; color: var(--strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tag { font-size: 10px; color: var(--muted); background: var(--line); padding: 0 6px; border-radius: 3px; flex: none; }
-  .jump { display: flex; align-items: center; gap: 3px; font-size: 10.5px; color: var(--dim); flex: none; }
-  .host { padding-left: 16px; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .edit { all: unset; width: 28px; display: none; place-items: center; color: var(--muted); cursor: pointer; }
-  .row:hover .edit, .edit:focus-visible { display: grid; }
-  .edit:hover { color: var(--strong); }
+  .l1 .chip { flex: none; }
+  .jump { display: flex; align-items: center; gap: 2px; font-size: var(--t-xs); color: var(--dim); flex: none; }
+  .host { padding-left: var(--s4); font-size: var(--t-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .edit { display: none; }
+  .row:hover .edit, .edit:focus-visible { display: inline-grid; }
 </style>

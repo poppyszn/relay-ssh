@@ -131,14 +131,14 @@ describe("ProfileForm vault password integration", () => {
   it("asks to unlock instead of saving when a typed password has nowhere to go", async () => {
     const r = await submitted({ oldName: "", name: "srv", unlocked: false, typed: "s3cret-pass" });
     expect(r.onsave).not.toHaveBeenCalled();
-    expect(document.body.textContent).toContain("Unlock Vault");
+    expect(document.body.textContent).toContain("Unlock vault");
     r.done();
   });
 
   it("asks to unlock before renaming a connection whose password is saved", async () => {
     const r = await submitted({ oldName: "old", name: "new", unlocked: false, remembered: ["old"] });
     expect(r.onsave).not.toHaveBeenCalled();
-    expect(document.body.textContent).toContain("Unlock Vault");
+    expect(document.body.textContent).toContain("Unlock vault");
     r.done();
   });
 

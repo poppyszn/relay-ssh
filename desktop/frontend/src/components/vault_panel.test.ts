@@ -13,8 +13,9 @@ describe("VaultPanel component", () => {
     const c = mount(VaultPanel, { target, props: { mode: "create", onclose: () => {} } });
     flushSync();
 
-    expect(target.querySelector("h2")?.textContent).toBe("Create Vault");
-    expect(target.textContent).toContain("cannot be recovered or reset if forgotten");
+    expect(target.querySelector("h2")?.textContent).toBe("Create vault");
+    expect(target.textContent).toContain("the only way back in is to reset the vault");
+    expect(target.textContent).not.toContain("cannot be recovered");
     expect(target.querySelector('input[aria-label="Master password"]')).not.toBeNull();
     expect(target.querySelector('input[aria-label="Confirm master password"]')).not.toBeNull();
     unmount(c);
@@ -27,10 +28,9 @@ describe("VaultPanel component", () => {
     const c = mount(VaultPanel, { target, props: { mode: "unlock", onclose: () => {} } });
     flushSync();
 
-    expect(target.querySelector("h2")?.textContent).toBe("Unlock Vault");
+    expect(target.querySelector("h2")?.textContent).toBe("Unlock vault");
     expect(target.querySelector('input[aria-label="Master password"]')).not.toBeNull();
     expect(target.querySelector("button[type=submit]")?.textContent).toBe("Unlock");
-    expect(target.textContent).toContain("Forgot password? Reset");
     unmount(c);
   });
 
@@ -50,7 +50,7 @@ describe("VaultPanel component", () => {
     });
     flushSync();
 
-    expect(target.querySelector("h2")?.textContent).toBe("Unlock Vault for prod-db");
+    expect(target.querySelector("h2")?.textContent).toBe("Unlock vault for prod-db");
     expect(target.textContent).toContain("prod-db");
     const skipBtn = target.querySelector<HTMLButtonElement>('button[aria-label="Skip unlocking vault"]');
     expect(skipBtn).not.toBeNull();
@@ -59,45 +59,43 @@ describe("VaultPanel component", () => {
     unmount(c);
   });
 
-  it("renders Manage mode when vault is unlocked", () => {
-    vault.exists = true;
-    vault.unlocked = true;
-    vault.remembered = ["web1", "web2"];
-    const target = document.createElement("div");
-    const c = mount(VaultPanel, { target, props: { mode: "manage", onclose: () => {} } });
+  it("auto mode creates when there is no vault and unlocks when there is one", () => {
+    vault.exists = false;
+    vault.unlocked = false;
+    let target = document.createElement("div");
+    let c = mount(VaultPanel, { target, props: { mode: "auto", onclose: () => {} } });
     flushSync();
+    expect(target.querySelector("h2")?.textContent).toBe("Create vault");
+    unmount(c);
 
-    expect(target.querySelector("h2")?.textContent).toBe("Vault");
-    expect(target.textContent).toContain("Vault is unlocked");
-    expect(target.textContent).toContain("2 passwords saved");
-    expect(target.textContent).toContain("Lock now");
-    expect(target.textContent).toContain("Change master password");
-    expect(target.textContent).toContain("Reset vault…");
+    vault.exists = true;
+    target = document.createElement("div");
+    c = mount(VaultPanel, { target, props: { mode: "auto", onclose: () => {} } });
+    flushSync();
+    expect(target.querySelector("h2")?.textContent).toBe("Unlock vault");
     unmount(c);
   });
 
-  it("reset requires typing RESET before submit button becomes enabled", async () => {
+  it("create refuses mismatched passwords without calling the service", async () => {
+    vault.exists = false;
+    const create = vi.spyOn(VaultService, "Create").mockResolvedValue(undefined as never);
     const target = document.createElement("div");
-    const c = mount(VaultPanel, { target, props: { mode: "reset", onclose: () => {} } });
+    const c = mount(VaultPanel, { target, props: { mode: "create", onclose: () => {} } });
     flushSync();
-
-    expect(target.querySelector("h2")?.textContent).toBe("Reset Vault");
-    const submitBtn = target.querySelector<HTMLButtonElement>("button[type=submit]")!;
-    const input = target.querySelector<HTMLInputElement>('input[aria-label="Type RESET to confirm"]')!;
-
-    expect(submitBtn.disabled).toBe(true);
-
-    input.value = "reset";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    const type = (label: string, value: string) => {
+      const el = target.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+      el.value = value;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    type("Master password", "one");
+    type("Confirm master password", "two");
     flushSync();
-    expect(submitBtn.disabled).toBe(true);
-
-    input.value = "RESET";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    target.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true }));
     flushSync();
-    expect(submitBtn.disabled).toBe(false);
-
+    expect(target.textContent).toContain("Passwords do not match");
+    expect(create).not.toHaveBeenCalled();
     unmount(c);
+    vi.restoreAllMocks();
   });
 
   it("clears input on unlock attempt", async () => {

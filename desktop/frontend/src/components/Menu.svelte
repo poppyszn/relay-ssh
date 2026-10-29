@@ -7,6 +7,8 @@
     sub?: string;
     icon?: IconName;
     kbd?: string;
+    /** Quiet text on the right, e.g. "empty". */
+    hint?: string;
     danger?: boolean;
     disabled?: boolean;
     /** A hairline above this row. */
@@ -77,6 +79,7 @@
       {#if it.icon}<span class="ico"><Icon name={it.icon} /></span>{/if}
       <span class="txt"><span class="t">{it.label}</span>{#if it.sub}<span class="s">{it.sub}</span>{/if}</span>
       {#if it.kbd}<span class="kbd">{it.kbd}</span>{/if}
+      {#if it.hint}<span class="note">{it.hint}</span>{/if}
     </button>
   {/each}
 </div>
@@ -93,7 +96,8 @@
   .row-hl .ico { color: var(--accent-text); background: var(--accent-ring); }
   .item:not(.rich).row-hl .ico { background: none; }
   .txt { display: grid; gap: 1px; flex: 1; min-width: 0; }
-  .t { font-weight: 500; }
-  .s { font-size: var(--t-sm); color: var(--muted); }
+  .t { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .s { font-size: var(--t-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .note { font-size: var(--t-xs); color: var(--dim); }
   .row-hl .s { color: var(--text2); }
 </style>

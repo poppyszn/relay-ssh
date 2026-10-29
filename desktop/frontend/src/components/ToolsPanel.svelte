@@ -1,9 +1,10 @@
 <script lang="ts">
   import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import { vault } from "../state/vault.svelte";
+  import EmptyState from "./EmptyState.svelte";
+  import Modal from "./Modal.svelte";
 
-  type Tab = "health" | "backup" | "import" | "keys" | "vault";
-  let { initial = "health", onclose, onchanged, ongenerate, onvault }: { initial?: Tab; onclose: () => void; onchanged: () => void; ongenerate: () => void; onvault?: () => void } = $props();
+  type Tab = "health" | "backup" | "import" | "keys";
+  let { initial = "health", onclose, onchanged, ongenerate }: { initial?: Tab; onclose: () => void; onchanged: () => void; ongenerate: () => void } = $props();
 
   // svelte-ignore state_referenced_locally
   let tab = $state<Tab>(initial);
@@ -12,7 +13,6 @@
     { id: "backup", label: "Backup & restore" },
     { id: "import", label: "Import" },
     { id: "keys", label: "Keys" },
-    { id: "vault", label: "Vault" },
   ];
 
   const msg = (e: unknown) => (e as Error)?.message ?? String(e);
@@ -64,7 +64,6 @@
     } catch (e) { restoreNote = { ok: false, text: msg(e) }; }
   }
   async function restore() {
-    if (!confirmRestore) return (confirmRestore = true);
     confirmRestore = false;
     try {
       await ToolsService.Restore(restorePath, restorePass);
@@ -72,6 +71,17 @@
       restorePass = "";
       onchanged();
     } catch (e) { restoreNote = { ok: false, text: msg(e) }; }
+  }
+
+  // Tabs: arrow keys move between them (the list is vertical).
+  let navEl: HTMLElement;
+  function onNavKey(e: KeyboardEvent) {
+    const i = tabs.findIndex((t) => t.id === tab);
+    const next = e.key === "ArrowDown" ? (i + 1) % tabs.length : e.key === "ArrowUp" ? (i - 1 + tabs.length) % tabs.length : e.key === "Home" ? 0 : e.key === "End" ? tabs.length - 1 : -1;
+    if (next < 0) return;
+    e.preventDefault();
+    tab = tabs[next].id;
+    navEl.querySelectorAll<HTMLElement>('[role="tab"]')[next]?.focus();
   }
 
   // Import
@@ -126,135 +136,138 @@
   $effect(() => { if (tab === "health") recheck(); else if (tab === "keys") loadKeys(); });
 </script>
 
-<div class="scrim" role="presentation" onclick={onclose} onkeydown={(e) => e.key === "Escape" && onclose()}>
-  <div class="panel" role="dialog" aria-label="Tools" tabindex="-1" onclick={(e) => e.stopPropagation()}>
-    <header><h2>Tools</h2><button class="x" aria-label="Close" onclick={onclose}>&times;</button></header>
-    <div class="body">
-      <nav aria-label="Tools">
-        {#each tabs as t}<button class:on={tab === t.id} onclick={() => (tab = t.id)}>{t.label}</button>{/each}
-      </nav>
-      <div class="content">
-        {#if tab === "health"}
-          <div class="head"><div><h3>Health</h3><p>Checks that your connections, the generated SSH config and your keys agree.</p></div>
-            <div class="actions"><button class="btn" onclick={recheck} disabled={busy}>Re-check</button>{#if problems}<button class="btn primary" onclick={fix} disabled={busy}>Fix {problems} issue{problems === 1 ? "" : "s"}</button>{/if}</div></div>
-          <ul class="checks">
+<Modal title="Tools" size="lg" tall flush {onclose}>
+  <div class="layout">
+    <div class="nav" role="tablist" aria-label="Tools" aria-orientation="vertical" tabindex="-1" bind:this={navEl} onkeydown={onNavKey}>
+      {#each tabs as t}
+        <button type="button" role="tab" id="tools-tab-{t.id}" aria-selected={tab === t.id} aria-controls="tools-panel" tabindex={tab === t.id ? 0 : -1} data-autofocus={tab === t.id ? "" : undefined} class="tab" class:row-hl={tab === t.id} class:row-hover={tab !== t.id} onclick={() => (tab = t.id)}>{t.label}</button>
+      {/each}
+    </div>
+    <div class="content" role="tabpanel" id="tools-panel" aria-labelledby="tools-tab-{tab}" tabindex="-1">
+      {#if tab === "health"}
+        <div class="head">
+          <div><h3>Health</h3><p class="hint">Checks that your connections, the generated SSH config and your keys agree.</p></div>
+          <div class="actions">
+            <button type="button" class="btn" onclick={recheck} disabled={busy}>Re-check</button>
+            {#if problems}<button type="button" class="btn primary" onclick={fix} disabled={busy}>Fix {problems} issue{problems === 1 ? "" : "s"}</button>{/if}
+          </div>
+        </div>
+        {#if checks.length}
+          <ul class="rows">
             {#each checks as c}
               <li><span class="dot" class:ok={c.status === "ok"} class:warn={c.status === "warn"} class:err={c.status === "fail"}></span><b>{c.name}</b><span class="detail">{c.detail}</span></li>
             {/each}
           </ul>
-          {#each fixErrors as e}<p class="note bad">{e}</p>{/each}
-          {#if checks.length && !problems}<p class="note good">Everything looks healthy.</p>{/if}
-        {:else if tab === "backup"}
+        {/if}
+        {#each fixErrors.filter(Boolean) as e}<div class="notice bad" role="alert">{e}</div>{/each}
+        {#if checks.length && !problems}<div class="notice good">Everything looks healthy.</div>{/if}
+      {:else if tab === "backup"}
+        <section>
           <h3>Back up</h3>
-          <p>Saves your connections and adopted keys into one file, encrypted with a passphrase. Relay never stores the passphrase: without it the file cannot be opened.</p>
-          <div class="fields"><label>Passphrase<input type="password" bind:value={pass} autocomplete="off" /></label><label>Confirm<input type="password" bind:value={pass2} autocomplete="off" /></label></div>
-          <div class="actions"><button class="btn primary" onclick={backup}>Choose location and back up</button></div>
-          {#if backupNote}<p class="note" class:good={backupNote.ok} class:bad={!backupNote.ok}>{backupNote.text}</p>{/if}
+          <p class="hint">Saves your connections and adopted keys into one file, encrypted with a passphrase. Relay never stores the passphrase: without it the file cannot be opened.</p>
+          <div class="pair">
+            <label class="field"><span>Passphrase</span><input type="password" bind:value={pass} autocomplete="off" /></label>
+            <label class="field"><span>Confirm passphrase</span><input type="password" bind:value={pass2} autocomplete="off" /></label>
+          </div>
+          <div class="actions"><button type="button" class="btn primary" onclick={backup}>Choose location and back up</button></div>
+          {#if backupNote?.text}<div class="notice" class:good={backupNote.ok} class:bad={!backupNote.ok} role={backupNote.ok ? "status" : "alert"}>{backupNote.text}</div>{/if}
+        </section>
 
-          <h3 class="gap">Restore</h3>
-          <p>Replaces your current connections and adopted keys with the contents of a backup.</p>
-          <div class="actions"><button class="btn" onclick={chooseRestore}>Choose backup…</button><span class="path mono">{restorePath || "No file chosen"}</span></div>
+        <section>
+          <h3>Restore</h3>
+          <p class="hint">Replaces your current connections and adopted keys with the contents of a backup.</p>
+          <div class="actions"><button type="button" class="btn" onclick={chooseRestore}>Choose backup…</button><span class="path mono">{restorePath || "No file chosen"}</span></div>
           {#if restorePath}
-            {#if !needsPass}<p class="note bad">This backup is not encrypted, so nothing proves it is yours. Only restore a file you made or trust: it replaces your connections and keys. Connections that could not be written safely into your ssh config are refused.</p>{/if}
-            {#if needsPass}<div class="fields one"><label>Passphrase<input type="password" bind:value={restorePass} autocomplete="off" /></label></div>{/if}
-            <div class="actions"><button class="btn" class:danger-fill={confirmRestore} onclick={restore}>{confirmRestore ? "Click again to replace current data" : "Restore"}</button></div>
+            {#if !needsPass}<div class="notice warn" role="alert">This backup is not encrypted, so nothing proves it is yours. Only restore a file you made or trust: it replaces your connections and keys. Connections that could not be written safely into your ssh config are refused.</div>{/if}
+            {#if needsPass}<label class="field one"><span>Passphrase</span><input type="password" bind:value={restorePass} autocomplete="off" /></label>{/if}
+            {#if confirmRestore}
+              <div class="notice warn" role="alert">This replaces your current connections and adopted keys.</div>
+              <div class="actions">
+                <button type="button" class="btn" onclick={() => (confirmRestore = false)}>Cancel</button>
+                <button type="button" class="btn danger" onclick={restore}>Replace</button>
+              </div>
+            {:else}
+              <div class="actions"><button type="button" class="btn" onclick={() => (confirmRestore = true)}>Restore</button></div>
+            {/if}
           {/if}
-          {#if restoreNote}<p class="note" class:good={restoreNote.ok} class:bad={!restoreNote.ok}>{restoreNote.text}</p>{/if}
-        {:else if tab === "import"}
-          <h3>Import from ~/.ssh/config</h3>
-          <p>Adds a connection for every concrete Host entry in your SSH config that Relay doesn't know yet. Entries without a HostName or User get ssh's own defaults (the alias and your login). Wildcard hosts are ignored, and nothing in your SSH config is changed.</p>
-          <div class="actions"><button class="btn primary" onclick={doImport} disabled={busy}>Import</button></div>
-          {#if importError}<p class="note bad">{importError}</p>{/if}
-          {#if report}
-            <p class="note" class:good={added.length > 0}>{added.length ? `Imported ${added.length}: ${added.join(", ")}` : "No new connections found."}</p>
-            {#each skipped as s}<p class="note bad">Skipped {s}</p>{/each}
-          {/if}
-        {:else if tab === "keys"}
-          <div class="head"><div><h3>Keys</h3><p>Adopted keys are copied into Relay's vault and included in backups. Other keys stay where they are and are not backed up. For a key with a passphrase, adopting also asks for it once so ssh does not ask every time.</p></div>
-            <div class="actions"><button class="btn" onclick={adoptOther}>Adopt a key…</button><button class="btn" onclick={ongenerate}>Generate…</button></div></div>
-          {#if keyError}<p class="note bad">{keyError}</p>{/if}
-          <ul class="keys">
+          {#if restoreNote?.text}<div class="notice" class:good={restoreNote.ok} class:bad={!restoreNote.ok} role={restoreNote.ok ? "status" : "alert"}>{restoreNote.text}</div>{/if}
+        </section>
+      {:else if tab === "import"}
+        <h3>Import from ~/.ssh/config</h3>
+        <p class="hint">Adds a connection for every concrete Host entry in your SSH config that Relay doesn't know yet. Entries without a HostName or User get ssh's own defaults (the alias and your login). Wildcard hosts are ignored, and nothing in your SSH config is changed.</p>
+        <div class="actions"><button type="button" class="btn primary" onclick={doImport} disabled={busy}>Import</button></div>
+        {#if importError}<div class="notice bad" role="alert">{importError}</div>{/if}
+        {#if report}
+          <div class="notice" class:good={added.length > 0} role="status">{added.length ? `Imported ${added.length}: ${added.join(", ")}` : "No new connections found."}</div>
+          {#each skipped as s}<div class="notice bad">Skipped {s}</div>{/each}
+        {/if}
+      {:else if tab === "keys"}
+        <div class="head">
+          <div><h3>Keys</h3><p class="hint">Adopted keys are copied into Relay's vault and included in backups. Other keys stay where they are and are not backed up. For a key with a passphrase, adopting also asks for it once so ssh does not ask every time.</p></div>
+          <div class="actions">
+            <button type="button" class="btn" onclick={adoptOther}>Adopt a key…</button>
+            <button type="button" class="btn" onclick={ongenerate}>Generate a key…</button>
+          </div>
+        </div>
+        {#if keyError}<div class="notice bad" role="alert">{keyError}</div>{/if}
+        {#if keyList.length}
+          <ul class="rows">
             {#each keyList as k}
-              <li><div class="kname"><b class="mono">{k.name}</b>{#if k.adopted}<span class="chip ok">in backups</span>{:else}<span class="chip">not backed up</span>{/if}{#if k.encrypted}<span class="chip">passphrase</span>{:else}<span class="chip warn" title="Anyone who can read this file can use the key. Add a passphrase with: ssh-keygen -p -f {k.path}">no passphrase</span>{/if}</div>
-                <div class="kmeta mono">{k.path}</div>
-                <div class="kuse">{k.usedBy?.length ? "Used by " + k.usedBy.join(", ") : "Not used by any connection"}</div>
+              <li class="key">
+                <div class="info">
+                  <div class="kname"><b class="mono">{k.name}</b>{#if k.adopted}<span class="chip ok">In backups</span>{:else}<span class="chip">Not backed up</span>{/if}{#if k.encrypted}<span class="chip">Passphrase</span>{:else}<span class="chip warn" title="Anyone who can read this file can use the key. Add a passphrase with: ssh-keygen -p -f {k.path}">No passphrase</span>{/if}</div>
+                  <div class="kmeta mono">{k.path}</div>
+                  <div class="kuse">{k.usedBy?.length ? "Used by " + k.usedBy.join(", ") : "Not used by any connection"}</div>
+                </div>
                 {#if ask && ask.path === k.path}
                   <form class="pass" onsubmit={(e) => { e.preventDefault(); submitPass(); }}>
-                    <label>Passphrase for {k.name}<input type="password" bind:value={keyPass} autocomplete="off" /></label>
-                    <div class="actions"><button type="submit" class="btn primary" disabled={busy || !keyPass}>{ask.mode === "adopt" ? "Adopt and remember" : "Remember"}</button><button type="button" class="btn" onclick={cancelPass}>Cancel</button></div>
+                    <label class="field"><span>Passphrase for {k.name}</span><input type="password" bind:value={keyPass} autocomplete="off" data-autofocus /></label>
                     <p class="hint">{mac ? "ssh-add stores it in your macOS Keychain and loads the key into the ssh-agent, so ssh stops asking. Relay does not keep it." : "The key is loaded into your ssh-agent for this login session, so ssh stops asking. Relay does not keep the passphrase."}</p>
+                    <div class="actions">
+                      <button type="button" class="btn sm" onclick={cancelPass}>Cancel</button>
+                      <button type="submit" class="btn sm primary" disabled={busy || !keyPass}>{ask.mode === "adopt" ? "Adopt and remember" : "Remember"}</button>
+                    </div>
                   </form>
-                {:else if !k.adopted}<button class="btn adopt" onclick={() => adopt(k.path)}>Adopt</button>
-                {:else if k.encrypted}<button class="btn adopt" title="Load this key into the ssh-agent{mac ? ' and the Keychain' : ''} so ssh stops asking for its passphrase" onclick={() => { ask = { path: k.path, name: k.name, mode: "remember" }; keyPass = ""; keyError = ""; }}>Remember passphrase</button>{/if}</li>
-            {:else}<li class="empty">No private keys found in ~/.ssh.</li>{/each}
+                {:else if !k.adopted}<button type="button" class="btn sm" onclick={() => adopt(k.path)}>Adopt</button>
+                {:else if k.encrypted}<button type="button" class="btn sm" title="Load this key into the ssh-agent{mac ? ' and the Keychain' : ''} so ssh stops asking for its passphrase" onclick={() => { ask = { path: k.path, name: k.name, mode: "remember" }; keyPass = ""; keyError = ""; }}>Remember passphrase</button>{/if}
+              </li>
+            {/each}
           </ul>
-        {:else if tab === "vault"}
-          <div class="head">
-            <div>
-              <h3>Encrypted Vault</h3>
-              <p>Relay can store SSH passwords in an encrypted vault on disk, protected with Filippo Valsorda's age encryption and unlocked with your master password.</p>
-            </div>
-          </div>
-          <div class="note" style="margin-bottom: 16px;">
-            <p style="margin: 0 0 6px;">
-              Status: <strong>{vault.exists ? (vault.unlocked ? "Unlocked" : "Locked") : "Not set up"}</strong>
-            </p>
-            {#if vault.remembered.length > 0}
-              <p style="margin: 0; font-size: 12px; color: var(--muted);">{vault.remembered.length} password{vault.remembered.length === 1 ? "" : "s"} saved in vault</p>
-            {/if}
-          </div>
-          <div class="actions">
-            {#if onvault}
-              <button class="btn primary" onclick={onvault}>{vault.exists ? (vault.unlocked ? "Manage vault" : "Unlock vault") : "Create vault"}</button>
-            {/if}
-          </div>
+        {:else}
+          <EmptyState icon="key" title="No private keys found" text="Relay looks for keys in ~/.ssh. Generate one or adopt a key from elsewhere." />
         {/if}
-      </div>
+      {/if}
     </div>
   </div>
-</div>
+</Modal>
 
 <style>
-  .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 25; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .panel { width: min(860px, 100%); height: min(600px, 100%); display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 30px 80px var(--shadow); overflow: hidden; }
-  header { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 14px 0 22px; border-bottom: 1px solid var(--line2); }
-  h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--strong); }
-  .x { width: 30px; height: 30px; border: 0; background: none; border-radius: 4px; color: var(--muted); font-size: 18px; }
-  .x:hover { background: var(--line); color: var(--strong); }
-  .body { flex: 1; min-height: 0; display: flex; }
-  nav { width: 190px; flex: none; background: var(--bar); border-right: 1px solid var(--line2); padding: 8px 0; }
-  nav button { display: block; width: 100%; text-align: left; padding: 10px 22px; border: 0; background: none; color: var(--text2); }
-  nav button:hover { background: var(--hover); }
-  nav button.on { background: var(--active); color: var(--strong); box-shadow: inset 3px 0 var(--accent); font-weight: 500; }
-  .content { flex: 1; min-width: 0; overflow: auto; padding: 20px 26px 26px; }
-  h3 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--strong); }
-  h3.gap { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line2); }
-  p { margin: 0 0 12px; color: var(--muted); line-height: 1.5; }
-  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
-  .actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 10px; }
-  .path { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px; }
-  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 6px 0 4px; }
-  .fields.one { grid-template-columns: 1fr; max-width: 50%; }
-  label { display: grid; gap: 5px; font-size: 12px; color: var(--text2); }
-  .checks, .keys { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--line2); }
-  .checks li { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-top: 1px solid var(--line2); }
-  .checks li:first-child, .keys li:first-child { border-top: 0; }
-  .checks b { font-weight: 500; min-width: 140px; }
+  .layout { flex: 1; min-height: 0; display: flex; }
+  .nav { width: 196px; flex: none; display: grid; align-content: start; gap: 2px; padding: var(--s3) var(--s2); background: var(--bar); border-right: 1px solid var(--line); }
+  .tab { height: var(--h-md); padding: 0 var(--s3); text-align: left; background: transparent; border: 0; border-radius: var(--r-sm); color: var(--text2); font-size: var(--t-md); }
+  .tab[aria-selected="true"] { font-weight: 500; }
+  .content { flex: 1; min-width: 0; overflow: auto; padding: var(--s5); display: grid; align-content: start; gap: var(--s4); outline: none; }
+  h3 { margin: 0 0 var(--s1); font-size: var(--t-lg); font-weight: 600; color: var(--strong); }
+  p { margin: 0; }
+  section { display: grid; gap: var(--s4); }
+  section + section { padding-top: var(--s5); border-top: 1px solid var(--line); }
+  .head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s4); }
+  .actions { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+  .head .actions { flex: none; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+  .field.one { max-width: 50%; }
+  .path { font-size: var(--t-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .rows { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r-sm); }
+  .rows li { display: flex; align-items: center; gap: var(--s3); min-height: 36px; padding: var(--s2) var(--s3); border-top: 1px solid var(--line); }
+  .rows li:first-child { border-top: 0; }
+  .rows b { font-weight: 500; min-width: 140px; }
   .detail { color: var(--muted); }
-  .dot.warn { background: var(--warn); }
-  .keys li { position: relative; display: grid; gap: 2px; padding: 12px 14px; border-top: 1px solid var(--line2); }
-  .kname { display: flex; align-items: center; gap: 8px; }
-  .kmeta { font-size: 11.5px; color: var(--muted); }
-  .kuse { font-size: 12px; color: var(--text2); }
-  .chip.ok { color: var(--ok); }
-  .chip.warn { color: var(--warn); }
-  .pass { display: grid; gap: 8px; margin-top: 8px; padding-top: 10px; border-top: 1px dashed var(--line2); }
-  .pass label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); max-width: 320px; }
-  .pass .hint { margin: 0; font-size: 11.5px; color: var(--muted); }
-  .adopt { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); padding: 5px 12px; }
-  .empty { color: var(--muted); padding: 16px; }
-  .note { padding: 9px 12px; border: 1px solid var(--line2); margin: 10px 0 0; }
-  .note.good { color: var(--ok); border-color: var(--ok-edge); background: var(--ok-bg); }
-  .note.bad { color: var(--err-text); border-color: var(--err-edge); background: var(--err-bg); }
-  .danger-fill { background: var(--err); border-color: var(--err); color: var(--on-err); font-weight: 600; }
+  .rows li.key { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+  .info { display: grid; gap: 2px; min-width: 0; }
+  .kname { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); }
+  .kname b { min-width: 0; }
+  .kmeta { font-size: var(--t-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kuse { font-size: var(--t-sm); color: var(--text2); }
+  .pass { grid-column: 1 / -1; display: grid; gap: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--line); }
+  .pass .field { max-width: 320px; }
 </style>
