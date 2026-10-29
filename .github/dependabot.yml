@@ -14,6 +14,11 @@ updates:
     groups:
       frontend:
         patterns: ["*"]
+    ignore:
+      # svelte-check's --tsgo mode needs TypeScript 6 installed next to the 7 alias
+      # (@typescript/native); moving "typescript" itself to 7 breaks `npm run check`.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }

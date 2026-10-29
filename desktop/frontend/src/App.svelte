@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import { Clipboard, Events } from "@wailsio/runtime";
-  import { runBench } from "./bench";
   import { blankProfile, nextSession } from "./lib";
   import { ws } from "./workspace.svelte";
   import { leaves } from "./panes";
@@ -9,17 +8,10 @@
   import Sidebar from "./Sidebar.svelte";
   import StatusBar from "./StatusBar.svelte";
   import PaneView from "./PaneView.svelte";
-  import Palette from "./Palette.svelte";
   import DragGhost from "./DragGhost.svelte";
-  import ProfileForm from "./ProfileForm.svelte";
   import Logo from "./Logo.svelte";
   import BlockMenu from "./BlockMenu.svelte";
   import { copyText } from "./clipboard";
-  import SettingsPanel from "./SettingsPanel.svelte";
-  import ToolsPanel from "./ToolsPanel.svelte";
-  import FilesPanel from "./FilesPanel.svelte";
-  import ForwardsPanel from "./ForwardsPanel.svelte";
-  import SnippetsPanel from "./SnippetsPanel.svelte";
   import { settings } from "./settings.svelte";
   import { sb } from "./foldertree.svelte";
   import { FilesService, ForwardsService, ProfilesService, SnippetsService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
@@ -37,6 +29,9 @@
   let forwardsTarget = $state("");
   let snippetsOpen = $state(false);
   let form = $state<{ initial: Profile; oldName: string } | null>(null);
+  // Loaded the first time the form opens; the {#if} keeps `form` non-null while it renders.
+  let ProfileForm = $state<typeof import("./ProfileForm.svelte").default | null>(null);
+  $effect(() => { if (form && !ProfileForm) import("./ProfileForm.svelte").then((m) => (ProfileForm = m.default)); });
   let confirmDelete = $state<Profile | null>(null);
   let benchHost = $state<HTMLElement>();
   let customChrome = $state(false);
@@ -186,7 +181,7 @@
       // RELAY_BENCH is "run", "idle", "smoke", or "smoke|<connection>|<remote dir>" to also test files
       const [mode, box, dir, sshdPort, localPort] = (await TerminalService.BenchMode()).split("|");
       if (mode === "smoke") return smoke(box, dir, sshdPort, localPort);
-      if (mode) return runBench(benchHost!, mode);
+      if (mode) return (await import("./bench")).runBench(benchHost!, mode);
       await refresh();
       await ws.openTab(null);
     })();
@@ -790,16 +785,16 @@
   <StatusBar {profiles} themeName={settings.label} />
 </div>
 
-{#if snippetsOpen}<SnippetsPanel into={ws.panes[ws.focusedPane] ? (ws.panes[ws.focusedPane].target ?? "Local shell") : ""} onuse={(c, run) => ws.typeSnippet(c, run)} onclose={() => (snippetsOpen = false)} />{/if}
-{#if forwardsTarget}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/if}
-{#if filesTarget}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/if}
-{#if toolsOpen}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/if}
+{#if snippetsOpen}{#await import("./SnippetsPanel.svelte") then { default: SnippetsPanel }}<SnippetsPanel into={ws.panes[ws.focusedPane] ? (ws.panes[ws.focusedPane].target ?? "Local shell") : ""} onuse={(c, run) => ws.typeSnippet(c, run)} onclose={() => (snippetsOpen = false)} />{/await}{/if}
+{#if forwardsTarget}{#await import("./ForwardsPanel.svelte") then { default: ForwardsPanel }}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/await}{/if}
+{#if filesTarget}{#await import("./FilesPanel.svelte") then { default: FilesPanel }}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/await}{/if}
+{#if toolsOpen}{#await import("./ToolsPanel.svelte") then { default: ToolsPanel }}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/await}{/if}
 {#if ws.blockMenu}<BlockMenu block={ws.blockMenu.block} rect={ws.blockMenu.rect} oncopy={copied} onclose={() => (ws.blockMenu = null)} />{/if}
 {#if toast}<div class="toast" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>{toast}</div>{/if}
-{#if settingsOpen}<SettingsPanel onclose={() => (settingsOpen = false)} />{/if}
+{#if settingsOpen}{#await import("./SettingsPanel.svelte") then { default: SettingsPanel }}<SettingsPanel onclose={() => (settingsOpen = false)} />{/await}{/if}
 <DragGhost />
-{#if palette}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/if}
-{#if form}
+{#if palette}{#await import("./Palette.svelte") then { default: Palette }}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/await}{/if}
+{#if form && ProfileForm}
   <ProfileForm initial={form.initial} oldName={form.oldName} {profiles} {folders} onsave={save} ondelete={() => (confirmDelete = profiles.find((p) => p.name === form!.oldName) ?? null)} oncancel={() => (form = null)} />
 {/if}
 {#if confirmDelete}

@@ -284,7 +284,12 @@ An audit of `main` (dependency scans, attack surface, measured performance) foun
 - **Permissions.** The app tightens its folders to 0700 at startup (older versions left some at 0755; the files inside were already 0600).
 - **Prompt hook cost.** The branch lookup ran two git processes outside a repository; it now runs one (exit status 1 means detached HEAD, only then a second call for the short commit), saving about 12 ms per prompt there.
 
-Measured on the production build: a 203 MB `cat` in about 3.1 to 3.5 s with the UI never stalling more than 40 ms, keystroke echo 1 ms, under 1 percent CPU and about 105 MB memory idle, 24 terminals all keeping GPU rendering. Not done: splitting the 708 KB script into lazy chunks, and measuring startup time and long-session memory.
+Measured on the production build: a 203 MB `cat` in about 3.1 to 3.5 s with the UI never stalling more than 40 ms, keystroke echo 1 ms, under 1 percent CPU and about 105 MB memory idle, 24 terminals all keeping GPU rendering. Follow-up, same day:
+
+- **Code splitting.** The startup script went from 708 KB to 471 KB (gzip 195 to 126 KB). The WebGL renderer (113 KB, fetched in parallel with the terminal endpoint, so the first terminal still gets GPU rendering), the benchmark code and the seven on-demand panels (settings, tools, files, forwards, snippets, command palette, connection form) are separate chunks fetched on first use. The rest is xterm.js and Svelte, which every window needs. Verified in the real dev window (no JS errors, GPU rendering on) and in the production binary under the CSP (the bench chunk loads and runs, throughput unchanged).
+- **Dependabot and TypeScript 7.** The proposed `typescript` 6 to 7 bump cannot be taken: `svelte-check --tsgo` requires TypeScript 6 installed beside the TypeScript 7 alias (`@typescript/native`), and fails outright with only 7. Dependabot now ignores major `typescript` updates; revisit when svelte-check supports 7 alone.
+
+Not done: measuring startup time and long-session memory.
 
 ## 10. Working agreement (carried over from the CLI)
 

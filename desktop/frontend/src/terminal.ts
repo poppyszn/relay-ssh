@@ -1,7 +1,6 @@
 import { Terminal, type IDisposable } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
-import { WebglAddon } from "@xterm/addon-webgl";
 import { BlockTracker, type BlockRef } from "./blocks";
 import { settings } from "./settings.svelte";
 import "@xterm/xterm/css/xterm.css";
@@ -78,7 +77,8 @@ export interface Session {
 
 export async function openSession(el: HTMLElement, target: string, scrollback = 10000): Promise<Session> {
   await document.fonts.load(`400 ${settings.fontSize}px "JetBrains Mono"`).catch(() => []);
-  const ep = await TerminalService.Endpoint();
+  // The WebGL renderer is its own chunk: fetched alongside the endpoint, not in the startup bundle.
+  const [ep, webglMod] = await Promise.all([TerminalService.Endpoint(), import("@xterm/addon-webgl").catch(() => null)]);
   const term = new Terminal({ scrollback, allowProposedApi: true, ...settings.xterm });
   const fit = new FitAddon();
   const search = new SearchAddon();
@@ -87,7 +87,7 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
   term.open(el);
   let webgl = false;
   try {
-    const gl = new WebglAddon();
+    const gl = new webglMod!.WebglAddon();
     gl.onContextLoss(() => gl.dispose());
     term.loadAddon(gl);
     webgl = true;
