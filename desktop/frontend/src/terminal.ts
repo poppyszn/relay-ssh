@@ -10,7 +10,7 @@ const ACK_BATCH = 128 * 1024;
 
 // Matches theme.css: deep navy background, soft blue accent.
 const THEME = {
-  background: "#141c29", foreground: "#d3dcea", cursor: "#f07b86", selectionBackground: "#2d4466",
+  background: "#1b2634", foreground: "#d3dcea", cursor: "#f07b86", selectionBackground: "#2d4466",
   black: "#1f2a3a", red: "#f07b86", green: "#9ad07a", yellow: "#e6c07b", blue: "#4aa8ee", magenta: "#c792ea", cyan: "#56d4dd", white: "#d3dcea",
   brightBlack: "#5c6b82", brightRed: "#ff939d", brightGreen: "#b4e394", brightYellow: "#f3d398", brightBlue: "#7cc0f5", brightMagenta: "#d9aaf2", brightCyan: "#7ee3ea", brightWhite: "#ffffff",
 };
@@ -25,8 +25,9 @@ export interface Session {
 }
 
 export async function openSession(el: HTMLElement, target: string, scrollback = 10000): Promise<Session> {
+  await document.fonts.load('400 13px "JetBrains Mono"').catch(() => []);
   const ep = await TerminalService.Endpoint();
-  const term = new Terminal({ scrollback, fontFamily: '"SF Mono", Menlo, "Cascadia Mono", Consolas, monospace', fontSize: 13, allowProposedApi: true, cursorBlink: true, theme: THEME });
+  const term = new Terminal({ scrollback, fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace', fontSize: 13, lineHeight: 1.35, allowProposedApi: true, cursorBlink: true, theme: THEME });
   const fit = new FitAddon();
   term.loadAddon(fit);
   term.open(el);

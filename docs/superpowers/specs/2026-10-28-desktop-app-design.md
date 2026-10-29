@@ -162,6 +162,14 @@ Visual direction (owner-provided reference, a Windows terminal with a deep navy-
 
 Known gaps: only one terminal at a time (tabs are Phase 3); no import-from-`ssh_config` or key picker in the UI yet.
 
+## 9d. Phase 3 progress (2026-10-29)
+
+Design: the approved Claude Design canvas (flat structure with square tabs, edge-to-edge bar highlights, hairline borders; small radii only on controls; round status dots; Inter for UI, JetBrains Mono for the terminal, both bundled). Canvas: https://claude.ai/artifact/D1az9oH3pTN3a5zfY8jC2g (private to the owner).
+
+Done (stage A/B): tab strip as the macOS title bar, flat sidebar, status bar, quick open with actions, redesigned connection form with a live preview from the real generator (`ProfilesService.Preview`) and a native key-file picker, tabs, split panes (drag to resize, per-pane headers when split), reconnect (button and Enter), native app menu with shortcuts (Cmd on macOS; Ctrl+Shift elsewhere so Ctrl+D and Ctrl+W still reach the shell). Verified under `wails3 dev` with `RELAY_BENCH=smoke`: tabs, splits, a command in every pane, dropped session detected, reconnect, close pane.
+
+Remaining: scrollback search, themes and font settings, clipboard check in the real window, and command blocks (OSC 133 markers drawn as xterm decorations in the frontend; needs shell integration injected for local shells and an explicit opt-in snippet for remote shells).
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.

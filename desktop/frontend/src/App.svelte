@@ -1,25 +1,35 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { openSession, type Session } from "./terminal";
+  import { Events } from "@wailsio/runtime";
   import { runBench } from "./bench";
   import { blankProfile } from "./lib";
+  import { ws } from "./workspace.svelte";
+  import { leaves } from "./panes";
+  import TabBar from "./TabBar.svelte";
   import Sidebar from "./Sidebar.svelte";
+  import StatusBar from "./StatusBar.svelte";
+  import PaneView from "./PaneView.svelte";
   import Palette from "./Palette.svelte";
   import ProfileForm from "./ProfileForm.svelte";
   import { ProfilesService, TerminalService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 
-  let host: HTMLElement;
+  const mac = navigator.userAgent.includes("Mac");
   let profiles = $state<Profile[]>([]);
-  let active = $state<Profile | null>(null);
-  let session: Session | undefined;
-  let started = $state(false);
-  let ended = $state(false);
   let banner = $state("");
   let palette = $state(false);
+  let sidebar = $state(true);
   let form = $state<{ initial: Profile; oldName: string } | null>(null);
   let confirmDelete = $state<Profile | null>(null);
+  let benchHost = $state<HTMLElement>();
 
   const folders = $derived([...new Set(profiles.map((p) => p.folder).filter(Boolean))].sort());
+  const open = $derived(new Set(ws.tabs.flatMap((t) => leaves(t.root).map((id) => ws.panes[id]?.target ?? "")).filter(Boolean)));
+  const actions = [
+    { id: "new-connection", label: "New connection", hint: mac ? "⌘N" : "Ctrl+Shift+N" },
+    { id: "new-tab", label: "New local tab", hint: mac ? "⌘T" : "Ctrl+Shift+T" },
+    { id: "split-right", label: "Split pane right", hint: mac ? "⌘D" : "Ctrl+Shift+D" },
+    { id: "split-down", label: "Split pane down", hint: mac ? "⇧⌘D" : "Ctrl+Alt+D" },
+  ];
 
   async function refresh() {
     try {
@@ -29,147 +39,160 @@
     }
   }
 
-  async function connect(p: Profile | null) {
+  async function connect(p: Profile, split = false) {
     palette = false;
-    session?.dispose();
-    host.replaceChildren();
-    active = p;
-    ended = false;
     banner = "";
-    try {
-      session = await openSession(host, p ? p.name : "local");
-      session.ws.addEventListener("close", () => (ended = true));
-      session.term.focus();
-      started = true;
-    } catch (e) {
-      banner = String(e);
+    if (split && ws.active) await ws.split("row", p.name);
+    else await ws.openTab(p.name);
+  }
+
+  function run(id: string) {
+    palette = false;
+    switch (id) {
+      case "new-tab": return ws.openTab(null);
+      case "new-connection": return (form = { initial: blankProfile(), oldName: "" });
+      case "quick-open": return (palette = !palette);
+      case "split-right": return ws.split("row");
+      case "split-down": return ws.split("col");
+      case "close": return ws.focusedPane && ws.closePane(ws.focusedPane);
+      case "close-tab": return ws.activeId && ws.closeTab(ws.activeId);
+      case "next-tab": return ws.cycle(1);
+      case "prev-tab": return ws.cycle(-1);
+      case "toggle-sidebar": return (sidebar = !sidebar);
     }
   }
 
   async function save(prof: Profile) {
     await ProfilesService.Save(form!.oldName, prof);
-    if (active && active.name === form!.oldName) active = { ...prof };
     form = null;
     await refresh();
   }
-
   async function remove(p: Profile) {
     confirmDelete = null;
     try {
       await ProfilesService.Delete(p.name);
-      if (active?.name === p.name) active = null;
+      form = null;
       await refresh();
     } catch (e) {
       banner = String(e);
     }
   }
 
+  // Windows and Linux have no app menu: Ctrl+Shift combos avoid clashing with
+  // terminal control keys. On macOS the native menu owns the shortcuts.
   function keydown(e: KeyboardEvent) {
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-      e.preventDefault();
-      palette = !palette;
-    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "n") {
-      e.preventDefault();
-      form = { initial: blankProfile(), oldName: "" };
-    }
+    if (mac || !e.ctrlKey || !e.shiftKey) return;
+    const map: Record<string, string> = { T: "new-tab", N: "new-connection", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar" };
+    const id = map[e.key.toUpperCase()];
+    if (id) { e.preventDefault(); run(id); }
   }
 
-  // RELAY_BENCH=smoke: drive the same path as the UI (load profiles, press
-  // "Local shell", run a command) and report what happened, so a build can be
+  onMount(() => {
+    const off = Events.On("menu", (e: { data: string }) => run(e.data));
+    (async () => {
+      const mode = await TerminalService.BenchMode();
+      if (mode === "smoke") return smoke();
+      if (mode) return runBench(benchHost!, mode);
+      await refresh();
+      await ws.openTab(null);
+    })();
+    return off;
+  });
+
+  // RELAY_BENCH=smoke: drive the real UI path (profiles, open a local tab,
+  // split it, run a command in each pane) and report, so a build can be
   // verified without clicking.
   async function smoke() {
     const out: Record<string, unknown> = { origin: location.origin };
+    const enc = new TextEncoder();
+    const seen = (id: string, text: string) => {
+      const b = ws.session(id)?.term.buffer.active;
+      for (let y = 0; b && y < b.length; y++) if (b.getLine(y)?.translateToString().includes(text)) return true;
+      return false;
+    };
     try {
       await refresh();
       out.profiles = profiles.length;
-      await connect(null);
-      out.banner = banner;
-      out.connected = session?.ws.readyState === WebSocket.OPEN;
-      session?.ws.send(new TextEncoder().encode("echo smoke-$((6*7))\n"));
-      for (let i = 0; i < 50 && !out.found; i++) {
-        await new Promise((r) => setTimeout(r, 100));
-        const b = session?.term.buffer.active;
-        for (let y = 0; b && y < b.length; y++) if (b.getLine(y)?.translateToString().includes("smoke-42")) out.found = true;
-      }
+      await ws.openTab(null);
+      await ws.split("row");
+      await ws.split("col");
+      await ws.openTab(null);
+      out.tabs = ws.tabs.length;
+      const panes = ws.tabs.flatMap((t) => leaves(t.root));
+      out.panes = panes.length;
+      panes.forEach((id, i) => ws.session(id)?.ws.send(enc.encode(`echo smoke-${i}-$((6*7))\n`)));
+      const deadline = Date.now() + 8000;
+      while (Date.now() < deadline && !panes.every((id, i) => seen(id, `smoke-${i}-42`))) await new Promise((r) => setTimeout(r, 100));
+      out.found = panes.map((id, i) => seen(id, `smoke-${i}-42`));
+      // ended pane -> reconnect
+      const victim = panes[0];
+      ws.session(victim)?.ws.close();
+      await new Promise((r) => setTimeout(r, 400));
+      out.endedDetected = ws.panes[victim]?.ended === true;
+      await ws.reconnect(victim);
+      ws.session(victim)?.ws.send(enc.encode("echo again-$((6*7))\n"));
+      for (let i = 0; i < 40 && !seen(victim, "again-42"); i++) await new Promise((r) => setTimeout(r, 100));
+      out.reconnected = seen(victim, "again-42");
+      ws.closePane(panes[1]);
+      out.afterClose = ws.tabs.flatMap((t) => leaves(t.root)).length;
     } catch (e) {
       out.error = String(e);
     }
     await TerminalService.ReportBench(JSON.stringify(out));
   }
-
-  onMount(async () => {
-    const mode = await TerminalService.BenchMode();
-    if (mode === "smoke") return smoke();
-    if (mode) return runBench(host, mode);
-    await refresh();
-  });
 </script>
 
 <svelte:window onkeydown={keydown} />
 
-<div class="shell">
-  <Sidebar
-    {profiles}
-    active={active?.name ?? ""}
-    onconnect={connect}
-    onnew={() => (form = { initial: blankProfile(), oldName: "" })}
-    onedit={(p) => (form = { initial: p, oldName: p.name })}
-    ondelete={(p) => (confirmDelete = p)}
-    onpalette={() => (palette = true)}
-  />
-  <main>
-    <header>
-      {#if active}
-        <strong>{active.name}</strong><span class="sub">{active.user}@{active.host}</span>
-        {#each active.tags as t}<span class="chip">{t}</span>{/each}
-      {:else}
-        <strong>Local shell</strong>
-      {/if}
-      <span class="spacer"></span>
-      {#if ended}<span class="ended">Session ended</span><button class="btn" onclick={() => connect(active)}>Reconnect</button>{/if}
-      <button class="btn" onclick={() => connect(null)}>Local shell</button>
-    </header>
-    {#if banner}<p class="banner" role="alert">{banner}</p>{/if}
-    <div class="term" bind:this={host}></div>
-    {#if !started && !banner}
-      <div class="welcome">
-        <h1>Relay</h1>
-        <p>Pick a connection on the left, or press <kbd>⌘K</kbd> to jump to one.</p>
-      </div>
+<div class="app">
+  <TabBar onsidebar={() => (sidebar = !sidebar)} onsettings={() => (banner = "Settings arrive with themes and fonts.")} />
+  <div class="body">
+    {#if sidebar}
+      <Sidebar {profiles} active={open} onconnect={(p) => connect(p)} onnew={() => run("new-connection")} onedit={(p) => (form = { initial: p, oldName: p.name })} onpalette={() => (palette = true)} />
     {/if}
-  </main>
+    <main>
+      {#if banner}<p class="banner" role="alert">{banner}<button aria-label="Dismiss" onclick={() => (banner = "")}>&times;</button></p>{/if}
+      <div class="stage" bind:this={benchHost}>
+        {#each ws.tabs as t (t.id)}
+          <div class="tabview" class:on={t.id === ws.activeId}>
+            <PaneView node={t.root} tabId={t.id} multi={leaves(t.root).length > 1} {profiles} />
+          </div>
+        {:else}
+          <div class="welcome"><h1>Relay</h1><p>Open a connection from the list, or press <span class="kbd">{mac ? "⌘T" : "Ctrl+Shift+T"}</span> for a local shell.</p></div>
+        {/each}
+      </div>
+    </main>
+  </div>
+  <StatusBar {profiles} themeName="Midnight" />
 </div>
 
-{#if palette}<Palette {profiles} onpick={connect} onclose={() => (palette = false)} />{/if}
+{#if palette}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/if}
 {#if form}
-  <ProfileForm initial={form.initial} isNew={form.oldName === ""} others={profiles.map((p) => p.name).filter((n) => n !== form!.oldName)} {folders} onsave={save} oncancel={() => (form = null)} />
+  <ProfileForm initial={form.initial} oldName={form.oldName} {profiles} {folders} onsave={save} ondelete={() => (confirmDelete = profiles.find((p) => p.name === form!.oldName) ?? null)} oncancel={() => (form = null)} />
 {/if}
 {#if confirmDelete}
   <div class="scrim" role="presentation" onkeydown={(e) => e.key === "Escape" && (confirmDelete = null)}>
     <div class="confirm" role="alertdialog" aria-label="Delete connection">
       <p>Delete <strong>{confirmDelete.name}</strong>? This removes it from connections.toml and your SSH config.</p>
-      <div class="buttons">
-        <button class="btn" onclick={() => (confirmDelete = null)}>Cancel</button>
-        <button class="btn danger" onclick={() => remove(confirmDelete!)}>Delete</button>
-      </div>
+      <div class="buttons"><button class="btn" onclick={() => (confirmDelete = null)}>Cancel</button><button class="btn primary danger-fill" onclick={() => remove(confirmDelete!)}>Delete</button></div>
     </div>
   </div>
 {/if}
 
 <style>
-  .shell { display: flex; height: 100%; }
-  main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
-  header { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--panel); min-height: 44px; }
-  .sub { color: var(--muted); font: 12px var(--mono); }
-  .spacer { flex: 1; }
-  .ended { color: var(--err); }
-  .term { flex: 1; min-height: 0; padding: 6px 8px 0; background: var(--bg); }
-  .welcome { position: absolute; inset: 44px 0 0 0; display: grid; place-content: center; text-align: center; color: var(--muted); pointer-events: none; }
+  .app { display: flex; flex-direction: column; height: 100%; }
+  .body { flex: 1; min-height: 0; display: flex; }
+  main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--term); }
+  .stage { flex: 1; min-height: 0; position: relative; }
+  .tabview { position: absolute; inset: 0; display: none; }
+  .tabview.on { display: flex; }
+  .welcome { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: var(--muted); }
   .welcome h1 { color: var(--text); margin: 0 0 6px; font-weight: 600; }
-  kbd { font: 11px var(--mono); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
-  .banner { margin: 0; padding: 8px 14px; color: var(--err); background: var(--err-bg); border-bottom: 1px solid var(--err); }
-  .scrim { position: fixed; inset: 0; background: rgba(5, 9, 15, 0.6); display: flex; align-items: center; justify-content: center; z-index: 10; }
-  .confirm { width: min(420px, 92vw); background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .banner { margin: 0; padding: 8px 14px; display: flex; align-items: center; color: var(--err-text); background: var(--err-bg); border-bottom: 1px solid var(--err); }
+  .banner button { all: unset; margin-left: auto; cursor: pointer; font-size: 16px; }
+  .scrim { position: fixed; inset: 0; background: rgba(6, 10, 16, 0.66); display: flex; align-items: center; justify-content: center; z-index: 30; }
+  .confirm { width: min(420px, 92vw); background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; padding: 18px 20px; }
   .confirm p { margin: 0 0 16px; }
   .buttons { display: flex; justify-content: flex-end; gap: 8px; }
+  .danger-fill { background: var(--err); border-color: var(--err); color: #1a0508; }
 </style>

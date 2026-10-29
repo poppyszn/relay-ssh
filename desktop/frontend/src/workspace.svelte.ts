@@ -1,0 +1,154 @@
+import { tick } from "svelte";
+import { openSession, type Session } from "./terminal";
+import * as P from "./panes";
+
+export interface Tab { id: string; root: P.Node; focus: string }
+export interface PaneInfo { target: string | null; ended: boolean; error: string }
+
+let seq = 0;
+const uid = (p: string) => `${p}${++seq}`;
+
+/** Tabs of split panes. Each pane owns a persistent DOM element and one session. */
+class Workspace {
+  tabs = $state<Tab[]>([]);
+  activeId = $state("");
+  panes = $state<Record<string, PaneInfo>>({});
+  private els = new Map<string, HTMLElement>();
+  private sessions = new Map<string, Session>();
+
+  get active(): Tab | undefined {
+    return this.tabs.find((t) => t.id === this.activeId);
+  }
+  get focusedPane(): string {
+    return this.active?.focus ?? "";
+  }
+  session(id: string): Session | undefined {
+    return this.sessions.get(id);
+  }
+  element(id: string): HTMLElement {
+    let el = this.els.get(id);
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "pane-term";
+      this.els.set(id, el);
+    }
+    return el;
+  }
+
+  tabTitle(t: Tab): string {
+    const names = [...new Set(P.leaves(t.root).map((id) => this.panes[id]?.target ?? "Local"))];
+    return names.length > 2 ? `${names[0]} +${names.length - 1}` : names.join(" + ");
+  }
+
+  async openTab(target: string | null) {
+    const id = uid("p");
+    const tab: Tab = { id: uid("t"), root: { id }, focus: id };
+    this.panes[id] = { target, ended: false, error: "" };
+    this.tabs.push(tab);
+    this.activeId = tab.id;
+    await this.start(id);
+  }
+
+  /** Splits the focused pane of the active tab; the new pane connects to `target` (default: same as the focused one). */
+  async split(dir: "row" | "col", target?: string | null) {
+    const tab = this.active;
+    if (!tab) return this.openTab(target ?? null);
+    const id = uid("p");
+    this.panes[id] = { target: target !== undefined ? target : (this.panes[tab.focus]?.target ?? null), ended: false, error: "" };
+    tab.root = P.splitLeaf(tab.root, tab.focus, id, dir, uid("s"));
+    tab.focus = id;
+    await this.start(id);
+  }
+
+  /** Opens the session once the pane element is attached and has a size. */
+  private async start(id: string) {
+    await tick();
+    const info = this.panes[id];
+    if (!info) return;
+    info.ended = false;
+    info.error = "";
+    this.sessions.get(id)?.dispose();
+    this.els.get(id)?.replaceChildren();
+    try {
+      const s = await openSession(this.element(id), info.target ?? "local");
+      s.ws.addEventListener("close", () => {
+        if (this.sessions.get(id) === s && this.panes[id]) this.panes[id].ended = true;
+      });
+      s.term.onData((d) => {
+        if (this.sessions.get(id) === s && this.panes[id]?.ended && d.includes("\r")) this.start(id);
+      });
+      this.sessions.set(id, s);
+      if (this.focusedPane === id) s.term.focus();
+    } catch (e) {
+      info.error = String(e);
+      info.ended = true;
+    }
+  }
+
+  reconnect(id: string) {
+    return this.start(id);
+  }
+
+  focus(id: string) {
+    const tab = this.tabs.find((t) => P.leaves(t.root).includes(id));
+    if (!tab) return;
+    tab.focus = id;
+    this.activeId = tab.id;
+    this.sessions.get(id)?.term.focus();
+  }
+
+  closePane(id: string) {
+    const tab = this.tabs.find((t) => P.leaves(t.root).includes(id));
+    if (!tab) return;
+    const next = P.neighbor(tab.root, id);
+    const root = P.removeLeaf(tab.root, id);
+    this.sessions.get(id)?.dispose();
+    this.sessions.delete(id);
+    this.els.delete(id);
+    delete this.panes[id];
+    if (!root || !next) return this.dropTab(tab.id);
+    tab.root = root;
+    if (tab.focus === id) tab.focus = next;
+    this.focus(tab.focus);
+  }
+
+  closeTab(tabId: string) {
+    const tab = this.tabs.find((t) => t.id === tabId);
+    if (!tab) return;
+    for (const id of P.leaves(tab.root)) {
+      this.sessions.get(id)?.dispose();
+      this.sessions.delete(id);
+      this.els.delete(id);
+      delete this.panes[id];
+    }
+    this.dropTab(tabId);
+  }
+
+  private dropTab(tabId: string) {
+    const i = this.tabs.findIndex((t) => t.id === tabId);
+    if (i < 0) return;
+    this.tabs.splice(i, 1);
+    if (this.activeId === tabId) this.activeId = this.tabs[Math.min(i, this.tabs.length - 1)]?.id ?? "";
+    const f = this.active?.focus;
+    if (f) tick().then(() => this.sessions.get(f)?.term.focus());
+  }
+
+  select(tabId: string) {
+    this.activeId = tabId;
+    const f = this.active?.focus;
+    if (f) tick().then(() => this.sessions.get(f)?.term.focus());
+  }
+
+  cycle(delta: number) {
+    if (this.tabs.length < 2) return;
+    const i = this.tabs.findIndex((t) => t.id === this.activeId);
+    this.select(this.tabs[(i + delta + this.tabs.length) % this.tabs.length].id);
+  }
+
+  setRatio(sid: string, ratio: number) {
+    const tab = this.active;
+    if (tab) tab.root = P.setRatio(tab.root, sid, ratio);
+  }
+}
+
+export const ws = new Workspace();

@@ -10,6 +10,7 @@ export {
 
 export type {
     Endpoint,
+    PreviewResult,
     Profile,
     TunnelDTO
 } from "./models.js";

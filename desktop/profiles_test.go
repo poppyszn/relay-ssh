@@ -50,3 +50,36 @@ func TestProfilesServiceRoundTrip(t *testing.T) {
 		t.Errorf("after delete List = %v", got)
 	}
 }
+
+func TestPreviewUsesRealGeneratorAndReportsProblems(t *testing.T) {
+	t.Setenv("SSSH_HOME", t.TempDir())
+	svc := ProfilesService{}
+	if err := svc.Save("", Profile{Name: "bastion", Host: "b.example.com", User: "ops", Port: 22, Auth: "agent"}); err != nil {
+		t.Fatal(err)
+	}
+
+	good := Profile{Name: "web-1", Host: "10.0.0.5", User: "deploy", Port: 2222, Auth: "key", Key: "~/.ssh/id_ed25519",
+		Jump: "bastion", ForwardAgent: true, Tunnels: []TunnelDTO{{Type: "local", Listen: "8080", Target: "localhost:80"}}}
+	r := svc.Preview("", good)
+	if r.Problem != "" {
+		t.Errorf("valid profile reported problem %q", r.Problem)
+	}
+	for _, want := range []string{"Host web-1", "HostName 10.0.0.5", "Port 2222", "IdentityFile", "ProxyJump bastion", "ForwardAgent yes", "LocalForward 8080 localhost:80"} {
+		if !strings.Contains(r.Config, want) {
+			t.Errorf("preview missing %q:\n%s", want, r.Config)
+		}
+	}
+	if strings.Contains(r.Config, "Host bastion") || strings.Contains(r.Config, "managed by") {
+		t.Errorf("preview should show only this profile, got:\n%s", r.Config)
+	}
+
+	bad := good
+	bad.Jump = "ghost"
+	if r := svc.Preview("", bad); r.Problem == "" || r.Config == "" {
+		t.Errorf("unknown jump should give a problem but still a preview, got %+v", r)
+	}
+	// previewing must never write anything
+	if got, _ := svc.List(); len(got) != 1 {
+		t.Errorf("Preview changed the store: %v", got)
+	}
+}
