@@ -258,7 +258,41 @@ A single click on a connection row selects it and brings up the tab and pane tha
 
 **Picker.** The connection form's key field is now a list: adopted keys (in backups), keys found in `~/.ssh` (linked, not in backups), and "Another file..." with a path box and Browse. A key with a passphrase is marked, and a linked key gets a hint to adopt it.
 
-**Passphrases.** Adopting a key that has a passphrase (read from the key file's header, never by trying passwords) asks for it. Relay does not keep it: it runs `ssh-add` on the vault copy with the passphrase handed over through ssh's askpass hook (an environment variable of that one child process, answered once, with a helper script that holds no secret), which loads the key into the ssh-agent and, on macOS, passes `--apple-use-keychain` so the system Keychain remembers the passphrase (the Keychain entry is keyed to the vault path, which is why it is the vault copy that is added). A wrong passphrase adopts nothing (the copy is removed again). On macOS a connection whose key has a passphrase also gets `UseKeychain=yes`, `AddKeysToAgent=yes` (with `IgnoreUnknown=UseKeychain`) on its terminal's ssh, so ssh can unlock the key from the Keychain after a restart; the generated config is read alone (`-F`), so the user's own `~/.ssh/config` lines for this do not apply. Elsewhere the key is loaded into the agent for the login session only. Adopted keys with a passphrase get a **Remember passphrase** button, needed again on a new machine after a restore (the Keychain is not part of a backup). Keys with no passphrase are flagged. Test runs and the bench never touch the real Keychain. This does not conflict with "no secrets stored": the passphrase lives only in the OS Keychain/agent. Password logins are different (no agent or Keychain hook exists for them) and are unchanged.
+**Passphrases.** Adopting a key that has a passphrase (read from the key file's header, never by trying passwords) asks for it. Relay does not keep it: it runs `ssh-add` on the vault copy with the passphrase handed over through ssh's askpass hook (an environment variable of that one child process, answered once, with a helper script that holds no secret), which loads the key into the ssh-agent and, on macOS, passes `--apple-use-keychain` so the system Keychain remembers the passphrase (the Keychain entry is keyed to the vault path, which is why it is the vault copy that is added). A wrong passphrase adopts nothing (the copy is removed again). On macOS a connection whose key has a passphrase also gets `UseKeychain=yes`, `AddKeysToAgent=yes` (with `IgnoreUnknown=UseKeychain`) on its terminal's ssh, so ssh can unlock the key from the Keychain after a restart; the generated config is read alone (`-F`), so the user's own `~/.ssh/config` lines for this do not apply. Elsewhere the key is loaded into the agent for the login session only. Adopted keys with a passphrase get a **Remember passphrase** button, needed again on a new machine after a restore (the Keychain is not part of a backup). Keys with no passphrase are flagged. Test runs and the bench never touch the real Keychain. This does not conflict with "no secrets stored": the passphrase lives only in the OS Keychain/agent. Password logins are different (no agent or Keychain hook exists for them) and were unchanged (updated in 9r: optional per-connection password storage in an encrypted vault with safe auto-fill).
+
+## 9r. Encrypted secret vault and safe password auto-fill (2026-10-29)
+
+**Why:** Relay's core promise has been "no secrets are stored" because OpenSSH handles passwords and passphrases in the terminal. For users with password-only servers, typing passwords repeatedly is friction. Key passphrases already delegate to the OS Keychain and ssh-agent (9q), but SSH password authentication has no native agent hook. This adds an opt-in, encrypted vault for SSH connection passwords with tight, non-invasive terminal auto-fill.
+
+**Decisions:**
+- **Encrypted vault file:** Passwords are kept in `<config dir>/vault.age` (0600) encrypted with `filippo.io/age` using scrypt derived from a user master password (min 12 chars). Default age scrypt work factor is preserved (~1s unlock). Payload is JSON: `{"version":1,"secrets":{"<profile name>":"<password>"}}`.
+- **Atomic writes & corruption safety:** Writes use `internal/fsutil.WriteFile` (atomic temp file + rename). File corruption vs incorrect master password yield distinguishable errors; a corrupt or wrongly keyed file is never replaced by an empty vault. Resetting requires an explicit confirmation argument (`"RESET"`).
+- **Interface & Lifecycle:** Storage is abstracted behind `SecretStore` (Status, Get, Set, Forget, Rename, Has) to permit future backend alternatives. In-memory master and secret bytes are zeroed on `Lock()`. Idle auto-lock defaults to 15 minutes, driven by an injectable clock. Best-effort lock on app quit.
+- **Wails API boundary:** `VaultService` exposes lifecycle, status, and mutation (`SetSecret`, `ForgetSecret`, `HasSecret`), but **never** exposes `Get` or returns a secret to JavaScript. Frontend inputs are scrubbed immediately after submission.
+- **Profile consistency:** Profile rename renames the associated secret; delete or changing auth away from `password` forgets it. If the vault is locked during profile changes, profile save succeeds without error; any orphaned secrets are purged on the next unlock by reconciling against existing connection profiles.
+- **Safe terminal auto-fill:**
+  - `parsePasswordPrompt` in `desktop/frontend/src/lib.ts` is a pure function that strictly detects OpenSSH account prompts (`user@host's password:`) and generic prompts (`Password:`, `(user@host) Password:`). It strictly rejects non-SSH prompts, sudo, 2FA, passphrase, host-key confirmations, and output lines.
+  - Frontend triggers fill only when connection auth is `password`, before `authed` is set, and at most once.
+  - Fill request sends a `fill` control message over the loopback WebSocket. Go inspects connection target metadata and enforces 8 strict checks:
+    1. Vault is unlocked and has a secret for the resolved connection.
+    2. Target profile auth is `password`.
+    3. Account prompts match user and host against saved profiles (case-insensitive host/name) without ambiguity. Jump host prompts resolve to the jump host's secret; target secret is never sent to a jump host.
+    4. Generic prompts are only answered if the session has no jump host and use the target secret.
+    5. At most one fill per session per connection (prevents lockouts from bad passwords).
+    6. Per-session cap of 2 fills total (target + 1 jump host).
+    7. Never fill after authentication (`authed` signal from OSC 7771 marker or mux frame, reinforced by frontend `authed` control frame).
+    8. Session was initiated for a saved connection (not a local shell).
+  - Go types the secret directly into the PTY; secrets never traverse back to the frontend.
+
+**Threat Model & Boundaries:**
+- Protects against: offline file theft, casual disk inspection, unprivileged filesystem access.
+- Does NOT protect against: malware or compromise running as the user while the vault is unlocked (which can inspect process memory or tap the PTY).
+- Secrets are never placed in logs, errors, URLs, localStorage, `connections.toml`, or generated `ssh_config`.
+
+**Known Gaps:**
+- Backups: The vault file is desktop-only and is intentionally excluded from `sssh backup` archives (which are managed by `internal/core` under CLI budget constraints). Restore does not overwrite or delete `vault.age`.
+- Memory scrubbing in Go: Byte slices are explicitly zeroed on lock, but due to Go runtime heap copies and string conversions, residual memory copies cannot be cryptographically guaranteed to be scrubbed.
+- Password recovery: There is no recovery or reset mechanism for a forgotten master password other than resetting (destroying) the vault.
 
 ## 10. Working agreement (carried over from the CLI)
 
