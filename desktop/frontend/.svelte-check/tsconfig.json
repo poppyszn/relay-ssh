@@ -27,6 +27,7 @@
   "exclude": [
     "../src/App.svelte",
     "../src/FilesPanel.svelte",
+    "../src/ForwardDiagram.svelte",
     "../src/ForwardsPanel.svelte",
     "../src/Palette.svelte",
     "../src/PaneView.svelte",
@@ -36,6 +37,7 @@
     "../src/Sidebar.svelte",
     "../src/StatusBar.svelte",
     "../src/TabBar.svelte",
-    "../src/ToolsPanel.svelte"
+    "../src/ToolsPanel.svelte",
+    "../src/WindowControls.svelte"
   ]
 }

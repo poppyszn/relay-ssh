@@ -51,6 +51,7 @@ function $$render() {
   let form = $state<{ initial: Profile; oldName: string } | null>(null);
   let confirmDelete = $state<Profile | null>(null);
   let benchHost = $state<HTMLElement>();
+  let customChrome = $state(false);
 
   const folders = $derived([...new Set(profiles.map((p) => p.folder).filter(Boolean))].sort());
   const open = $derived(new Set(ws.tabs.flatMap((t) => leaves(t.root).map((id) => ws.panes[id]?.target ?? "")).filter(Boolean)));
@@ -118,6 +119,13 @@ function $$render() {
     filesTarget = t;
   }
 
+  // Always edit the stored profile, not a cached copy: forwards saved from their own
+  // panel, a restore or an import may have changed it since the list was loaded.
+  async function edit(p: Profile) {
+    await refresh();
+    form = { initial: profiles.find((x) => x.name === p.name) ?? p, oldName: p.name };
+  }
+
   // Forwards are managed on a saved connection's live login.
   function openForwards() {
     const t = ws.panes[ws.focusedPane]?.target;
@@ -160,6 +168,7 @@ function $$render() {
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     (async () => {
+      customChrome = await TerminalService.CustomChrome();
       // RELAY_BENCH is "run", "idle", "smoke", or "smoke|<connection>|<remote dir>" to also test files
       const [mode, box, dir, sshdPort, localPort] = (await TerminalService.BenchMode()).split("|");
       if (mode === "smoke") return smoke(box, dir, sshdPort, localPort);
@@ -314,6 +323,28 @@ function $$render() {
         forwardsTarget = "";
         out.forwards = { connectedBefore: before.connected, connectedState: !!document.querySelector(".state"), listening: after.forwards?.[0]?.listening, uiRows: rows, afterCancel: gone.forwards?.length };
       }
+      // edit form shows a forward saved elsewhere (regression: it used a stale cached profile)
+      if (profiles.length) {
+        const target0 = profiles[0];
+        const fresh = (await ProfilesService.List())!.find((x) => x.name === target0.name)!;
+        await ProfilesService.Save(target0.name, { ...fresh, tunnels: [...(fresh.tunnels ?? []), { type: "local", listen: "7777", target: "localhost:7" }] });
+        await edit(target0); // the sidebar list was NOT refreshed by the save above
+        await tick();
+        out.editShowsSavedForward = [...document.querySelectorAll(".tun input")].some((i) => (i as HTMLInputElement).value === "7777");
+        form = null;
+        await ProfilesService.Save(target0.name, fresh); // restore
+        await refresh();
+      }
+      // window chrome: frameless means no native title bar, and our buttons sit centred in the strip
+      const strip = document.querySelector<HTMLElement>(".strip")?.getBoundingClientRect();
+      const btns = [...document.querySelectorAll<HTMLElement>(".controls button")].map((b) => b.getBoundingClientRect());
+      out.chrome = {
+        custom: customChrome,
+        titleBarHeight: outerHeight - innerHeight,
+        buttons: btns.length,
+        offCentre: strip && btns.length ? Math.max(...btns.map((r) => Math.abs(r.top + r.height / 2 - (strip.top + strip.height / 2)))) : null,
+        inset: btns[0] && strip ? Math.round(btns[0].left - strip.left) : null,
+      };
       // ended pane -> reconnect
       const victim = panes[0];
       ws.session(victim)?.ws.close();
@@ -336,10 +367,10 @@ async () => {
  { svelteHTML.createElement("svelte:window", {  "onkeydown":keydown,});}
 
  { svelteHTML.createElement("div", { "class":`app`,});
-   { const $$_raBbaT1C = __sveltets_2_ensureComponent(TabBar); new $$_raBbaT1C({ target: __sveltets_2_any(), props: {          "onsidebar":() => (sidebar = !sidebar),"onsettings":() => (settingsOpen = !settingsOpen),"ontools":() => (toolsOpen = !toolsOpen),"onfiles":openFiles,"onforwards":openForwards,}});}
+   { const $$_raBbaT1C = __sveltets_2_ensureComponent(TabBar); new $$_raBbaT1C({ target: __sveltets_2_any(), props: {            "custom":customChrome,"onsidebar":() => (sidebar = !sidebar),"onsettings":() => (settingsOpen = !settingsOpen),"ontools":() => (toolsOpen = !toolsOpen),"onfiles":openFiles,"onforwards":openForwards,}});}
    { svelteHTML.createElement("div", { "class":`body`,});
     if(sidebar){
-       { const $$_rabediS2C = __sveltets_2_ensureComponent(Sidebar); new $$_rabediS2C({ target: __sveltets_2_any(), props: {           profiles,"active":open,"onconnect":(p) => connect(p),"onnew":() => run("new-connection"),"onedit":(p) => (form = { initial: p, oldName: p.name }),"onpalette":() => (palette = true),}});}
+       { const $$_rabediS2C = __sveltets_2_ensureComponent(Sidebar); new $$_rabediS2C({ target: __sveltets_2_any(), props: {           profiles,"active":open,"onconnect":(p) => connect(p),"onnew":() => run("new-connection"),"onedit":edit,"onpalette":() => (palette = true),}});}
     }
      { svelteHTML.createElement("main", {});
       if(banner){ { svelteHTML.createElement("p", {   "class":`banner`,"role":`alert`,});banner; { svelteHTML.createElement("button", {   "aria-label":`Dismiss`,"onclick":() => (banner = ""),});  } }}
@@ -357,7 +388,7 @@ async () => {
    { const $$_raBsutatS1C = __sveltets_2_ensureComponent(StatusBar); new $$_raBsutatS1C({ target: __sveltets_2_any(), props: {   profiles,"themeName":settings.themeDef.name,}});}
  }
 
-if(forwardsTarget){ { const $$_lenaPsdrawroF0C = __sveltets_2_ensureComponent(ForwardsPanel); new $$_lenaPsdrawroF0C({ target: __sveltets_2_any(), props: {      "target":forwardsTarget,"onclose":() => (forwardsTarget = ""),"onopen":() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); },}});}}
+if(forwardsTarget){ { const $$_lenaPsdrawroF0C = __sveltets_2_ensureComponent(ForwardsPanel); new $$_lenaPsdrawroF0C({ target: __sveltets_2_any(), props: {        "target":forwardsTarget,"onchanged":refresh,"onclose":() => (forwardsTarget = ""),"onopen":() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); },}});}}
 if(filesTarget){ { const $$_lenaPseliF0C = __sveltets_2_ensureComponent(FilesPanel); new $$_lenaPseliF0C({ target: __sveltets_2_any(), props: {    "target":filesTarget,"onclose":() => (filesTarget = ""),}});}}
 if(toolsOpen){ { const $$_lenaPslooT0C = __sveltets_2_ensureComponent(ToolsPanel); new $$_lenaPslooT0C({ target: __sveltets_2_any(), props: {      "onclose":() => (toolsOpen = false),"onchanged":refresh,"ongenerate":generateKey,}});}}
 if(settingsOpen){ { const $$_lenaPsgnitteS0C = __sveltets_2_ensureComponent(SettingsPanel); new $$_lenaPsgnitteS0C({ target: __sveltets_2_any(), props: {  "onclose":() => (settingsOpen = false),}});}}

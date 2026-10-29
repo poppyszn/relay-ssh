@@ -2,13 +2,17 @@
 ;
 import { ws } from "./workspace.svelte";
 import { leaves } from "./panes";
+import WindowControls from "./WindowControls.svelte";
+import { Window } from "@wailsio/runtime";
 
-;type $$ComponentProps =  { onsidebar: () => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void };function $$render() {
+;type $$ComponentProps =  { custom: boolean; onsidebar: () => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void };function $$render() {
 
   
   
+  
+  
 
-  let { onsidebar, onsettings, ontools, onfiles, onforwards }:/*Ωignore_startΩ*/$$ComponentProps/*Ωignore_endΩ*/ = $props();
+  let { custom, onsidebar, onsettings, ontools, onfiles, onforwards }:/*Ωignore_startΩ*/$$ComponentProps/*Ωignore_endΩ*/ = $props();
   const mac = navigator.userAgent.includes("Mac");
 
   function status(t: (typeof ws.tabs)[number]) {
@@ -18,7 +22,9 @@ import { leaves } from "./panes";
 ;
 async () => {
 
- { svelteHTML.createElement("div", {  "class":`strip drag`,});mac;
+
+ { svelteHTML.createElement("div", {   "class":`strip drag`,"ondblclick":(e) => custom && e.target === e.currentTarget && Window.ToggleMaximise(),});mac;
+  if(custom){ { const $$_slortnoCwodniW1C = __sveltets_2_ensureComponent(WindowControls); new $$_slortnoCwodniW1C({ target: __sveltets_2_any(), props: {}});}}
    { svelteHTML.createElement("div", {   "class":`tabs nodrag`,"role":`tablist`,});
        for(let t of __sveltets_2_ensureArray(ws.tabs)){t.id;
        { svelteHTML.createElement("div", {    "class":`tab`,"role":`presentation`,});t.id === ws.activeId;

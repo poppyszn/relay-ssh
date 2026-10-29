@@ -1,8 +1,10 @@
 <script lang="ts">
   import { ws } from "./workspace.svelte";
   import { leaves } from "./panes";
+  import WindowControls from "./WindowControls.svelte";
+  import { Window } from "@wailsio/runtime";
 
-  let { onsidebar, onsettings, ontools, onfiles, onforwards }: { onsidebar: () => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void } = $props();
+  let { custom, onsidebar, onsettings, ontools, onfiles, onforwards }: { custom: boolean; onsidebar: () => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void } = $props();
   const mac = navigator.userAgent.includes("Mac");
 
   function status(t: (typeof ws.tabs)[number]) {
@@ -11,7 +13,9 @@
   }
 </script>
 
-<div class="strip drag" class:mac>
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="strip drag" class:mac ondblclick={(e) => custom && e.target === e.currentTarget && Window.ToggleMaximise()}>
+  {#if custom}<WindowControls />{/if}
   <div class="tabs nodrag" role="tablist">
     {#each ws.tabs as t (t.id)}
       <div class="tab" class:active={t.id === ws.activeId} role="presentation">

@@ -1,7 +1,8 @@
 <script lang="ts">
+  import ForwardDiagram from "./ForwardDiagram.svelte";
   import { ForwardsService, ProfilesService, type ForwardInfo } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 
-  let { target, onclose, onopen }: { target: string; onclose: () => void; onopen: () => void } = $props();
+  let { target, onclose, onopen, onchanged }: { target: string; onclose: () => void; onopen: () => void; onchanged: () => void } = $props();
 
   let connected = $state(false);
   let message = $state("");
@@ -14,13 +15,11 @@
   let kind = $state<"local" | "remote" | "dynamic">("local");
   let listen = $state("");
   let dest = $state("");
+  // Clicking a row shows that forward in the diagram; typing in the form takes over again.
+  let viewing = $state<ForwardInfo | null>(null);
+  const shown = $derived(viewing ?? { type: kind, listen, target: dest });
 
   const label = { local: "Local", remote: "Remote", dynamic: "SOCKS" } as const;
-  const help = $derived(
-    kind === "local" ? `Opens port ${listen || "N"} on this Mac and sends it to the target, as seen from ${target}.`
-    : kind === "remote" ? `Opens port ${listen || "N"} on ${target} and sends it back to the target, as seen from this Mac.`
-    : `Opens a SOCKS proxy on port ${listen || "N"} on this Mac that routes through ${target}.`,
-  );
   const msg = (e: unknown) => (e as Error)?.message ?? String(e);
 
   async function refresh() {
@@ -42,6 +41,7 @@
     if (!p) throw new Error("Connection not found.");
     p.tunnels = [...(p.tunnels ?? []), { type: f.type, listen: f.listen, target: f.target }];
     await ProfilesService.Save(target, p);
+    onchanged();
   }, "Saved to the connection. It will start automatically next time.");
 
   $effect(() => {
@@ -70,7 +70,7 @@
         {#if forwards.length}
           <div class="row head"><span>Type</span><span>Listen</span><span>Target</span><span>From</span><span></span></div>
           {#each forwards as f (f.type + f.listen + f.target)}
-            <div class="row">
+            <div class="row pick" class:viewing={viewing === f} role="row" tabindex="0" onclick={() => (viewing = f)} onkeydown={(e) => e.key === "Enter" && (viewing = f)}>
               <span><span class="chip">{label[f.type as keyof typeof label]}</span></span>
               <span class="mono"><span class="dot" class:ok={f.listening}></span> {f.listen}</span>
               <span class="mono">{f.type === "dynamic" ? "SOCKS proxy" : f.target}</span>
@@ -87,14 +87,14 @@
       </div>
 
       <form class="add" onsubmit={(e) => { e.preventDefault(); add(); }}>
+        <ForwardDiagram kind={shown.type as "local" | "remote" | "dynamic"} listen={shown.listen} dest={shown.target} server={target} />
         <div class="label">Add a forward</div>
         <div class="fields">
-          <select bind:value={kind} aria-label="Type"><option value="local">Local</option><option value="remote">Remote</option><option value="dynamic">SOCKS</option></select>
-          <input class="mono" bind:value={listen} placeholder={kind === "remote" ? "remote port" : "local port"} aria-label="Listen port" required />
-          {#if kind !== "dynamic"}<input class="mono" bind:value={dest} placeholder="host:port" aria-label="Target" required />{:else}<span class="na">no target needed</span>{/if}
+          <select bind:value={kind} aria-label="Type" onchange={() => (viewing = null)}><option value="local">Local</option><option value="remote">Remote</option><option value="dynamic">SOCKS</option></select>
+          <input class="mono" bind:value={listen} oninput={() => (viewing = null)} placeholder={kind === "remote" ? "remote port" : "local port"} aria-label="Listen port" required />
+          {#if kind !== "dynamic"}<input class="mono" bind:value={dest} oninput={() => (viewing = null)} placeholder="host:port" aria-label="Target" required />{:else}<span class="na">no target needed</span>{/if}
           <button class="btn primary" disabled={busy}>Add</button>
         </div>
-        <p class="help">{help}</p>
       </form>
     {/if}
     {#if error}<p class="msg bad" role="alert">{error}</p>{/if}
@@ -119,6 +119,9 @@
   .row { display: grid; grid-template-columns: 90px 1fr 1.3fr 90px 150px; align-items: center; gap: 10px; padding: 0 22px; height: 44px; border-bottom: 1px solid #1c2736; }
   .row.head { height: 34px; background: var(--bar); font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); position: sticky; top: 0; }
   .row .dot { width: 7px; height: 7px; margin-right: 4px; display: inline-block; }
+  .pick { cursor: default; }
+  .pick:hover { background: var(--hover); }
+  .pick.viewing { background: var(--active); box-shadow: inset 3px 0 var(--accent); }
   .acts { display: flex; gap: 6px; justify-content: flex-end; }
   .btn.sm { padding: 4px 12px; font-size: 12px; }
   .add { padding: 16px 22px 18px; border-top: 1px solid var(--line2); background: var(--foot); display: grid; gap: 10px; }
