@@ -1,14 +1,23 @@
 import { tick } from "svelte";
 import { openSession, type Session } from "./terminal";
 import * as P from "./panes";
-import { blocksWanted, loginQuiet, reorder, snippetText } from "./lib";
+import { blocksWanted, loginQuiet, parsePasswordPrompt, reorder, snippetText } from "./lib";
 import { settings } from "./settings.svelte";
 import type { BlockRef } from "./blocks";
 import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 export interface Tab { id: string; root: P.Node; focus: string }
 /** `connecting` is true from the start of a saved connection until ssh first writes anything (a prompt, a banner or an error). */
-export interface PaneInfo { target: string | null; ended: boolean; error: string; blocks: boolean; connecting: boolean; since: number }
+export interface PaneInfo {
+  target: string | null;
+  ended: boolean;
+  error: string;
+  blocks: boolean;
+  connecting: boolean;
+  since: number;
+  filled?: boolean;
+  fillHint?: string;
+}
 
 let seq = 0;
 const uid = (p: string) => `${p}${++seq}`;
@@ -24,6 +33,8 @@ class Workspace {
   panes = $state<Record<string, PaneInfo>>({});
   /** A connection's own command-block mode ("on", "off" or ""), supplied by the app. */
   blocksMode: (target: string) => string | undefined = () => undefined;
+  /** A connection's auth method ("agent", "key" or "password"), supplied by the app. */
+  profileAuth: (target: string) => string | undefined = () => undefined;
   private els = new Map<string, HTMLElement>();
   private sessions = new Map<string, Session>();
 
@@ -54,7 +65,7 @@ class Workspace {
   async openTab(target: string | null) {
     const id = uid("p");
     const tab: Tab = { id: uid("t"), root: { id }, focus: id };
-    this.panes[id] = { target, ended: false, error: "", blocks: false, connecting: false, since: 0 };
+    this.panes[id] = { target, ended: false, error: "", blocks: false, connecting: false, since: 0, filled: false, fillHint: "" };
     this.tabs.push(tab);
     this.activeId = tab.id;
     await this.start(id);
@@ -65,7 +76,7 @@ class Workspace {
     const tab = this.active;
     if (!tab) return this.openTab(target ?? null);
     const id = uid("p");
-    this.panes[id] = { target: target !== undefined ? target : (this.panes[tab.focus]?.target ?? null), ended: false, error: "", blocks: false, connecting: false, since: 0 };
+    this.panes[id] = { target: target !== undefined ? target : (this.panes[tab.focus]?.target ?? null), ended: false, error: "", blocks: false, connecting: false, since: 0, filled: false, fillHint: "" };
     tab.root = P.splitLeaf(tab.root, tab.focus, id, dir, uid("s"));
     tab.focus = id;
     await this.start(id);
@@ -76,7 +87,7 @@ class Workspace {
     const tab = this.tabs.find((t) => P.leaves(t.root).includes(paneId));
     if (!tab) return;
     const id = uid("p");
-    this.panes[id] = { target, ended: false, error: "", blocks: false, connecting: false, since: 0 };
+    this.panes[id] = { target, ended: false, error: "", blocks: false, connecting: false, since: 0, filled: false, fillHint: "" };
     tab.root = P.splitLeaf(tab.root, paneId, id, edge === "left" || edge === "right" ? "row" : "col", uid("s"), edge === "left" || edge === "top");
     tab.focus = id;
     this.activeId = tab.id;
@@ -164,6 +175,46 @@ class Workspace {
       if (s.received) info.connecting = false;
       s.term.onData((d) => {
         if (this.sessions.get(id) === s && this.panes[id]?.ended && d.includes("\r")) this.start(id);
+      });
+      let fillSent = false;
+      let fillSuccess = false;
+      s.onFilled = () => {
+        fillSuccess = true;
+        if (this.panes[id]) {
+          this.panes[id].filled = true;
+        }
+      };
+      s.term.onWriteParsed(() => {
+        if (s.authed || !info.target) return;
+        const auth = this.profileAuth(info.target);
+        if (auth !== "password") return;
+
+        const buf = s.term.buffer.active;
+        let lineObj = buf.getLine(buf.baseY + buf.cursorY);
+        let line = lineObj ? lineObj.translateToString(true) : "";
+        let prompt = parsePasswordPrompt(line);
+        if (!prompt && buf.cursorY > 0 && !line.trim()) {
+          lineObj = buf.getLine(buf.baseY + buf.cursorY - 1);
+          if (lineObj) {
+            line = lineObj.translateToString(true);
+            prompt = parsePasswordPrompt(line);
+          }
+        }
+        if (!prompt) return;
+
+        if (fillSent || fillSuccess) {
+          if (!this.panes[id]?.fillHint && !s.authed) {
+            if (this.panes[id]) {
+              this.panes[id].fillHint = "The stored password was rejected. Update it in the connection's settings.";
+            }
+          }
+          return;
+        }
+
+        fillSent = true;
+        if (s.ws.readyState === WebSocket.OPEN) {
+          s.ws.send(JSON.stringify({ t: "fill", ...prompt }));
+        }
       });
       this.autoBlocks(id, s);
       s.onBlockMenu = (block, rect) => { this.blockMenu = { block, rect }; };

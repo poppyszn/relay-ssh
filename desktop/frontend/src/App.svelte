@@ -172,6 +172,7 @@
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     ws.blocksMode = (name) => profiles.find((p) => p.name === name)?.blocks;
+    ws.profileAuth = (name) => profiles.find((p) => p.name === name)?.auth;
     sb.onFocusConnection = (name) => {
       const ids = ws.tabs.flatMap((t) => leaves(t.root)).filter((id) => ws.panes[id]?.target === name);
       const id = nextSession(ids, ws.focusedPane);

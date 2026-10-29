@@ -16,6 +16,7 @@
     <span class="seg"><span class="dot" class:ok={!info.ended && !info.connecting} class:warn={info.connecting} class:err={info.ended}></span>{info.ended ? "Disconnected" : info.connecting ? "Connecting…" : "Connected"}</span>
     <span class="seg mono">{prof ? `${prof.user}@${prof.host}:${prof.port}` : "local shell"}</span>
     {#if prof?.jump}<span class="seg">via {prof.jump}</span>{/if}
+    {#if info.filled}<span class="seg ok" title="Password auto-filled from Relay's vault">Password filled</span>{/if}
     {#if info.blocks}<span class="seg ok">Blocks</span>
     {:else if info.target && !info.connecting && !info.ended}
       <button class="seg act" title="Splits this session's output into command blocks. Types a short setup line into the remote bash or zsh." onclick={() => ws.enableBlocks(ws.focusedPane)}>Enable command blocks</button>
