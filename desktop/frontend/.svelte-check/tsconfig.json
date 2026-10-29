@@ -27,6 +27,7 @@
   "exclude": [
     "../src/AddMenu.svelte",
     "../src/App.svelte",
+    "../src/BlockMenu.svelte",
     "../src/Branch.svelte",
     "../src/Card.svelte",
     "../src/ConnRow.svelte",

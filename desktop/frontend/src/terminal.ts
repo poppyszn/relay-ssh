@@ -2,7 +2,7 @@ import { Terminal, type IDisposable } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { WebglAddon } from "@xterm/addon-webgl";
-import { BlockTracker } from "./blocks";
+import { BlockTracker, type BlockRef } from "./blocks";
 import { settings } from "./settings.svelte";
 import "@xterm/xterm/css/xterm.css";
 import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
@@ -60,6 +60,8 @@ export interface Session {
   onChunk?: (data: Uint8Array) => void;
   /** Called once, when the shell first emits prompt markers (command blocks are active). */
   onBlocks?: () => void;
+  /** Called when the user presses a block's menu button; `anchor` is the button's position. */
+  onBlockMenu?: (block: BlockRef, anchor: DOMRect) => void;
   dispose(): void;
 }
 
@@ -106,7 +108,7 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
     },
     dispose: () => { ws.close(); term.dispose(); },
   };
-  const tracker = new BlockTracker(term as never, () => s.onBlocks?.());
+  const tracker = new BlockTracker(term as never, () => s.onBlocks?.(), (b, r) => s.onBlockMenu?.(b, r));
   const anchor = anchorBottom(term);
   term.onSelectionChange(() => {
     if (settings.copyOnSelect && term.hasSelection()) navigator.clipboard?.writeText(term.getSelection()).catch(() => {});

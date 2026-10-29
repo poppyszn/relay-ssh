@@ -1,6 +1,7 @@
 import { tick } from "svelte";
 import { openSession, type Session } from "./terminal";
 import * as P from "./panes";
+import type { BlockRef } from "./blocks";
 import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 export interface Tab { id: string; root: P.Node; focus: string }
@@ -15,6 +16,8 @@ class Workspace {
   activeId = $state("");
   /** The pane whose find bar is open, if any. */
   searchPane = $state("");
+  /** The open block menu (raw: it holds functions and a DOMRect, which need no reactivity). */
+  blockMenu = $state.raw<{ block: BlockRef; rect: DOMRect } | null>(null);
   panes = $state<Record<string, PaneInfo>>({});
   private els = new Map<string, HTMLElement>();
   private sessions = new Map<string, Session>();
@@ -81,6 +84,7 @@ class Workspace {
       s.term.onData((d) => {
         if (this.sessions.get(id) === s && this.panes[id]?.ended && d.includes("\r")) this.start(id);
       });
+      s.onBlockMenu = (block, rect) => { this.blockMenu = { block, rect }; };
       s.onBlocks = () => { if (this.panes[id]) this.panes[id].blocks = true; };
       this.sessions.set(id, s);
       if (this.focusedPane === id) s.term.focus();
