@@ -32,7 +32,7 @@ check: fmt vet race guardrails ## Everything CI runs. This is the gate before an
 desktop-check: ## Gate for the Relay desktop module (guardrails, typecheck, frontend tests, build, Go tests)
 	./desktop/scripts/guardrails.sh
 	cd desktop/frontend && npm run check -- --output machine 2>&1 | tee /dev/stderr | grep -q " 0 ERRORS " && npm test && npm run build
-	cd desktop && go vet . && go test .
+	cd desktop && go vet . ./vault && go test . ./vault
 
 hooks: ## Use the repo's git hooks (a pre-push that runs desktop-check on macOS)
 	git config core.hooksPath .githooks
