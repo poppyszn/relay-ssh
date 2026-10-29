@@ -39,7 +39,8 @@ companion that reads and writes the same data.
 - Terminal with tabs, split panes, scrollback search, fonts and four themes (three dark, one light, or follow the system). With shell integration on,
   each command becomes a block with its directory, git branch, exit status and duration, started from the bottom of the pane, and a ⋯ menu
   on each block copies the command, its output, or both.
-  Local zsh and bash are set up automatically; for a remote host you opt in explicitly.
+  Local zsh and bash are set up automatically; for a remote host you opt in (a button, or
+  automatically per connection or for all of them, once the login has finished).
 - **Tools:** health check with one-click fixes, passphrase-encrypted backup and restore, import from
   `~/.ssh/config`, and key management.
 - **Files:** browse, upload and download over `sftp`, reusing the login of the connection's terminal tab.

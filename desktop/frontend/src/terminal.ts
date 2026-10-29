@@ -62,6 +62,13 @@ export interface Session {
   received: boolean;
   /** Called once, when the first bytes arrive. */
   onFirstData?: () => void;
+  /** True once ssh has finished authenticating (its login marker, or a "mux" frame for a shared login). */
+  authed: boolean;
+  /** When (ms since the epoch) authentication was noticed, and when output last arrived. */
+  authedAt: number;
+  lastData: number;
+  /** How authentication was noticed (for diagnostics). */
+  authBy: "" | "marker" | "mux";
   /** Called once, when the shell first emits prompt markers (command blocks are active). */
   onBlocks?: () => void;
   /** Called when the user presses a block's menu button; `anchor` is the button's position. */
@@ -105,7 +112,7 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
 
   const enc = new TextEncoder();
   const s: Session = {
-    term, ws, webgl, fit, search, received: false,
+    term, ws, webgl, fit, search, received: false, authed: false, authedAt: 0, lastData: 0, authBy: "",
     applySettings() {
       Object.assign(term.options, settings.xterm);
       fit.fit();
@@ -118,8 +125,22 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
     if (settings.copyOnSelect && term.hasSelection()) navigator.clipboard?.writeText(term.getSelection()).catch(() => {});
   });
   let unacked = 0;
+  const authenticated = (by: "marker" | "mux") => {
+    if (s.authed) return;
+    s.authed = true;
+    s.authBy = by;
+    s.authedAt = Date.now();
+  };
+  // ssh prints this (via its LocalCommand) once the login has authenticated; the parser swallows it.
+  term.parser.registerOscHandler(7771, (d) => (d === "auth" ? (authenticated("marker"), true) : false));
   ws.onmessage = (e) => {
+    if (typeof e.data === "string") {
+      // a login that is shared with an open tab has no authentication step to wait for
+      if ((JSON.parse(e.data) as { t?: string }).t === "mux") authenticated("mux");
+      return;
+    }
     const data = new Uint8Array(e.data as ArrayBuffer);
+    s.lastData = Date.now();
     if (!s.received) {
       s.received = true;
       s.onFirstData?.();

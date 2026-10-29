@@ -26,7 +26,7 @@ export function groupByFolder(profiles: Profile[]): FolderNode[] {
 }
 
 export function blankProfile(): Profile {
-  return { name: "", host: "", user: "", port: 22, auth: "agent", key: "", folder: "", tags: [], jump: "", forwardAgent: false, tunnels: [] } as Profile;
+  return { name: "", host: "", user: "", port: 22, auth: "agent", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } as Profile;
 }
 
 export function parseTags(s: string): string[] {
@@ -130,4 +130,17 @@ export function paneEdge(r: { left: number; top: number; width: number; height: 
   if (dx >= 0.3 && dx <= 0.7 && dy >= 0.3 && dy <= 0.7) return "center";
   const d = { left: dx, right: 1 - dx, top: dy, bottom: 1 - dy };
   return (Object.keys(d) as (keyof typeof d)[]).reduce((best, k) => (d[k] < d[best] ? k : best), "left");
+}
+
+/** Whether to set up command blocks by itself: the connection's mode ("on", "off", or empty to follow the app). */
+export function blocksWanted(mode: string | undefined, appAutomatic: boolean): boolean {
+  return mode === "on" ? true : mode === "off" ? false : appAutomatic;
+}
+
+/**
+ * True once an ssh login has authenticated (so no password prompt can be waiting) and the
+ * session has been silent for `quietMs`: the moment to type the setup line.
+ */
+export function loginQuiet(authed: boolean, authedAt: number, lastData: number, now: number, quietMs = 700): boolean {
+  return authed && now - Math.max(authedAt, lastData) >= quietMs;
 }

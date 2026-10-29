@@ -83,3 +83,25 @@ func TestPreviewUsesRealGeneratorAndReportsProblems(t *testing.T) {
 		t.Errorf("Preview changed the store: %v", got)
 	}
 }
+
+// The per-connection command-block mode is saved with the profile, validated, and kept out of
+// the generated ssh config (it is an app setting, not an ssh option).
+func TestProfileBlocksModeRoundTrips(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("SSSH_HOME", home)
+	svc := ProfilesService{}
+	if err := svc.Save("", Profile{Name: "box", Host: "h", User: "u", Port: 22, Auth: "agent", Blocks: "on"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.List()
+	if err != nil || len(got) != 1 || got[0].Blocks != "on" {
+		t.Fatalf("List = %+v, %v", got, err)
+	}
+	if err := svc.Save("", Profile{Name: "box2", Host: "h", User: "u", Port: 22, Auth: "agent", Blocks: "sometimes"}); err == nil {
+		t.Error("an unknown blocks mode should be rejected")
+	}
+	cfg, _ := os.ReadFile(home + "/.ssh/sssh.d/config")
+	if strings.Contains(strings.ToLower(string(cfg)), "blocks") {
+		t.Errorf("blocks leaked into the generated ssh config:\n%s", cfg)
+	}
+}

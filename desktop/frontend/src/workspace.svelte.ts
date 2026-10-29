@@ -1,7 +1,8 @@
 import { tick } from "svelte";
 import { openSession, type Session } from "./terminal";
 import * as P from "./panes";
-import { reorder } from "./lib";
+import { blocksWanted, loginQuiet, reorder } from "./lib";
+import { settings } from "./settings.svelte";
 import type { BlockRef } from "./blocks";
 import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
@@ -21,6 +22,8 @@ class Workspace {
   /** The open block menu (raw: it holds functions and a DOMRect, which need no reactivity). */
   blockMenu = $state.raw<{ block: BlockRef; rect: DOMRect } | null>(null);
   panes = $state<Record<string, PaneInfo>>({});
+  /** A connection's own command-block mode ("on", "off" or ""), supplied by the app. */
+  blocksMode: (target: string) => string | undefined = () => undefined;
   private els = new Map<string, HTMLElement>();
   private sessions = new Map<string, Session>();
 
@@ -124,6 +127,7 @@ class Workspace {
       s.term.onData((d) => {
         if (this.sessions.get(id) === s && this.panes[id]?.ended && d.includes("\r")) this.start(id);
       });
+      this.autoBlocks(id, s);
       s.onBlockMenu = (block, rect) => { this.blockMenu = { block, rect }; };
       s.onBlocks = () => { if (this.panes[id]) this.panes[id].blocks = true; };
       this.sessions.set(id, s);
@@ -133,6 +137,29 @@ class Workspace {
       info.ended = true;
       info.connecting = false;
     }
+  }
+
+  /** Whether this pane's session will set up command blocks by itself. */
+  autoBlocksFor(target: string | null): boolean {
+    return target !== null && blocksWanted(this.blocksMode(target), settings.autoBlocks);
+  }
+
+  /**
+   * Types the command-block setup line into an ssh session once the login has authenticated and
+   * gone quiet: never earlier, because before that the keystrokes could land in a password prompt.
+   */
+  private autoBlocks(id: string, s: Session) {
+    const info = this.panes[id];
+    if (!info || !this.autoBlocksFor(info.target)) return;
+    const timer = setInterval(() => {
+      const live = this.sessions.get(id) === s && this.panes[id] && !this.panes[id].ended;
+      if (!live || this.panes[id].blocks || Date.now() - info.since > 120_000) return clearInterval(timer);
+      if (loginQuiet(s.authed, s.authedAt, s.lastData, Date.now())) {
+        clearInterval(timer);
+        this.enableBlocks(id);
+      }
+    }, 200);
+    s.ws.addEventListener("close", () => clearInterval(timer));
   }
 
   /** Gives up on a connection that is still waiting for the host. */

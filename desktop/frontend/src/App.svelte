@@ -167,6 +167,7 @@
 
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
+    ws.blocksMode = (name) => profiles.find((p) => p.name === name)?.blocks;
     sb.onPaneMove = (id, target, edge) => ws.movePane(id, target, edge);
     sb.onPaneDrop = (name, paneId, edge) => { banner = ""; return edge === "center" ? ws.openTab(name) : ws.splitAt(paneId, edge, name); };
     (async () => {
@@ -581,6 +582,17 @@
         document.querySelector<HTMLButtonElement>(".tabview.on .connecting .btn")?.click();
         await sleep(600);
         out.connectSlow = { early, hint, stillWaiting, cancelled: { ...sample(slow), ended: ws.panes[slow]?.ended, error: ws.panes[slow]?.error, banner: document.querySelector(".tabview.on .ended")?.textContent?.replace(/\s+/g, " ").trim() } };
+        // automatic command blocks: after the login authenticates and goes quiet, the setup line is typed
+        const autoBefore = settings.autoBlocks;
+        settings.autoBlocks = true;
+        await ws.openTab(box);
+        const auto = ws.focusedPane;
+        for (let i = 0; i < 60 && !seen(auto, "yes/no"); i++) await sleep(100);
+        const typedBeforeLogin = ws.panes[auto]?.blocks || ws.session(auto)?.authed === true;
+        ws.session(auto)?.ws.send(enc.encode("yes\n"));
+        for (let i = 0; i < 150 && !ws.panes[auto]?.blocks; i++) await sleep(100);
+        out.autoBlocks = { sawHostKeyQuestion: seen(auto, "yes/no"), authedBeforeAnswer: typedBeforeLogin, authed: ws.session(auto)?.authed, authBy: ws.session(auto)?.authBy, blocks: ws.panes[auto]?.blocks, pill: !!document.querySelector(".tabview.on .hint") };
+        settings.autoBlocks = autoBefore;
       }
     } catch (e) {
       out.error = String(e);

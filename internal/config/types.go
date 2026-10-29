@@ -60,7 +60,10 @@ type Profile struct {
 	Tags         []string `toml:"tags,omitempty"`
 	Jump         string   `toml:"jump,omitempty"`
 	ForwardAgent bool     `toml:"forward_agent,omitempty"`
-	Tunnels      []Tunnel `toml:"tunnel,omitempty"`
+	// Blocks is the Relay desktop app's command-block mode for this host: "on",
+	// "off", or empty to follow the app setting. The CLI ignores it.
+	Blocks  string   `toml:"blocks,omitempty"`
+	Tunnels []Tunnel `toml:"tunnel,omitempty"`
 }
 
 // Store is the whole of connections.toml.

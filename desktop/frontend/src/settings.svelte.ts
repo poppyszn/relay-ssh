@@ -18,7 +18,7 @@ export const DENSITY: Record<string, { name: string; lineHeight: number }> = {
   airy: { name: "Airy", lineHeight: 1.4 },
 };
 
-interface Saved { theme: string; font: string; fontSize: number; density: string; copyOnSelect: boolean; cursorBlink: boolean }
+interface Saved { theme: string; font: string; fontSize: number; density: string; copyOnSelect: boolean; cursorBlink: boolean; autoBlocks: boolean }
 const KEY = "relay.settings.v1";
 
 function load(): Partial<Saved> {
@@ -36,6 +36,8 @@ class Settings {
   density = $state("comfortable");
   copyOnSelect = $state(false);
   cursorBlink = $state(true);
+  /** Set up command blocks by itself in ssh sessions (a connection can override this). */
+  autoBlocks = $state(false);
 
   constructor() {
     const s = load();
@@ -45,6 +47,7 @@ class Settings {
     if (s.density && DENSITY[s.density]) this.density = s.density;
     if (typeof s.copyOnSelect === "boolean") this.copyOnSelect = s.copyOnSelect;
     if (typeof s.cursorBlink === "boolean") this.cursorBlink = s.cursorBlink;
+    if (typeof s.autoBlocks === "boolean") this.autoBlocks = s.autoBlocks;
   }
 
   /** Whether macOS is currently in light mode; only consulted for the "system" theme. */
@@ -76,7 +79,7 @@ class Settings {
     const root = document.documentElement;
     for (const [k, v] of Object.entries(this.themeDef.vars)) root.style.setProperty(`--${k}`, v);
     root.style.colorScheme = this.themeDef.scheme; // native scrollbars, inputs and the selection colour follow
-    const saved: Saved = { theme: this.theme, font: this.font, fontSize: this.fontSize, density: this.density, copyOnSelect: this.copyOnSelect, cursorBlink: this.cursorBlink };
+    const saved: Saved = { theme: this.theme, font: this.font, fontSize: this.fontSize, density: this.density, copyOnSelect: this.copyOnSelect, cursorBlink: this.cursorBlink, autoBlocks: this.autoBlocks };
     try {
       localStorage.setItem(KEY, JSON.stringify(saved));
     } catch {

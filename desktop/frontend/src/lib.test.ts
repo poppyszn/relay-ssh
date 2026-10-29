@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blankProfile, connectingHint, formatElapsed, groupByFolder, matches, paneEdge, parseTags, reorder, slotAt } from "./lib";
+import { blankProfile, blocksWanted, connectingHint, loginQuiet, formatElapsed, groupByFolder, matches, paneEdge, parseTags, reorder, slotAt } from "./lib";
 
 const mk = (o: object) => ({ ...blankProfile(), host: "h", user: "u", ...o }) as ReturnType<typeof blankProfile>;
 
@@ -147,5 +147,26 @@ describe("pane drop zones", () => {
   it("prefers the closer edge in a corner", () => {
     expect(paneEdge(r, 105, 60)).toBe("left"); // 5/400 from the left, 10/300 from the top
     expect(paneEdge(r, 130, 52)).toBe("top");
+  });
+});
+
+describe("automatic command blocks", () => {
+  it("a connection's own mode beats the app setting", () => {
+    expect(blocksWanted("on", false)).toBe(true);
+    expect(blocksWanted("off", true)).toBe(false);
+    expect(blocksWanted("", true)).toBe(true);
+    expect(blocksWanted("", false)).toBe(false);
+    expect(blocksWanted(undefined, true)).toBe(true);
+  });
+
+  it("waits for the login to finish and the output to go quiet before typing", () => {
+    // not authenticated yet: never, however quiet (a prompt may be waiting for a password)
+    expect(loginQuiet(false, 0, 0, 10_000)).toBe(false);
+    // just authenticated, or output still arriving
+    expect(loginQuiet(true, 1_000, 1_000, 1_200)).toBe(false);
+    expect(loginQuiet(true, 1_000, 1_900, 2_300)).toBe(false);
+    // quiet long enough since the later of the marker and the last output
+    expect(loginQuiet(true, 1_000, 1_000, 1_800)).toBe(true);
+    expect(loginQuiet(true, 1_000, 1_900, 2_700)).toBe(true);
   });
 });
