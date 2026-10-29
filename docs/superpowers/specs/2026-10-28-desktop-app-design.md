@@ -172,7 +172,14 @@ Done (stage D, command blocks): the shell prints OSC 133 markers (A prompt start
 
 Layout follows the owner's Warp reference (2026-10-29): content is anchored to the bottom of the pane (the screen is shifted down by the unused rows until the buffer fills; `anchorBottom` in `terminal.ts`), each block has a blank row above and below it printed by the shell hooks (the block is finished at the next prompt so it includes the bottom row), dividers bleed edge to edge through the terminal padding, and type is 14px at line-height 1.25 (about 22.5px rows). Padding is on the `.xterm` element because FitAddon subtracts that, not a parent's padding.
 
-Remaining: scrollback search, themes and font settings, a clipboard check in the real window, a Relay-drawn header line (path, git, duration) instead of relying on the user's own prompt, and Windows ConPTY.
+Scrollbar: xterm 6 draws its own scrollbar, so it is restyled in `theme.css` to a 5px slider with a 10px grab area, pushed out through the terminal padding to the pane's right edge.
+
+Remaining: scrollback search, themes and font settings, a clipboard check in the real window, the block options menu and Relay-drawn header (section 9e), and Windows ConPTY.
+
+## 9e. Backlog notes from the owner (2026-10-29)
+
+- **Per-block options menu (later):** a three-dot button on every command block, like Warp's, opening actions such as copy command, copy output, copy all (command plus output), and likely more (for example re-run, share, collapse). Blocks already know their start and command markers; the output range is the rows between the command row and the block end, so copy actions can read it from the xterm buffer without Go involvement. Needs a hover affordance on the block overlay (the overlay is `pointer-events: none` today, so the button needs its own hit area), keyboard access, and tests for the range extraction.
+- **Relay-drawn block header (later):** a dim header line (path, git branch, duration) instead of the user's own prompt, optional because it means Relay draws its own prompt in local shells.
 
 ## 10. Working agreement (carried over from the CLI)
 
