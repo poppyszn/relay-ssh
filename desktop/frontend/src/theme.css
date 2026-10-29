@@ -30,7 +30,7 @@
   --active: #1f2b3b;
   --foot: #172130;
   --divider: #3d4f6b;
-  --window-radius: 6px;
+  --window-radius: 10px;
   --sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
 }
