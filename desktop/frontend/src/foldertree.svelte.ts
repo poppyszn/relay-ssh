@@ -1,7 +1,7 @@
 import { ProfilesService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 import { canDrop, folderBase, folderParent, joinFolder, paneEdge, type PaneEdge } from "./lib";
 
-export type DragKind = "profile" | "folder";
+export type DragKind = "profile" | "folder" | "pane";
 export interface Pending { kind: DragKind; id: string; to: string; text: string; sub: string }
 
 const KEY = "relay.sidebar.collapsed.v1";
@@ -12,6 +12,14 @@ function loadCollapsed(): Record<string, boolean> {
     return {}; // storage may be unavailable; everything starts expanded
   }
 }
+const LEARNED = "relay.sidebar.openhint.v1";
+const hasLearned = () => {
+  try {
+    return localStorage.getItem(LEARNED) === "1";
+  } catch {
+    return false;
+  }
+};
 const msg = (e: unknown) => (e as Error)?.message ?? String(e);
 
 /** Shared state and operations for the connection tree: folders, drag and drop, confirmations. */
@@ -19,6 +27,18 @@ class SidebarState {
   collapsed = $state<Record<string, boolean>>(loadCollapsed());
   /** The folder new subfolders and connections go into; "" is the top level. */
   selectedFolder = $state("");
+  /** The connection row last clicked (highlighted; double-click opens it). */
+  selectedConn = $state("");
+  /** Whether the user has opened a connection by double-clicking (the hint under the list goes away). */
+  learnedOpen = $state(hasLearned());
+  learnOpen() {
+    this.learnedOpen = true;
+    try {
+      localStorage.setItem(LEARNED, "1");
+    } catch {
+      // best effort
+    }
+  }
   /** Parent path of the inline "new folder" row, or null when none is open. */
   creatingIn = $state<string | null>(null);
   newName = $state("");
@@ -32,6 +52,8 @@ class SidebarState {
   paneDrop = $state<{ id: string; edge: PaneEdge } | null>(null);
   /** Called when a connection is dropped on a pane (set by the app). */
   onPaneDrop: (connection: string, paneId: string, edge: PaneEdge) => void = () => {};
+  /** Called when a pane is dropped on another pane (set by the app). */
+  onPaneMove: (paneId: string, targetId: string, edge: PaneEdge) => void = () => {};
   dropOk = $state(true);
   dropReason = $state("");
   pending = $state<Pending | null>(null);
@@ -138,21 +160,26 @@ class SidebarState {
       if (y > r.top && y < r.top + 36) scroller.scrollTop -= 12;
       else if (y < r.bottom && y > r.bottom - 36) scroller.scrollTop += 12;
     }
-    // A connection dropped on a terminal opens in it (split or new tab), instead of moving between folders.
-    const pane = this.drag.kind === "profile" ? document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-pane]") : null;
-    if (pane) {
+    // A connection or a pane dropped on a terminal lands in it (split, move, new tab), instead of moving between folders.
+    const kind = this.drag.kind;
+    const pane = kind !== "folder" ? document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-pane]") : null;
+    if (pane && !(kind === "pane" && pane.dataset.pane === this.drag.id)) {
       this.paneDrop = { id: pane.dataset.pane ?? "", edge: paneEdge(pane.getBoundingClientRect(), x, y) };
       this.dropTarget = null;
       return;
     }
     this.paneDrop = null;
+    if (kind === "pane") {
+      this.dropTarget = null;
+      return;
+    }
     const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-drop]");
     if (!el) {
       this.dropTarget = null;
       return;
     }
     const target = el.dataset.drop ?? "";
-    const verdict = canDrop(this.drag.kind, this.drag.id, target, this.data.profiles, this.data.folders);
+    const verdict = canDrop(kind, this.drag.id, target, this.data.profiles, this.data.folders);
     this.dropTarget = target;
     this.dropOk = verdict.ok;
     this.dropReason = verdict.reason ?? "";
@@ -165,7 +192,7 @@ class SidebarState {
     this.cancelDrag();
     this.justDragged = true;
     setTimeout(() => (this.justDragged = false), 0);
-    if (d && pane) return this.onPaneDrop(d.id, pane.id, pane.edge);
+    if (d && pane) return d.kind === "pane" ? this.onPaneMove(d.id, pane.id, pane.edge) : this.onPaneDrop(d.id, pane.id, pane.edge);
     if (!d || target === null || !ok) return;
     const where = target || "the top level";
     const from = d.kind === "profile" ? this.data.profiles.find((p) => p.name === d.id)?.folder : folderParent(d.id);

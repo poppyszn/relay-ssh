@@ -10,6 +10,7 @@
   import StatusBar from "./StatusBar.svelte";
   import PaneView from "./PaneView.svelte";
   import Palette from "./Palette.svelte";
+  import DragGhost from "./DragGhost.svelte";
   import ProfileForm from "./ProfileForm.svelte";
   import Logo from "./Logo.svelte";
   import BlockMenu from "./BlockMenu.svelte";
@@ -166,6 +167,7 @@
 
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
+    sb.onPaneMove = (id, target, edge) => ws.movePane(id, target, edge);
     sb.onPaneDrop = (name, paneId, edge) => { banner = ""; return edge === "center" ? ws.openTab(name) : ws.splitAt(paneId, edge, name); };
     (async () => {
       customChrome = await TerminalService.CustomChrome();
@@ -514,7 +516,45 @@
           const tabs0 = ws.tabs.length;
           const pr2 = document.querySelector<HTMLElement>(".tabview.on [data-pane]")!.getBoundingClientRect();
           const hintC = await dropOn(pr2.left + pr2.width / 2, pr2.top + pr2.height / 2);
-          out.paneDrop = { left, center: { hint: hintC, newTab: ws.tabs.length - tabs0, target: ws.panes[ws.focusedPane]?.target } };
+          const centerTarget = ws.panes[ws.focusedPane]?.target;
+          out.paneDrop = { left, center: { hint: hintC, newTab: ws.tabs.length - tabs0, target: centerTarget } };
+          // the remote pane just opened waits at ssh's host-key question: blocks are off there, so the opt-in is offered
+          await sleep(3200);
+          out.blocksOffer = {
+            statusButton: [...document.querySelectorAll("footer button")].some((b) => b.textContent?.trim() === "Enable command blocks"),
+            pill: document.querySelector(".tabview.on .hint strong")?.textContent ?? null,
+          };
+          // double-click opens a new tab; a single click does not
+          const tabsA = ws.tabs.length;
+          rowBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+          await sleep(200);
+          const afterSingle = ws.tabs.length;
+          rowBtn.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, detail: 2 }));
+          await sleep(400);
+          out.openByClick = { single: afterSingle - tabsA, double: ws.tabs.length - afterSingle, tip: !!document.querySelector(".tip") };
+          // dragging a pane by its header moves it, and its session keeps running
+          ws.select(tab.id);
+          await tick();
+          await sleep(300);
+          const ids = leaves(ws.active!.root);
+          const mover = ids.at(-1)!;
+          const dest = ids[0];
+          const hdr = document.querySelector<HTMLElement>(`[data-pane="${mover}"] header`);
+          const destEl = document.querySelector<HTMLElement>(`[data-pane="${dest}"]`);
+          if (hdr && destEl) {
+            const h = hdr.getBoundingClientRect();
+            const d = destEl.getBoundingClientRect();
+            press(hdr, h.left + 60, h.top + 10);
+            await dragTo(h.left + 80, h.top + 30);
+            await dragTo(d.left + 20, d.top + d.height / 2);
+            const hint = document.querySelector(".dropzone")?.textContent ?? null;
+            await release(d.left + 20, d.top + d.height / 2);
+            const now = leaves(ws.active!.root);
+            ws.session(mover)?.ws.send(enc.encode("echo moved-$((6*7))\n"));
+            for (let i = 0; i < 40 && !seen(mover, "moved-42"); i++) await sleep(100);
+            const el = document.querySelector<HTMLElement>(`[data-pane="${mover}"] .xterm-screen`)?.getBoundingClientRect();
+            out.paneMove = { hint, before: ids, after: now, movedFirst: now[0] === mover, sameSet: [...now].sort().join() === [...ids].sort().join(), stillRuns: seen(mover, "moved-42"), size: el ? [Math.round(el.width), Math.round(el.height)] : null };
+          }
         }
       }
       // connecting: a saved connection shows a loading screen until ssh first writes, and can be cancelled
@@ -565,7 +605,7 @@
             <PaneView node={t.root} tabId={t.id} multi={leaves(t.root).length > 1} {profiles} />
           </div>
         {:else}
-          <div class="welcome"><Logo size={72} /><h1>Relay</h1><p>Open a connection from the list, or press <span class="kbd">{mac ? "⌘T" : "Ctrl+Shift+T"}</span> for a local shell.</p></div>
+          <div class="welcome"><Logo size={72} /><h1>Relay</h1><p>Double-click a connection in the list to open it, or press <span class="kbd">{mac ? "⌘T" : "Ctrl+Shift+T"}</span> for a local shell.</p></div>
         {/each}
       </div>
     </main>
@@ -579,6 +619,7 @@
 {#if ws.blockMenu}<BlockMenu block={ws.blockMenu.block} rect={ws.blockMenu.rect} oncopy={copied} onclose={() => (ws.blockMenu = null)} />{/if}
 {#if toast}<div class="toast" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>{toast}</div>{/if}
 {#if settingsOpen}<SettingsPanel onclose={() => (settingsOpen = false)} />{/if}
+<DragGhost />
 {#if palette}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/if}
 {#if form}
   <ProfileForm initial={form.initial} oldName={form.oldName} {profiles} {folders} onsave={save} ondelete={() => (confirmDelete = profiles.find((p) => p.name === form!.oldName) ?? null)} oncancel={() => (form = null)} />

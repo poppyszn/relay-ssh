@@ -2,18 +2,23 @@
   import type { Node } from "./panes";
   import { isLeaf } from "./panes";
   import { ws } from "./workspace.svelte";
-  import { sb } from "./foldertree.svelte";
+  import { sb, dragSource } from "./foldertree.svelte";
   import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
   import PaneView from "./PaneView.svelte";
   import SearchBar from "./SearchBar.svelte";
   import ConnectingOverlay from "./ConnectingOverlay.svelte";
+  import BlocksHint from "./BlocksHint.svelte";
 
   let { node, tabId, multi, profiles }: { node: Node; tabId: string; multi: boolean; profiles: Profile[] } = $props();
 
   // Moves the pane's persistent terminal element into this leaf.
   function attach(host: HTMLElement, id: string) {
-    host.appendChild(ws.element(id));
-    return { destroy() { /* element stays alive in the workspace; the next leaf re-adopts it */ } };
+    host.replaceChildren(ws.element(id));
+    return {
+      // A leaf component can be reused for another pane when panes are rearranged.
+      update(next: string) { host.replaceChildren(ws.element(next)); },
+      destroy() { /* element stays alive in the workspace; the next leaf re-adopts it */ },
+    };
   }
 
   function drag(e: PointerEvent, sid: string, dir: "row" | "col") {
@@ -35,21 +40,24 @@
   {@const prof = profiles.find((p) => p.name === info?.target)}
   <section class="leaf" data-pane={node.id} class:focused={multi && tab?.focus === node.id} onpointerdowncapture={() => ws.focus(node.id)}>
     {#if multi}
-      <header>
+      <header use:dragSource={{ kind: "pane", id: node.id, label: info?.target ?? "Local" }} title="Drag to move this pane">
         <span class="dot" class:ok={info && !info.ended && !info.connecting} class:warn={info?.connecting} class:err={info?.ended}></span>
         <strong>{info?.target ?? "Local"}</strong>
         {#if prof}<span class="sub">{prof.user}@{prof.host}</span>{/if}
         {#if info?.connecting}<span class="wait">connecting…</span>{/if}
         {#if info?.ended}<span class="gone">disconnected</span>{/if}
-        <button class="close" aria-label="Close pane" onclick={() => ws.closePane(node.id)}>&times;</button>
+        <button class="close" data-nodrag aria-label="Close pane" onclick={() => ws.closePane(node.id)}>&times;</button>
       </header>
     {/if}
     <div class="term" use:attach={node.id}></div>
     {#if info?.connecting && info.target}
       <div class="cover" class:below-header={multi}><ConnectingOverlay target={info.target} {prof} since={info.since} oncancel={() => ws.cancelConnect(node.id)} /></div>
     {/if}
+    {#if info?.target && !info.connecting && !info.ended && !info.blocks}
+      {#key node.id}<BlocksHint id={node.id} />{/key}
+    {/if}
     {#if sb.paneDrop?.id === node.id}
-      <div class="dropzone {sb.paneDrop.edge}" class:below-header={multi} aria-hidden="true"><span>{sb.paneDrop.edge === "center" ? "Open in a new tab" : `Split ${sb.paneDrop.edge}`}</span></div>
+      <div class="dropzone {sb.paneDrop.edge}" class:below-header={multi} aria-hidden="true"><span>{sb.drag?.kind === "pane" ? (sb.paneDrop.edge === "center" ? "Swap places" : `Move ${sb.paneDrop.edge}`) : sb.paneDrop.edge === "center" ? "Open in a new tab" : `Split ${sb.paneDrop.edge}`}</span></div>
     {/if}
     {#if ws.searchPane === node.id && ws.session(node.id)}<SearchBar session={ws.session(node.id)!} onclose={() => ws.closeSearch()} />{/if}
     {#if info?.ended}
@@ -78,7 +86,7 @@
   .handle:hover { background: var(--accent); }
   .leaf { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; background: var(--term); }
   .leaf.focused { box-shadow: inset 0 0 0 1px var(--accent-edge); }
-  header { height: 28px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 0 0 14px; background: var(--bar); border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
+  header { cursor: grab; height: 28px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 0 0 14px; background: var(--bar); border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
   header strong { color: var(--text); font-weight: 500; }
   .dot { width: 7px; height: 7px; }
   .gone { color: var(--err-text); }
