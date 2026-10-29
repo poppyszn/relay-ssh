@@ -139,6 +139,7 @@ func TestShellIntegrationReportsBranchAndDirectory(t *testing.T) {
 
 // The snippet a user pastes into a remote shell defines the same hooks.
 func TestRemoteSnippetReportsDirectory(t *testing.T) {
+	clearGitEnv(t)
 	for _, shell := range []string{"zsh", "bash"} {
 		t.Run(shell, func(t *testing.T) {
 			path, err := exec.LookPath(shell)
