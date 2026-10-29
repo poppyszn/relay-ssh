@@ -113,7 +113,7 @@
 
 <style>
   aside { position: relative; width: 268px; flex: none; display: flex; flex-direction: column; background: var(--rail); border-right: 1px solid var(--line); min-height: 0; }
-  .head { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 10px 16px; }
+  .head { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 12px 16px; border-bottom: 1px solid var(--line); }
   .title { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; color: var(--strong); }
   .n { font-size: 11px; font-weight: 400; color: var(--dim); }
   .add { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px 0 9px; border: 0; border-radius: 4px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 12px; }
