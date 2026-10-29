@@ -9,6 +9,15 @@ export interface Endpoint {
     "token": string;
 }
 
+/**
+ * PreviewResult is the form's live preview: the exact Host block the profile
+ * would generate, and the reason it cannot be saved yet, if any.
+ */
+export interface PreviewResult {
+    "config": string;
+    "problem": string;
+}
+
 export interface Profile {
     "name": string;
     "host": string;

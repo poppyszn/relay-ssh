@@ -1,9 +1,15 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/poppyszn/super-ssh-v2/internal/config"
 	"github.com/poppyszn/super-ssh-v2/internal/core"
 	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/super-ssh-v2/internal/sshconfig"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // TunnelDTO and Profile are the JSON shapes the frontend sees. They mirror
@@ -95,4 +101,64 @@ func (ProfilesService) Delete(name string) error {
 	}
 	_, err = core.RemoveProfile(p, name)
 	return err
+}
+
+// PreviewResult is the form's live preview: the exact Host block the profile
+// would generate, and the reason it cannot be saved yet, if any.
+type PreviewResult struct {
+	Config  string `json:"config"`
+	Problem string `json:"problem"`
+}
+
+// Preview renders the generated SSH config for prof (replacing oldName, or
+// added when oldName is empty) without writing anything.
+func (ProfilesService) Preview(oldName string, prof Profile) PreviewResult {
+	cand := fromProfile(prof)
+	// Generate has no validation of its own, so the preview renders even
+	// while the form is half filled in; Problem says what blocks saving.
+	block := sshconfig.Generate(config.Store{Version: config.Version, Profiles: []config.Profile{cand}})
+	if i := strings.Index(block, "Host "); i >= 0 {
+		block = block[i:]
+	}
+	res := PreviewResult{Config: strings.TrimRight(block, "\n")}
+
+	p, err := paths.Default()
+	if err != nil {
+		res.Problem = err.Error()
+		return res
+	}
+	s, err := config.Load(p.StoreFile)
+	if err != nil {
+		res.Problem = err.Error()
+		return res
+	}
+	var profiles []config.Profile
+	for _, cur := range s.Profiles {
+		if cur.Name != oldName {
+			profiles = append(profiles, cur)
+		}
+	}
+	s.Profiles = append(profiles, cand)
+	if err := s.Validate(); err != nil {
+		res.Problem = err.Error()
+	}
+	return res
+}
+
+// PickKeyFile opens the native file dialog on ~/.ssh and returns the chosen
+// path, shortened to ~/ when it is under the home directory. Empty if cancelled.
+func (ProfilesService) PickKeyFile() (string, error) {
+	home, _ := os.UserHomeDir()
+	path, err := application.Get().Dialog.OpenFile().
+		SetTitle("Choose a private key").
+		SetDirectory(filepath.Join(home, ".ssh")).
+		CanChooseFiles(true).ShowHiddenFiles(true).
+		PromptForSingleSelection()
+	if err != nil || path == "" {
+		return "", err
+	}
+	if home != "" && strings.HasPrefix(path, home+string(filepath.Separator)) {
+		path = "~" + path[len(home):]
+	}
+	return path, nil
 }

@@ -30,6 +30,22 @@ export function List(): $CancellablePromise<$models.Profile[] | null> {
 }
 
 /**
+ * PickKeyFile opens the native file dialog on ~/.ssh and returns the chosen
+ * path, shortened to ~/ when it is under the home directory. Empty if cancelled.
+ */
+export function PickKeyFile(): $CancellablePromise<string> {
+    return $Call.ByID(3800291075);
+}
+
+/**
+ * Preview renders the generated SSH config for prof (replacing oldName, or
+ * added when oldName is empty) without writing anything.
+ */
+export function Preview(oldName: string, prof: $models.Profile): $CancellablePromise<$models.PreviewResult> {
+    return $Call.ByID(2053742877, oldName, prof);
+}
+
+/**
  * Save adds a profile (oldName == "") or updates and possibly renames one.
  */
 export function Save(oldName: string, prof: $models.Profile): $CancellablePromise<void> {
