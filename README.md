@@ -118,8 +118,6 @@ tools, files, forwards          ssh / sftp / ssh-keygen         ~/.ssh/sssh.d/co
 - Backups are a gzip tarball encrypted with [age](https://age-encryption.org) (scrypt passphrase). Relay
   never stores the passphrase.
 
-The design notes behind these decisions are in [`docs/superpowers/specs/`](docs/superpowers/specs/).
-
 ## Example `connections.toml`
 
 ```toml

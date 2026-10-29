@@ -60,5 +60,5 @@ else
   bad "syscall.Exec count=$nexec location=$where (expected 1 in ./internal/launch/launch.go)"
 fi
 
-[ "$fail" = "0" ] || { echo; echo "guardrails failed — see docs/superpowers/specs/2026-09-11-sssh-v2-design.md"; exit 1; }
+[ "$fail" = "0" ] || { echo; echo "guardrails failed — see the Budgets section of CLAUDE.md"; exit 1; }
 echo "guardrails passed"
