@@ -5,7 +5,8 @@ import type { BlockRef } from "./blocks";
 import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 export interface Tab { id: string; root: P.Node; focus: string }
-export interface PaneInfo { target: string | null; ended: boolean; error: string; blocks: boolean }
+/** `connecting` is true from the start of a saved connection until ssh first writes anything (a prompt, a banner or an error). */
+export interface PaneInfo { target: string | null; ended: boolean; error: string; blocks: boolean; connecting: boolean; since: number }
 
 let seq = 0;
 const uid = (p: string) => `${p}${++seq}`;
@@ -49,7 +50,7 @@ class Workspace {
   async openTab(target: string | null) {
     const id = uid("p");
     const tab: Tab = { id: uid("t"), root: { id }, focus: id };
-    this.panes[id] = { target, ended: false, error: "", blocks: false };
+    this.panes[id] = { target, ended: false, error: "", blocks: false, connecting: false, since: 0 };
     this.tabs.push(tab);
     this.activeId = tab.id;
     await this.start(id);
@@ -60,7 +61,7 @@ class Workspace {
     const tab = this.active;
     if (!tab) return this.openTab(target ?? null);
     const id = uid("p");
-    this.panes[id] = { target: target !== undefined ? target : (this.panes[tab.focus]?.target ?? null), ended: false, error: "", blocks: false };
+    this.panes[id] = { target: target !== undefined ? target : (this.panes[tab.focus]?.target ?? null), ended: false, error: "", blocks: false, connecting: false, since: 0 };
     tab.root = P.splitLeaf(tab.root, tab.focus, id, dir, uid("s"));
     tab.focus = id;
     await this.start(id);
@@ -74,13 +75,21 @@ class Workspace {
     info.ended = false;
     info.error = "";
     info.blocks = false;
+    // Local shells start at once; only a saved connection has a login to wait for.
+    info.connecting = info.target !== null;
+    info.since = Date.now();
     this.sessions.get(id)?.dispose();
     this.els.get(id)?.replaceChildren();
     try {
       const s = await openSession(this.element(id), info.target ?? "local");
       s.ws.addEventListener("close", () => {
-        if (this.sessions.get(id) === s && this.panes[id]) this.panes[id].ended = true;
+        if (this.sessions.get(id) === s && this.panes[id]) {
+          this.panes[id].ended = true;
+          this.panes[id].connecting = false;
+        }
       });
+      s.onFirstData = () => { if (this.sessions.get(id) === s && this.panes[id]) this.panes[id].connecting = false; };
+      if (s.received) info.connecting = false;
       s.term.onData((d) => {
         if (this.sessions.get(id) === s && this.panes[id]?.ended && d.includes("\r")) this.start(id);
       });
@@ -91,7 +100,17 @@ class Workspace {
     } catch (e) {
       info.error = String(e);
       info.ended = true;
+      info.connecting = false;
     }
+  }
+
+  /** Gives up on a connection that is still waiting for the host. */
+  cancelConnect(id: string) {
+    const info = this.panes[id];
+    if (!info?.connecting) return;
+    info.error = "Cancelled before the host answered.";
+    info.connecting = false;
+    this.sessions.get(id)?.dispose();
   }
 
   /** Types the shell-integration snippet into a remote shell, on the user's request. */

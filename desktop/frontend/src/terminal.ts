@@ -58,6 +58,10 @@ export interface Session {
   applySettings(): void;
   /** Called with each raw chunk before it is written to xterm. */
   onChunk?: (data: Uint8Array) => void;
+  /** True once the process has written anything; ssh is silent until it needs input or the login completes. */
+  received: boolean;
+  /** Called once, when the first bytes arrive. */
+  onFirstData?: () => void;
   /** Called once, when the shell first emits prompt markers (command blocks are active). */
   onBlocks?: () => void;
   /** Called when the user presses a block's menu button; `anchor` is the button's position. */
@@ -101,7 +105,7 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
 
   const enc = new TextEncoder();
   const s: Session = {
-    term, ws, webgl, fit, search,
+    term, ws, webgl, fit, search, received: false,
     applySettings() {
       Object.assign(term.options, settings.xterm);
       fit.fit();
@@ -116,6 +120,10 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
   let unacked = 0;
   ws.onmessage = (e) => {
     const data = new Uint8Array(e.data as ArrayBuffer);
+    if (!s.received) {
+      s.received = true;
+      s.onFirstData?.();
+    }
     s.onChunk?.(data);
     term.write(data, () => {
       unacked += data.length;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blankProfile, groupByFolder, matches, parseTags } from "./lib";
+import { blankProfile, connectingHint, formatElapsed, groupByFolder, matches, parseTags } from "./lib";
 
 const mk = (o: object) => ({ ...blankProfile(), host: "h", user: "u", ...o }) as ReturnType<typeof blankProfile>;
 
@@ -87,5 +87,25 @@ describe("canDrop", () => {
     expect(clash.reason).toMatch(/already/);
     expect(canDrop("folder", "prod/eu", "staging", profiles, folders).ok).toBe(true);
     expect(canDrop("folder", "prod/eu", "", profiles, folders).ok).toBe(true); // to the top level
+  });
+});
+
+describe("connecting progress", () => {
+  it("formats elapsed seconds", () => {
+    expect(formatElapsed(0)).toBe("0s");
+    expect(formatElapsed(4_900)).toBe("4s");
+    expect(formatElapsed(59_999)).toBe("59s");
+    expect(formatElapsed(61_000)).toBe("1m 1s");
+  });
+
+  it("stays quiet at first, then says the host is slow, then that it may be unreachable", () => {
+    expect(connectingHint(2_000, false)).toBe("");
+    expect(connectingHint(9_000, false)).toMatch(/longer than usual/i);
+    expect(connectingHint(31_000, false)).toMatch(/unreachable|offline|firewall/i);
+  });
+
+  it("mentions the jump host when the route has one", () => {
+    expect(connectingHint(9_000, true)).toMatch(/jump host/i);
+    expect(connectingHint(2_000, true)).toBe("");
   });
 });

@@ -21,7 +21,7 @@
   <div class="head" class:sel={sb.selectedFolder === node.path} class:ok={over && sb.dropOk} class:bad={over && !sb.dropOk}
        style="padding-left: {pad}px" title={over && !sb.dropOk ? sb.dropReason : ""}
        use:dragSource={{ kind: "folder", id: node.path, label: node.name }}>
-    {#each Array(depth) as _, i}<span class="guide" style="left: {18 + 14 * i}px"></span>{/each}
+    {#each Array(Math.max(0, depth)) as _, i}<span class="guide" style="left: {18 + 14 * i}px"></span>{/each}
     <button class="caret" aria-label={expanded ? "Collapse" : "Expand"} onclick={() => sb.toggle(node.path)} style="transform: rotate({expanded ? 90 : 0}deg)">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
     </button>

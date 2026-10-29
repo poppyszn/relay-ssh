@@ -9,7 +9,8 @@
 
   function status(t: (typeof ws.tabs)[number]) {
     const ids = leaves(t.root);
-    return ids.every((id) => ws.panes[id]?.ended) ? "err" : "ok";
+    if (ids.every((id) => ws.panes[id]?.ended)) return "err";
+    return ids.some((id) => ws.panes[id]?.connecting) ? "warn" : "ok";
   }
 </script>
 

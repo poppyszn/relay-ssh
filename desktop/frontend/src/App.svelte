@@ -185,6 +185,10 @@
   async function smoke(box = "", dir = "", sshdPort = "", localPort = "") {
     const out: Record<string, unknown> = { origin: location.origin };
     const enc = new TextEncoder();
+    const jsErrors: string[] = [];
+    window.addEventListener("error", (e) => jsErrors.push(e.message));
+    window.addEventListener("unhandledrejection", (e) => jsErrors.push(String(e.reason)));
+    out.jsErrors = jsErrors;
     const seen = (id: string, text: string) => {
       const b = ws.session(id)?.term.buffer.active;
       for (let y = 0; b && y < b.length; y++) if (b.getLine(y)?.translateToString().includes(text)) return true;
@@ -459,6 +463,31 @@
       out.reconnected = seen(victim, "again-42");
       ws.closePane(panes[1]);
       out.afterClose = ws.tabs.flatMap((t) => leaves(t.root)).length;
+      // connecting: a saved connection shows a loading screen until ssh first writes, and can be cancelled
+      if (box) {
+        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        const sample = (id: string) => ({
+          connecting: ws.panes[id]?.connecting,
+          overlay: !!document.querySelector(".tabview.on .connecting"),
+          status: [...document.querySelectorAll("footer")].at(-1)?.querySelector(".seg")?.textContent?.trim(),
+        });
+        await ws.openTab(box);
+        const fast = ws.focusedPane;
+        const t0 = Date.now();
+        for (let i = 0; i < 100 && ws.panes[fast]?.connecting; i++) await sleep(50);
+        out.connectFast = { ms: Date.now() - t0, ...sample(fast), received: ws.session(fast)?.received };
+        await ws.openTab("slow");
+        const slow = ws.focusedPane;
+        await sleep(1000);
+        out.dbg = { views: [...document.querySelectorAll(".tabview")].map((e) => e.className + ":" + e.querySelectorAll(".connecting").length), footer: [...document.querySelectorAll("footer")].map((f) => f.textContent), active: ws.activeId, focused: ws.focusedPane, slow, pane: JSON.stringify(ws.panes[slow]) };
+        const early = { ...sample(slow), time: document.querySelector(".tabview.on .connecting .time")?.textContent, hint: document.querySelector(".tabview.on .hint.on")?.textContent ?? null };
+        await sleep(9000);
+        const hint = document.querySelector(".tabview.on .hint.on")?.textContent ?? null;
+        const stillWaiting = sample(slow);
+        document.querySelector<HTMLButtonElement>(".tabview.on .connecting .btn")?.click();
+        await sleep(600);
+        out.connectSlow = { early, hint, stillWaiting, cancelled: { ...sample(slow), ended: ws.panes[slow]?.ended, error: ws.panes[slow]?.error, banner: document.querySelector(".tabview.on .ended")?.textContent?.replace(/\s+/g, " ").trim() } };
+      }
     } catch (e) {
       out.error = String(e);
     }
