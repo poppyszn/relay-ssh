@@ -13,8 +13,8 @@ func TestWindowOptionsCustomAndNativeFrame(t *testing.T) {
 	}
 	t.Setenv("RELAY_NATIVE_FRAME", "")
 	o := windowOptions()
-	if !o.Frameless || o.Mac.CornerRadius != windowRadius || o.BackgroundType != application.BackgroundTypeTransparent {
-		t.Errorf("custom chrome = frameless:%v radius:%v bg:%v", o.Frameless, o.Mac.CornerRadius, o.BackgroundType)
+	if !o.Frameless || o.Mac.CornerRadius != windowRadius || o.Mac.Backdrop != application.MacBackdropTransparent || o.BackgroundType != application.BackgroundTypeTransparent {
+		t.Errorf("custom chrome = frameless:%v radius:%v backdrop:%v bg:%v", o.Frameless, o.Mac.CornerRadius, o.Mac.Backdrop, o.BackgroundType)
 	}
 	if !customChrome() {
 		t.Error("customChrome should be on by default")

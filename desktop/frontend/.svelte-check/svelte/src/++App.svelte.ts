@@ -169,6 +169,7 @@ function $$render() {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     (async () => {
       customChrome = await TerminalService.CustomChrome();
+      document.documentElement.classList.toggle("custom-chrome", customChrome);
       // RELAY_BENCH is "run", "idle", "smoke", or "smoke|<connection>|<remote dir>" to also test files
       const [mode, box, dir, sshdPort, localPort] = (await TerminalService.BenchMode()).split("|");
       if (mode === "smoke") return smoke(box, dir, sshdPort, localPort);
@@ -344,6 +345,9 @@ function $$render() {
         buttons: btns.length,
         offCentre: strip && btns.length ? Math.max(...btns.map((r) => Math.abs(r.top + r.height / 2 - (strip.top + strip.height / 2)))) : null,
         inset: btns[0] && strip ? Math.round(btns[0].left - strip.left) : null,
+        appRadius: getComputedStyle(document.getElementById("app")!).borderTopLeftRadius,
+        rootClass: document.documentElement.classList.contains("custom-chrome"),
+        htmlBg: getComputedStyle(document.documentElement).backgroundColor,
       };
       // ended pane -> reconnect
       const victim = panes[0];

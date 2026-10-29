@@ -30,11 +30,17 @@
   --active: #1f2b3b;
   --foot: #172130;
   --divider: #3d4f6b;
+  --window-radius: 6px;
   --sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
-html, body, #app { height: 100%; margin: 0; background: var(--bg); color: var(--text); font: 13px/1.45 var(--sans); overflow: hidden; }
+html, body, #app { height: 100%; margin: 0; color: var(--text); font: 13px/1.45 var(--sans); overflow: hidden; }
+/* The window is transparent when Relay draws its own frame, so the page paints the
+   background and rounds the corners itself (keep in step with windowRadius in main.go). */
+html, body { background: transparent; }
+#app { background: var(--bg); }
+.custom-chrome #app { border-radius: var(--window-radius); }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
 input, select { background: var(--field); border: 1px solid var(--fieldline); border-radius: 4px; padding: 0 11px; height: 36px; min-width: 0; }
