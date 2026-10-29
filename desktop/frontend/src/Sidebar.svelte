@@ -65,8 +65,8 @@
   nav { flex: 1; overflow: auto; }
   .bar { display: flex; justify-content: space-between; width: 100%; padding: 7px 16px; background: var(--bar); border: 0; border-top: 1px solid #1f2b3a; border-bottom: 1px solid #1f2b3a; margin-top: -1px; }
   .row { display: flex; align-items: stretch; position: relative; }
-  .row:hover { background: #1a2535; }
-  .row.active { background: #1f2b3b; box-shadow: inset 3px 0 var(--accent); }
+  .row:hover { background: var(--hover); }
+  .row.active { background: var(--active); box-shadow: inset 3px 0 var(--accent); }
   .main { all: unset; flex: 1; min-width: 0; padding: 9px 16px; display: grid; gap: 1px; cursor: pointer; }
   .line1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

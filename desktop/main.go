@@ -72,6 +72,8 @@ func buildMenu(app *application.App) *application.Menu {
 	shell := menu.AddSubmenu("Shell")
 	shell.Add("New Tab").SetAccelerator(acc("Cmd+T", "Ctrl+Shift+T")).OnClick(send("new-tab"))
 	shell.Add("New Connection…").SetAccelerator(acc("Cmd+N", "Ctrl+Shift+N")).OnClick(send("new-connection"))
+	shell.Add("Find…").SetAccelerator(acc("Cmd+F", "Ctrl+Shift+F")).OnClick(send("find"))
+	shell.Add("Settings…").SetAccelerator(acc("Cmd+,", "Ctrl+Shift+,")).OnClick(send("settings"))
 	shell.Add("Quick Open…").SetAccelerator(acc("Cmd+K", "Ctrl+Shift+K")).OnClick(send("quick-open"))
 	shell.AddSeparator()
 	shell.Add("Split Right").SetAccelerator(acc("Cmd+D", "Ctrl+Shift+D")).OnClick(send("split-right"))

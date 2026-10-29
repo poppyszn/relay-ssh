@@ -83,7 +83,7 @@
   .tags { margin-left: auto; display: flex; gap: 6px; align-items: center; }
   .act .kbd { margin-left: auto; }
   .none { padding: 14px 18px; color: var(--muted); }
-  .foot { display: flex; gap: 16px; padding: 10px 18px; border-top: 1px solid var(--line2); font-size: 11.5px; color: #9aa8bd; background: #172130; }
+  .foot { display: flex; gap: 16px; padding: 10px 18px; border-top: 1px solid var(--line2); font-size: 11.5px; color: #9aa8bd; background: var(--foot); }
   .foot b { font-weight: 400; }
   .right { margin-left: auto; }
 </style>

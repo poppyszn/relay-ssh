@@ -234,7 +234,7 @@
   .cli div { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; background: var(--strip); border: 1px solid var(--line); border-radius: 4px; font-size: 12px; }
   .cli i { color: var(--dim); font-style: normal; }
   .error { margin: 0; padding: 10px 24px; color: var(--err-text); background: var(--err-bg); border-top: 1px solid var(--err); }
-  footer { height: 60px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 20px 0 24px; border-top: 1px solid var(--line2); background: #172130; }
+  footer { height: 60px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 20px 0 24px; border-top: 1px solid var(--line2); background: var(--foot); }
   .esc { margin-left: auto; font-size: 11.5px; color: var(--dim); }
   .btn.primary { display: flex; align-items: center; gap: 10px; padding: 9px 16px; }
   .btn.primary span { font: 500 11px var(--sans); opacity: 0.75; }
