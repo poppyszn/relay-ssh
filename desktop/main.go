@@ -33,9 +33,12 @@ func main() {
 	app = application.New(application.Options{
 		Name:        "Relay",
 		Description: "SSH connection manager and terminal",
-		Services:    []application.Service{application.NewService(term), application.NewService(&ProfilesService{}), application.NewService(&ToolsService{}), application.NewService(&FilesService{}), application.NewService(&ForwardsService{}), application.NewService(&SnippetsService{})},
+		Services:    []application.Service{application.NewService(term), application.NewService(&ProfilesService{}), application.NewService(&ToolsService{}), application.NewService(&FilesService{}), application.NewService(&ForwardsService{}), application.NewService(&SnippetsService{}), application.NewService(&VaultService{})},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
 		Mac:         application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
+	})
+	app.OnShutdown(func() {
+		getVault().Lock()
 	})
 	app.Menu.Set(buildMenu(app))
 	app.Window.NewWithOptions(windowOptions())
