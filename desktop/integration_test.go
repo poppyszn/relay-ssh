@@ -178,3 +178,47 @@ func clearGitEnv(t *testing.T) {
 		}
 	}
 }
+
+// The prompt hook runs git before every prompt, so it should cost as little as it can: one process
+// on a branch and outside a repository, a second only to name a detached HEAD.
+func TestPromptHookRunsAsFewGitProcessesAsPossible(t *testing.T) {
+	for _, shell := range []string{"zsh", "bash"} {
+		for _, tc := range []struct {
+			name   string
+			rc     string
+			calls  int
+			branch string
+		}{
+			{"on a branch", "0", 1, "main"},
+			{"detached HEAD", "1", 2, "abc1234"},
+			{"not a repository", "128", 1, ""},
+		} {
+			t.Run(shell+"/"+tc.name, func(t *testing.T) {
+				path, err := exec.LookPath(shell)
+				if err != nil {
+					t.Skipf("%s not installed", shell)
+				}
+				dir := t.TempDir()
+				log := filepath.Join(dir, "calls")
+				fake := "#!/bin/sh\necho \"$1\" >> '" + log + "'\ncase \"$1\" in\n  symbolic-ref) [ \"$FAKE_RC\" = 0 ] && echo main; exit \"$FAKE_RC\";;\n  rev-parse) echo abc1234;;\nesac\n"
+				if err := os.WriteFile(filepath.Join(dir, "git"), []byte(fake), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				snippet := strings.TrimSuffix(remoteSnippet, "; clear\n")
+				cmd := exec.Command(path, "-c", snippet+"; __r")
+				cmd.Env = append(os.Environ(), "PATH="+dir+":"+os.Getenv("PATH"), "FAKE_RC="+tc.rc, "PS1=$ ")
+				out, err := cmd.CombinedOutput()
+				if err != nil {
+					t.Fatalf("%v: %s", err, out)
+				}
+				if want := "\x1b]133;A;" + tc.branch + ";"; !strings.Contains(string(out), want) {
+					t.Errorf("want %q in %q", want, out)
+				}
+				data, _ := os.ReadFile(log)
+				if got := len(strings.Fields(string(data))); got != tc.calls {
+					t.Errorf("git ran %d times (%q), want %d", got, data, tc.calls)
+				}
+			})
+		}
+	}
+}

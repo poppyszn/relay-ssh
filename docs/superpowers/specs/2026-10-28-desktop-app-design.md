@@ -274,6 +274,18 @@ Deliberately not planned: broadcast input, an AWS credential store, cluster admi
 
 A connection whose key is a bare name means "a key adopted into the vault". Saving one whose file is not in `~/.ssh/sssh.d/keys/` made ssh fail with `no such identity ... No such file or directory` (a key typed by name that was never adopted). The form's live preview and Save now refuse it, with a message that says what to do (pick it from the Key list, enter `~/.ssh/<name>` when it is in `~/.ssh`, or adopt it in Tools > Keys); only a new profile or a changed key is checked, so a connection already stored that way can still be edited. The "session ended / could not connect" banner moved from the bottom of the pane to the top (below the header in split panes), so it no longer covers the prompt or ssh's own error text, and it has a close button; pressing Enter in the terminal still reconnects.
 
+## 9u. Security and performance audit fixes (2026-10-29)
+
+An audit of `main` (dependency scans, attack surface, measured performance) found, and this section records the fixes for:
+- **ssh_config injection (the real issue).** A profile's host, user, key and tunnel addresses were written into the generated ssh config unchecked, so a line break in one (from a crafted `connections.toml`, a restored backup or imported data) could add directives such as `ProxyCommand` or `LocalCommand` and run a command when connecting. Validation now rejects control characters in all of them, whitespace in host, user and tunnel addresses, and a host beginning with `-`. Restore also parses and validates the archive's `connections.toml` before installing it (a refused restore leaves the current connections alone, where before an invalid file was installed and then could not be loaded), reads at most 64 MB of any one entry (a decompression bomb in an unencrypted legacy backup), and the dialog warns that an unencrypted backup proves nothing about where it came from. About 40 CLI lines: budget 3010 to 3050 (CLAUDE.md).
+- **Go toolchain.** 1.27.0 had 11 standard-library vulnerabilities (net/http, crypto/tls, crypto/x509, net/textproto); everything is on 1.27.3 now (`go.mod`, `desktop/go.mod`, `go.work`, CI).
+- **Content-Security-Policy** in `index.html`: only the app's own files run, the terminal socket is allowed on loopback, nothing loads from or sends to another site. Verified in dev and in the production binary (the smoke run now records any CSP violation).
+- **CI.** Actions are pinned by commit SHA, Dependabot proposes weekly updates (Go modules, npm, actions), and CI runs `govulncheck` (Go) and `npm audit --omit=dev` so a new vulnerability fails the build.
+- **Permissions.** The app tightens its folders to 0700 at startup (older versions left some at 0755; the files inside were already 0600).
+- **Prompt hook cost.** The branch lookup ran two git processes outside a repository; it now runs one (exit status 1 means detached HEAD, only then a second call for the short commit), saving about 12 ms per prompt there.
+
+Measured on the production build: a 203 MB `cat` in about 3.1 to 3.5 s with the UI never stalling more than 40 ms, keystroke echo 1 ms, under 1 percent CPU and about 105 MB memory idle, 24 terminals all keeping GPU rendering. Not done: splitting the 708 KB script into lazy chunks, and measuring startup time and long-session memory.
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.

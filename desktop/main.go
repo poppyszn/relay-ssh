@@ -19,6 +19,7 @@ import (
 var assets embed.FS
 
 func main() {
+	prepareDirs()
 	if os.Getenv("RELAY_BENCH") != "" {
 		keychainEnabled = false // test runs must never write to the real Keychain
 	}
