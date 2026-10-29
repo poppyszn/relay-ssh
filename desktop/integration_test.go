@@ -91,11 +91,10 @@ func TestShellIntegrationEmitsPromptMarkers(t *testing.T) {
 // under it: a sibling that merely starts with the same text is not abbreviated),
 // and nothing a directory is named can inject terminal sequences.
 func TestShellIntegrationReportsBranchAndDirectory(t *testing.T) {
-	git, err := exec.LookPath("git")
-	if err != nil {
+	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
-	_ = git
+	clearGitEnv(t)
 	for _, shell := range []string{"zsh", "bash"} {
 		t.Run(shell, func(t *testing.T) {
 			path, err := exec.LookPath(shell)
@@ -161,5 +160,20 @@ func TestRemoteSnippetReportsDirectory(t *testing.T) {
 				t.Errorf("%s: want %q in %q", shell, want, out)
 			}
 		})
+	}
+}
+
+// clearGitEnv removes the variables git sets for its hooks (GIT_DIR and friends), which would
+// point the test's own git commands at the repository that is running the tests, for example when
+// `git push` runs the pre-push hook from a linked worktree.
+func clearGitEnv(t *testing.T) {
+	t.Helper()
+	for _, kv := range os.Environ() {
+		name, _, _ := strings.Cut(kv, "=")
+		if strings.HasPrefix(name, "GIT_") {
+			old, _ := os.LookupEnv(name)
+			os.Unsetenv(name)
+			t.Cleanup(func() { os.Setenv(name, old) })
+		}
 	}
 }
