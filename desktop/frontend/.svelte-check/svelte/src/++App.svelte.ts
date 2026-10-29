@@ -15,10 +15,12 @@ import ProfileForm from "./ProfileForm.svelte";
 import SettingsPanel from "./SettingsPanel.svelte";
 import ToolsPanel from "./ToolsPanel.svelte";
 import FilesPanel from "./FilesPanel.svelte";
+import ForwardsPanel from "./ForwardsPanel.svelte";
 import { settings } from "./settings.svelte";
-import { FilesService, ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import { FilesService, ForwardsService, ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 function $$render() {
 
+  
   
   
   
@@ -45,6 +47,7 @@ function $$render() {
   let settingsOpen = $state(false);
   let toolsOpen = $state(false);
   let filesTarget = $state("");
+  let forwardsTarget = $state("");
   let form = $state<{ initial: Profile; oldName: string } | null>(null);
   let confirmDelete = $state<Profile | null>(null);
   let benchHost = $state<HTMLElement>();
@@ -57,6 +60,7 @@ function $$render() {
     { id: "split-right", label: "Split pane right", hint: mac ? "⌘D" : "Ctrl+Shift+D" },
     { id: "split-down", label: "Split pane down", hint: mac ? "⇧⌘D" : "Ctrl+Alt+D" },
     { id: "files", label: "Browse files on this connection", hint: mac ? "⇧⌘O" : "Ctrl+Shift+O" },
+    { id: "forwards", label: "Manage port forwards on this connection", hint: mac ? "⇧⌘P" : "Ctrl+Shift+P" },
     { id: "tools", label: "Open tools: health, backup, import, keys", hint: "" },
     { id: "enable-blocks", label: "Enable command blocks in this session", hint: "" },
   ];
@@ -93,6 +97,7 @@ function $$render() {
       case "settings": return (settingsOpen = !settingsOpen);
       case "tools": return (toolsOpen = !toolsOpen);
       case "files": return openFiles();
+      case "forwards": return openForwards();
       case "enable-blocks": return ws.focusedPane && ws.enableBlocks(ws.focusedPane);
     }
   }
@@ -111,6 +116,14 @@ function $$render() {
     if (!t) return (banner = "Open a saved connection in this pane to browse its files.");
     banner = "";
     filesTarget = t;
+  }
+
+  // Forwards are managed on a saved connection's live login.
+  function openForwards() {
+    const t = ws.panes[ws.focusedPane]?.target;
+    if (!t) return (banner = "Open a saved connection in this pane to manage its port forwards.");
+    banner = "";
+    forwardsTarget = t;
   }
 
   async function save(prof: Profile) {
@@ -133,7 +146,7 @@ function $$render() {
   // terminal control keys. On macOS the native menu owns the shortcuts.
   function keydown(e: KeyboardEvent) {
     if (mac || !e.ctrlKey || !e.shiftKey) return;
-    const map: Record<string, string> = { T: "new-tab", N: "new-connection", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar", F: "find", ",": "settings", O: "files" };
+    const map: Record<string, string> = { T: "new-tab", N: "new-connection", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar", F: "find", ",": "settings", O: "files", P: "forwards" };
     const id = map[e.key.toUpperCase()];
     if (id) { e.preventDefault(); run(id); }
   }
@@ -148,8 +161,8 @@ function $$render() {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     (async () => {
       // RELAY_BENCH is "run", "idle", "smoke", or "smoke|<connection>|<remote dir>" to also test files
-      const [mode, box, dir] = (await TerminalService.BenchMode()).split("|");
-      if (mode === "smoke") return smoke(box, dir);
+      const [mode, box, dir, sshdPort, localPort] = (await TerminalService.BenchMode()).split("|");
+      if (mode === "smoke") return smoke(box, dir, sshdPort, localPort);
       if (mode) return runBench(benchHost!, mode);
       await refresh();
       await ws.openTab(null);
@@ -160,7 +173,7 @@ function $$render() {
   // RELAY_BENCH=smoke: drive the real UI path (profiles, open a local tab,
   // split it, run a command in each pane) and report, so a build can be
   // verified without clicking.
-  async function smoke(box = "", dir = "") {
+  async function smoke(box = "", dir = "", sshdPort = "", localPort = "") {
     const out: Record<string, unknown> = { origin: location.origin };
     const enc = new TextEncoder();
     const seen = (id: string, text: string) => {
@@ -287,6 +300,20 @@ function $$render() {
         await tick();
         out.files = { panelRows: rows, error: shown, panelClosed: !document.querySelector("[aria-label=Files][role=dialog]") };
       }
+      // port forwards: the real panel and service against a live multiplex master started by the harness
+      if (box && sshdPort && localPort) {
+        const before = await ForwardsService.Status(box);
+        forwardsTarget = box;
+        await tick();
+        await ForwardsService.Add(box, "local", localPort, "127.0.0.1:" + sshdPort);
+        for (let i = 0; i < 60 && !document.querySelector(".panel .row:not(.head)"); i++) await new Promise((r) => setTimeout(r, 100));
+        const after = await ForwardsService.Status(box);
+        const rows = [...document.querySelectorAll(".panel .row:not(.head)")].map((r) => r.textContent?.replace(/\s+/g, " ").trim());
+        await ForwardsService.Cancel(box, "local", localPort, "127.0.0.1:" + sshdPort);
+        const gone = await ForwardsService.Status(box);
+        forwardsTarget = "";
+        out.forwards = { connectedBefore: before.connected, connectedState: !!document.querySelector(".state"), listening: after.forwards?.[0]?.listening, uiRows: rows, afterCancel: gone.forwards?.length };
+      }
       // ended pane -> reconnect
       const victim = panes[0];
       ws.session(victim)?.ws.close();
@@ -309,7 +336,7 @@ async () => {
  { svelteHTML.createElement("svelte:window", {  "onkeydown":keydown,});}
 
  { svelteHTML.createElement("div", { "class":`app`,});
-   { const $$_raBbaT1C = __sveltets_2_ensureComponent(TabBar); new $$_raBbaT1C({ target: __sveltets_2_any(), props: {        "onsidebar":() => (sidebar = !sidebar),"onsettings":() => (settingsOpen = !settingsOpen),"ontools":() => (toolsOpen = !toolsOpen),"onfiles":openFiles,}});}
+   { const $$_raBbaT1C = __sveltets_2_ensureComponent(TabBar); new $$_raBbaT1C({ target: __sveltets_2_any(), props: {          "onsidebar":() => (sidebar = !sidebar),"onsettings":() => (settingsOpen = !settingsOpen),"ontools":() => (toolsOpen = !toolsOpen),"onfiles":openFiles,"onforwards":openForwards,}});}
    { svelteHTML.createElement("div", { "class":`body`,});
     if(sidebar){
        { const $$_rabediS2C = __sveltets_2_ensureComponent(Sidebar); new $$_rabediS2C({ target: __sveltets_2_any(), props: {           profiles,"active":open,"onconnect":(p) => connect(p),"onnew":() => run("new-connection"),"onedit":(p) => (form = { initial: p, oldName: p.name }),"onpalette":() => (palette = true),}});}
@@ -330,6 +357,7 @@ async () => {
    { const $$_raBsutatS1C = __sveltets_2_ensureComponent(StatusBar); new $$_raBsutatS1C({ target: __sveltets_2_any(), props: {   profiles,"themeName":settings.themeDef.name,}});}
  }
 
+if(forwardsTarget){ { const $$_lenaPsdrawroF0C = __sveltets_2_ensureComponent(ForwardsPanel); new $$_lenaPsdrawroF0C({ target: __sveltets_2_any(), props: {      "target":forwardsTarget,"onclose":() => (forwardsTarget = ""),"onopen":() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); },}});}}
 if(filesTarget){ { const $$_lenaPseliF0C = __sveltets_2_ensureComponent(FilesPanel); new $$_lenaPseliF0C({ target: __sveltets_2_any(), props: {    "target":filesTarget,"onclose":() => (filesTarget = ""),}});}}
 if(toolsOpen){ { const $$_lenaPslooT0C = __sveltets_2_ensureComponent(ToolsPanel); new $$_lenaPslooT0C({ target: __sveltets_2_any(), props: {      "onclose":() => (toolsOpen = false),"onchanged":refresh,"ongenerate":generateKey,}});}}
 if(settingsOpen){ { const $$_lenaPsgnitteS0C = __sveltets_2_ensureComponent(SettingsPanel); new $$_lenaPsgnitteS0C({ target: __sveltets_2_any(), props: {  "onclose":() => (settingsOpen = false),}});}}

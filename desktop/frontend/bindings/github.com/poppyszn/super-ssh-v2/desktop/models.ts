@@ -27,6 +27,33 @@ export interface FixReport {
     "checks": HealthCheck[] | null;
 }
 
+/**
+ * ForwardInfo is one forward as shown in the UI.
+ */
+export interface ForwardInfo {
+    /**
+     * local | remote | dynamic
+     */
+    "type": string;
+    "listen": string;
+    "target": string;
+
+    /**
+     * profile | runtime
+     */
+    "source": string;
+    "listening": boolean;
+}
+
+/**
+ * ForwardStatus is a connection's live state.
+ */
+export interface ForwardStatus {
+    "connected": boolean;
+    "message": string;
+    "forwards": ForwardInfo[] | null;
+}
+
 export interface HealthCheck {
     "name": string;
 

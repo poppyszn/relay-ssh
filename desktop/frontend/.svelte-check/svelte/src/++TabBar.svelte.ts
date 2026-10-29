@@ -3,12 +3,12 @@
 import { ws } from "./workspace.svelte";
 import { leaves } from "./panes";
 
-;type $$ComponentProps =  { onsidebar: () => void; onsettings: () => void; ontools: () => void; onfiles: () => void };function $$render() {
+;type $$ComponentProps =  { onsidebar: () => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void };function $$render() {
 
   
   
 
-  let { onsidebar, onsettings, ontools, onfiles }:/*Ωignore_startΩ*/$$ComponentProps/*Ωignore_endΩ*/ = $props();
+  let { onsidebar, onsettings, ontools, onfiles, onforwards }:/*Ωignore_startΩ*/$$ComponentProps/*Ωignore_endΩ*/ = $props();
   const mac = navigator.userAgent.includes("Mac");
 
   function status(t: (typeof ws.tabs)[number]) {
@@ -38,6 +38,9 @@ async () => {
      }
      { svelteHTML.createElement("button", {     "aria-label":`Files`,"title":`Browse files on this connection`,"onclick":onfiles,});
        { svelteHTML.createElement("svg", {                 "width":`16`,"height":`16`,"viewBox":`0 0 24 24`,"fill":`none`,"stroke":`currentColor`,"stroke-width":`2`,"stroke-linecap":`round`,"stroke-linejoin":`round`,"aria-hidden":`true`,}); { svelteHTML.createElement("path", {  "d":`M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z`,});} }
+     }
+     { svelteHTML.createElement("button", {     "aria-label":`Port forwards`,"title":`Port forwards on this connection`,"onclick":onforwards,});
+       { svelteHTML.createElement("svg", {                 "width":`16`,"height":`16`,"viewBox":`0 0 24 24`,"fill":`none`,"stroke":`currentColor`,"stroke-width":`2`,"stroke-linecap":`round`,"stroke-linejoin":`round`,"aria-hidden":`true`,}); { svelteHTML.createElement("path", {  "d":`M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4`,});} }
      }
      { svelteHTML.createElement("button", {     "aria-label":`Tools`,"title":`Tools: health, backup, import, keys`,"onclick":ontools,});
        { svelteHTML.createElement("svg", {                 "width":`16`,"height":`16`,"viewBox":`0 0 24 24`,"fill":`none`,"stroke":`currentColor`,"stroke-width":`2`,"stroke-linecap":`round`,"stroke-linejoin":`round`,"aria-hidden":`true`,}); { svelteHTML.createElement("path", {  "d":`M14.7 6.3a4 4 0 0 0-5.4 5.2L3 17.8V21h3.2l6.3-6.3a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.4-.6-.6-2.4z`,});} }
