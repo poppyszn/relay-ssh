@@ -29,10 +29,10 @@ guardrails: ## Enforce the architectural budgets
 
 check: fmt vet race guardrails ## Everything CI runs. This is the gate before any "done".
 
-desktop-check: ## Gate for the Relay desktop module (guardrails, Go tests, typecheck, frontend tests, build)
+desktop-check: ## Gate for the Relay desktop module (guardrails, typecheck, frontend tests, build, Go tests)
 	./desktop/scripts/guardrails.sh
-	cd desktop && go vet . && go test .
 	cd desktop/frontend && npm run check 2>&1 | tee /dev/stderr | grep -q " 0 ERRORS " && npm test && npm run build
+	cd desktop && go vet . && go test .
 
 hooks: ## Use the repo's git hooks (a pre-push that runs desktop-check on macOS)
 	git config core.hooksPath .githooks

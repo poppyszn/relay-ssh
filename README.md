@@ -144,7 +144,8 @@ forward_agent = true
 - [x] Desktop: connections, tabs, split panes, command blocks, search, themes
 - [x] Desktop: tools (health, backup, import, keys), file browser, port forwards
 - [ ] Windows (ConPTY, no connection sharing) and Linux builds
-- [ ] CI for the desktop app, signed and notarized macOS releases, installers
+- [x] CI for the desktop app (macOS, on GitHub)
+- [ ] Signed and notarized macOS releases, installers
 - [x] Per-block menu: copy command, output, or both
 - [x] Light theme (Daylight) and System, which follows the OS
 - [x] Block header: directory and git branch on every block

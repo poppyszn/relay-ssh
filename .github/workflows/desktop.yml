@@ -1,0 +1,53 @@
+name: desktop
+# The Relay desktop app is built and tested on macOS only for now. It runs only when
+# something the app is made of changes, because macOS minutes cost ten times as much.
+on:
+  push:
+    branches: [main]
+    paths:
+      - desktop/**
+      - internal/**
+      - go.mod
+      - go.sum
+      - Makefile
+      - .github/workflows/desktop.yml
+  pull_request:
+    paths:
+      - desktop/**
+      - internal/**
+      - go.mod
+      - go.sum
+      - Makefile
+      - .github/workflows/desktop.yml
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: macos-latest
+    timeout-minutes: 25
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      CGO_CFLAGS: -mmacosx-version-min=13.0
+      CGO_LDFLAGS: -mmacosx-version-min=13.0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.0'
+          cache-dependency-path: |
+            go.sum
+            desktop/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: desktop/frontend/package-lock.json
+      - run: npm ci
+        working-directory: desktop/frontend
+      - run: make desktop-check
