@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/poppyszn/relay-ssh/desktop/vault"
 	"os"
 	"os/user"
 	"strings"
@@ -124,7 +125,7 @@ func (s *session) handleFill(ctx context.Context, c *websocket.Conn, m control) 
 	secret, has, err := v.Get(prof.Name, bindingOf(prof))
 	if err != nil || !has {
 		why := ""
-		if errors.Is(err, ErrBindingChanged) {
+		if errors.Is(err, vault.ErrBindingChanged) {
 			why = "changed"
 		}
 		s.refuseFill(ctx, c, why)
@@ -137,7 +138,7 @@ func (s *session) handleFill(ctx context.Context, c *websocket.Conn, m control) 
 		return
 	}
 	secretBytes := []byte(secret + "\n")
-	defer zeroBytes(secretBytes)
+	defer vault.Wipe(secretBytes)
 	if _, err := s.pty.Write(secretBytes); err != nil {
 		return
 	}
@@ -148,7 +149,7 @@ func (s *session) handleFill(ctx context.Context, c *websocket.Conn, m control) 
 
 // matchHop finds the one password hop in the chain an account prompt is for. ssh prints the
 // real host name, not the profile name, and the local user when the profile names none.
-func matchHop(chain []config.Profile, m control, v *Vault) int {
+func matchHop(chain []config.Profile, m control, v *vault.Vault) int {
 	if m.Host == "" {
 		return -1
 	}

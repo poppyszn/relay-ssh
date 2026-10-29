@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/poppyszn/relay-ssh/desktop/vault"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,7 +33,7 @@ func hashSecret(s string) string {
 	return fmt.Sprintf("%x", sum)
 }
 
-func setupTestStoreAndVault(t *testing.T) (paths.Paths, *Vault) {
+func setupTestStoreAndVault(t *testing.T) (paths.Paths, *vault.Vault) {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("SSSH_HOME", home)
@@ -46,7 +47,7 @@ func setupTestStoreAndVault(t *testing.T) (paths.Paths, *Vault) {
 	}
 
 	vpath := filepath.Join(filepath.Dir(p.StoreFile), "vault.age")
-	v := NewVault(vpath)
+	v := vault.New(vpath)
 	cleanup := setVaultForTest(v)
 	t.Cleanup(cleanup)
 
@@ -58,7 +59,7 @@ func setupTestStoreAndVault(t *testing.T) (paths.Paths, *Vault) {
 }
 
 // setBound saves a password the way the app does: bound to the profile as it is in the store.
-func setBound(t *testing.T, v *Vault, store config.Store, name, secret string) {
+func setBound(t *testing.T, v *vault.Vault, store config.Store, name, secret string) {
 	t.Helper()
 	for _, p := range store.Profiles {
 		if p.Name == name {

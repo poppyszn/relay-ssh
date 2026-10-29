@@ -1,4 +1,4 @@
-package main
+package vault
 
 import (
 	"bytes"
@@ -82,7 +82,7 @@ func (c *testFakeClock) Advance(d time.Duration) {
 
 func TestVaultCreateAndStatus(t *testing.T) {
 	vpath := filepath.Join(t.TempDir(), "vault.age")
-	v := NewVault(vpath)
+	v := New(vpath)
 
 	st := v.Status()
 	if st.Exists || st.Unlocked {
@@ -122,7 +122,7 @@ func TestVaultCreateAndStatus(t *testing.T) {
 
 func TestVaultUnlockWrongPasswordAndCorruptFile(t *testing.T) {
 	vpath := filepath.Join(t.TempDir(), "vault.age")
-	v := NewVault(vpath)
+	v := New(vpath)
 
 	// Unlock missing file
 	if err := v.Unlock("any-password-that-is-long-enough"); !errors.Is(err, ErrVaultNotFound) {
@@ -159,7 +159,7 @@ func TestVaultUnlockWrongPasswordAndCorruptFile(t *testing.T) {
 
 func TestVaultZeroingOnLock(t *testing.T) {
 	vpath := filepath.Join(t.TempDir(), "vault.age")
-	v := NewVault(vpath)
+	v := New(vpath)
 	master := "correct-horse-battery-staple"
 	if err := v.Create(master); err != nil {
 		t.Fatalf("Create failed: %v", err)
@@ -204,7 +204,7 @@ func TestVaultZeroingOnLock(t *testing.T) {
 
 func TestVaultGetSetForgetRenameHas(t *testing.T) {
 	vpath := filepath.Join(t.TempDir(), "vault.age")
-	v := NewVault(vpath)
+	v := New(vpath)
 	master := "correct-horse-battery-staple"
 	if err := v.Create(master); err != nil {
 		t.Fatalf("Create failed: %v", err)
@@ -248,7 +248,7 @@ func TestVaultGetSetForgetRenameHas(t *testing.T) {
 
 	// Persists across Lock and Unlock
 	v.Lock()
-	v2 := NewVault(vpath)
+	v2 := New(vpath)
 	if err := v2.Unlock(master); err != nil {
 		t.Fatalf("Unlock v2 failed: %v", err)
 	}
@@ -268,7 +268,7 @@ func TestVaultGetSetForgetRenameHas(t *testing.T) {
 
 func TestVaultReset(t *testing.T) {
 	vpath := filepath.Join(t.TempDir(), "vault.age")
-	v := NewVault(vpath)
+	v := New(vpath)
 	master := "correct-horse-battery-staple"
 	if err := v.Create(master); err != nil {
 		t.Fatalf("Create failed: %v", err)
@@ -294,7 +294,7 @@ func TestVaultReset(t *testing.T) {
 
 func TestVaultChangeMaster(t *testing.T) {
 	vpath := filepath.Join(t.TempDir(), "vault.age")
-	v := NewVault(vpath)
+	v := New(vpath)
 	master1 := "first-master-password-1234"
 	master2 := "second-master-password-5678"
 
@@ -322,7 +322,7 @@ func TestVaultChangeMaster(t *testing.T) {
 
 	// Re-open with master2
 	v.Lock()
-	v2 := NewVault(vpath)
+	v2 := New(vpath)
 	if err := v2.Unlock(master1); !errors.Is(err, ErrIncorrectPassword) {
 		t.Fatalf("old master must no longer work, got %v", err)
 	}
@@ -338,7 +338,7 @@ func TestVaultChangeMaster(t *testing.T) {
 func TestVaultIdleAutoLock(t *testing.T) {
 	vpath := filepath.Join(t.TempDir(), "vault.age")
 	clock := newTestFakeClock()
-	v := NewVault(vpath, WithVaultClock(clock), WithIdleTimeout(15*time.Minute))
+	v := New(vpath, WithClock(clock), WithIdleTimeout(15*time.Minute))
 	master := "correct-horse-battery-staple"
 
 	if err := v.Create(master); err != nil {
@@ -378,7 +378,7 @@ func TestVaultIdleAutoLock(t *testing.T) {
 
 func TestVaultAtomicWriteSafety(t *testing.T) {
 	vpath := filepath.Join(t.TempDir(), "vault.age")
-	v := NewVault(vpath)
+	v := New(vpath)
 	master := "correct-horse-battery-staple"
 	if err := v.Create(master); err != nil {
 		t.Fatalf("Create failed: %v", err)

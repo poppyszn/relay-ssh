@@ -1,4 +1,4 @@
-package main
+package vault
 
 import (
 	"errors"
@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-func newTestVault(t *testing.T, opts ...VaultOption) *Vault {
+func newTestVault(t *testing.T, opts ...Option) *Vault {
 	t.Helper()
-	v := NewVault(filepath.Join(t.TempDir(), "vault.age"), opts...)
+	v := New(filepath.Join(t.TempDir(), "vault.age"), opts...)
 	if err := v.Create("correct-horse-battery-staple"); err != nil {
 		t.Fatalf("Create: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestVaultRefusesPasswordsWithControlCharacters(t *testing.T) {
 // Asking whether a password exists is not "use": a page that polls it must not keep the vault open.
 func TestVaultHasDoesNotKeepItUnlocked(t *testing.T) {
 	clock := newTestFakeClock()
-	v := newTestVault(t, WithVaultClock(clock), WithIdleTimeout(15*time.Minute))
+	v := newTestVault(t, WithClock(clock), WithIdleTimeout(15*time.Minute))
 	_ = v.Set("dev", "dev-secret-42x", "")
 	for i := 0; i < 5; i++ {
 		clock.Advance(4 * time.Minute)
@@ -87,7 +87,7 @@ func TestVaultHasDoesNotKeepItUnlocked(t *testing.T) {
 // A timer that fired a moment before a real use must not lock the vault under that use.
 func TestVaultUseAtTheBoundaryWins(t *testing.T) {
 	clock := newTestFakeClock()
-	v := newTestVault(t, WithVaultClock(clock), WithIdleTimeout(15*time.Minute))
+	v := newTestVault(t, WithClock(clock), WithIdleTimeout(15*time.Minute))
 	_ = v.Set("dev", "dev-secret-42x", "")
 	clock.Advance(14 * time.Minute)
 	if _, _, err := v.Get("dev", ""); err != nil {
@@ -105,7 +105,7 @@ func TestVaultWithoutAPathRefusesInsteadOfWritingToTheWorkingDirectory(t *testin
 	_ = os.Chdir(dir)
 	t.Cleanup(func() { _ = os.Chdir(old) })
 
-	v := NewVault("")
+	v := New("")
 	if err := v.Create("correct-horse-battery-staple"); !errors.Is(err, ErrNoVaultPath) {
 		t.Fatalf("Create = %v, want ErrNoVaultPath", err)
 	}
@@ -117,7 +117,7 @@ func TestVaultWithoutAPathRefusesInsteadOfWritingToTheWorkingDirectory(t *testin
 // A write that fails leaves the in-memory vault as it was, so what the UI shows matches the file.
 func TestVaultFailedSaveRollsBack(t *testing.T) {
 	dir := t.TempDir()
-	v := NewVault(filepath.Join(dir, "vault.age"))
+	v := New(filepath.Join(dir, "vault.age"))
 	if err := v.Create("correct-horse-battery-staple"); err != nil {
 		t.Fatal(err)
 	}
@@ -160,15 +160,15 @@ func TestVaultChangeMasterFailureLeavesNothingLoaded(t *testing.T) {
 // Vaults written before connections were bound still open; their entries just have no binding.
 func TestVaultReadsTheOlderFormat(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "vault.age")
-	old := NewVault(path)
-	enc, err := old.encryptRawForTest("correct-horse-battery-staple", []byte(`{"version":1,"secrets":{"old":"legacy-password"}}`))
+	old := New(path)
+	enc, err := old.encrypt("correct-horse-battery-staple", []byte(`{"version":1,"secrets":{"old":"legacy-password"}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(path, enc, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	v := NewVault(path)
+	v := New(path)
 	if err := v.Unlock("correct-horse-battery-staple"); err != nil {
 		t.Fatalf("legacy vault: %v", err)
 	}

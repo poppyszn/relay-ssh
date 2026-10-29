@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/poppyszn/relay-ssh/desktop/vault"
 	"os"
 	"path/filepath"
 	"strings"
@@ -96,11 +97,11 @@ func (ps ProfilesService) SaveWithPassword(oldName string, prof Profile, passwor
 	if prof.Auth != "password" {
 		return errors.New("passwords are only kept for connections that use password auth")
 	}
-	if !validSecret(password) {
-		return ErrBadSecret
+	if !vault.ValidSecret(password) {
+		return vault.ErrBadSecret
 	}
 	if !getVault().Status().Unlocked {
-		return ErrVaultLocked
+		return vault.ErrVaultLocked
 	}
 	return ps.save(oldName, prof, password)
 }

@@ -1,6 +1,9 @@
 package main
 
 import (
+	"github.com/poppyszn/relay-ssh/desktop/vault"
+	"github.com/poppyszn/relay-ssh/internal/paths"
+	"path/filepath"
 	"sync"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -8,10 +11,10 @@ import (
 
 var (
 	appVaultMu sync.RWMutex
-	appVault   *Vault
+	appVault   *vault.Vault
 )
 
-func getVault() *Vault {
+func getVault() *vault.Vault {
 	appVaultMu.RLock()
 	v := appVault
 	appVaultMu.RUnlock()
@@ -26,12 +29,12 @@ func getVault() *Vault {
 		if err != nil {
 			p = "vault.age"
 		}
-		appVault = NewVault(p)
+		appVault = vault.New(p)
 	}
 	return appVault
 }
 
-func setVaultForTest(v *Vault) func() {
+func setVaultForTest(v *vault.Vault) func() {
 	appVaultMu.Lock()
 	old := appVault
 	appVault = v
@@ -43,13 +46,28 @@ func setVaultForTest(v *Vault) func() {
 	}
 }
 
+// VaultStatus describes the presence and unlock state of the vault.
+type VaultStatus struct {
+	Exists   bool `json:"exists"`
+	Unlocked bool `json:"unlocked"`
+}
+
+func defaultVaultPath() (string, error) {
+	p, err := paths.Default()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(filepath.Dir(p.StoreFile), "vault.age"), nil
+}
+
 // VaultService exposes secret vault operations to the frontend. No method returns a secret,
 // and none stores one: passwords go in through ProfilesService.SaveWithPassword, which binds
 // them to the connection being saved.
 type VaultService struct{}
 
 func (VaultService) Status() VaultStatus {
-	return getVault().Status()
+	st := getVault().Status()
+	return VaultStatus{Exists: st.Exists, Unlocked: st.Unlocked}
 }
 
 func (VaultService) Create(master string) error {

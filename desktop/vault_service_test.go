@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"github.com/poppyszn/relay-ssh/desktop/vault"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -62,7 +63,7 @@ func TestProfilesServiceKeepsSecretsConsistent(t *testing.T) {
 	}
 
 	vpath := filepath.Join(filepath.Dir(p.StoreFile), "vault.age")
-	v := NewVault(vpath)
+	v := vault.New(vpath)
 	cleanup := setVaultForTest(v)
 	defer cleanup()
 
@@ -173,7 +174,7 @@ func TestNoSecretLeakInConfigsOrLogs(t *testing.T) {
 	}
 
 	vpath := filepath.Join(filepath.Dir(p.StoreFile), "vault.age")
-	v := NewVault(vpath)
+	v := vault.New(vpath)
 	cleanup := setVaultForTest(v)
 	defer cleanup()
 
@@ -244,7 +245,7 @@ func TestNoSecretLeakInConfigsOrLogs(t *testing.T) {
 	}
 }
 
-func serviceTestHome(t *testing.T) (paths.Paths, *Vault) {
+func serviceTestHome(t *testing.T) (paths.Paths, *vault.Vault) {
 	t.Helper()
 	t.Setenv("SSSH_HOME", t.TempDir())
 	p, err := paths.Default()
@@ -254,7 +255,7 @@ func serviceTestHome(t *testing.T) (paths.Paths, *Vault) {
 	if err := paths.EnsureDirs(p); err != nil {
 		t.Fatal(err)
 	}
-	v := NewVault(filepath.Join(filepath.Dir(p.StoreFile), "vault.age"))
+	v := vault.New(filepath.Join(filepath.Dir(p.StoreFile), "vault.age"))
 	t.Cleanup(setVaultForTest(v))
 	if err := v.Create("correct-horse-battery-staple"); err != nil {
 		t.Fatal(err)
@@ -293,7 +294,7 @@ func TestSavedPasswordFollowsEditsMadeInTheAppOnly(t *testing.T) {
 	if err := ps.Save("web", tampered); err != nil { // the user opens the form and presses Save
 		t.Fatal(err)
 	}
-	if _, _, err := v.Get("web", bindingOf(fromProfile(tampered))); !errors.Is(err, ErrBindingChanged) {
+	if _, _, err := v.Get("web", bindingOf(fromProfile(tampered))); !errors.Is(err, vault.ErrBindingChanged) {
 		t.Fatalf("saving a tampered connection must not release its password to the new host, got %v", err)
 	}
 }
@@ -303,11 +304,11 @@ func TestSaveWithPasswordChecksBeforeSaving(t *testing.T) {
 	ps := ProfilesService{}
 	prof := Profile{Name: "web", Host: "10.0.0.5", User: "alice", Port: 22, Auth: "password"}
 
-	if err := ps.SaveWithPassword("", prof, "bad\npassword"); !errors.Is(err, ErrBadSecret) {
+	if err := ps.SaveWithPassword("", prof, "bad\npassword"); !errors.Is(err, vault.ErrBadSecret) {
 		t.Fatalf("got %v", err)
 	}
 	v.Lock()
-	if err := ps.SaveWithPassword("", prof, "fine-password"); !errors.Is(err, ErrVaultLocked) {
+	if err := ps.SaveWithPassword("", prof, "fine-password"); !errors.Is(err, vault.ErrVaultLocked) {
 		t.Fatalf("got %v", err)
 	}
 	if store, err := config.Load(p.StoreFile); err == nil && len(store.Profiles) != 0 {
