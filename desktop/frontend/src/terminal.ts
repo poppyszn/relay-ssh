@@ -33,9 +33,24 @@ export function anchorBottom(term: Terminal): IDisposable {
     }
     screen.style.transform = shift > 0 ? `translateY(${Math.round(shift)}px)` : "";
   };
-  const subs = [term.onWriteParsed(apply), term.onCursorMove(apply), term.onResize(apply), term.onScroll(apply)];
+  // Command blocks bleed to the pane edges. The cell grid rarely fills the pane
+  // exactly (padding plus leftover pixels), so measure how far the screen sits
+  // from each edge and expose it to CSS.
+  const bleed = () => {
+    const el = term.element;
+    const screen = el?.querySelector<HTMLElement>(".xterm-screen");
+    if (!el || !screen) return;
+    const e = el.getBoundingClientRect();
+    const s = screen.getBoundingClientRect();
+    el.style.setProperty("--bleed-l", `${Math.max(0, Math.round(s.left - e.left))}px`);
+    el.style.setProperty("--bleed-r", `${Math.max(0, Math.round(e.right - s.right))}px`);
+  };
+  const ro = term.element ? new ResizeObserver(bleed) : undefined;
+  if (term.element) ro?.observe(term.element);
+  const subs = [term.onWriteParsed(apply), term.onCursorMove(apply), term.onResize(() => { apply(); bleed(); }), term.onScroll(apply)];
   apply();
-  return { dispose: () => subs.forEach((s) => s.dispose()) };
+  bleed();
+  return { dispose: () => { ro?.disconnect(); subs.forEach((s) => s.dispose()); } };
 }
 
 export interface Session {

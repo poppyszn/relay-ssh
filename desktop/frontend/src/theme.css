@@ -55,8 +55,11 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 /* Command blocks: xterm decorations drawn over the terminal (see blocks.ts). */
-/* Blocks run edge to edge: they bleed through the terminal padding (24px each side). */
-.relay-block { pointer-events: none; margin-left: -24px; width: calc(100% + 48px) !important; background: rgba(255, 255, 255, 0.028); border-top: 1px solid #3d4f6b; box-shadow: inset 3px 0 #4f9b6e; }
+/* xterm paints its scroll layer black, which shows as a border around the padded terminal. */
+.xterm .xterm-viewport { background-color: var(--term) !important; }
+/* Blocks run edge to edge: they bleed through the terminal padding to the pane edges
+   (--bleed-l/-r are measured in terminal.ts). */
+.relay-block { pointer-events: none; margin-left: calc(-1 * var(--bleed-l, 24px)); width: calc(100% + var(--bleed-l, 24px) + var(--bleed-r, 24px)) !important; background: rgba(255, 255, 255, 0.028); border-top: 1px solid #3d4f6b; box-shadow: inset 3px 0 #4f9b6e; }
 .relay-block.err { background: rgba(240, 123, 134, 0.12); border-top-color: rgba(240, 123, 134, 0.7); border-bottom: 1px solid rgba(240, 123, 134, 0.7); box-shadow: inset 3px 0 var(--err); }
 .relay-badge { pointer-events: none; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; font: 500 11px var(--sans); color: var(--muted); }
 .relay-badge.err { color: var(--err-text); }
