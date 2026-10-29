@@ -44,7 +44,7 @@ func main() {
 // windowRadius is the corner radius, in points, of the frameless macOS window: a
 // small one. macOS draws very round corners on native windows; this is ours.
 // Keep it equal to --window-radius in theme.css.
-const windowRadius = 6
+const windowRadius = 10
 
 // customChrome reports whether Relay draws its own window frame and buttons
 // (macOS only). RELAY_NATIVE_FRAME=1 falls back to the native title bar.
