@@ -55,3 +55,20 @@ export function swapLeaves(n: Node, a: string, b: string): Node {
   if (isLeaf(n)) return n.id === a ? { id: b } : n.id === b ? { id: a } : n;
   return { ...n, a: swapLeaves(n.a, a, b), b: swapLeaves(n.b, a, b) };
 }
+
+/**
+ * Places the layout `incoming` (one pane or a whole tree) beside leaf `target`, on the given
+ * side. Unchanged when `target` is not in `n`.
+ */
+export function insertBeside(n: Node, target: string, incoming: Node, edge: "left" | "right" | "top" | "bottom", newSid: () => string): Node {
+  if (!leaves(n).includes(target)) return n;
+  const place = (m: Node): Node => {
+    if (isLeaf(m)) {
+      if (m.id !== target) return m;
+      const before = edge === "left" || edge === "top";
+      return { sid: newSid(), dir: edge === "left" || edge === "right" ? "row" : "col", ratio: 0.5, ...(before ? { a: incoming, b: m } : { a: m, b: incoming }) };
+    }
+    return { ...m, a: place(m.a), b: place(m.b) };
+  };
+  return place(n);
+}

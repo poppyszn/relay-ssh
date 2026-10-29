@@ -19,9 +19,10 @@
   import ToolsPanel from "./ToolsPanel.svelte";
   import FilesPanel from "./FilesPanel.svelte";
   import ForwardsPanel from "./ForwardsPanel.svelte";
+  import SnippetsPanel from "./SnippetsPanel.svelte";
   import { settings } from "./settings.svelte";
   import { sb } from "./foldertree.svelte";
-  import { FilesService, ForwardsService, ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { FilesService, ForwardsService, ProfilesService, SnippetsService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
   const mac = navigator.userAgent.includes("Mac");
   let profiles = $state<Profile[]>([]);
@@ -34,6 +35,7 @@
   let toolsOpen = $state(false);
   let filesTarget = $state("");
   let forwardsTarget = $state("");
+  let snippetsOpen = $state(false);
   let form = $state<{ initial: Profile; oldName: string } | null>(null);
   let confirmDelete = $state<Profile | null>(null);
   let benchHost = $state<HTMLElement>();
@@ -57,6 +59,7 @@
     { id: "files", label: "Browse files on this connection", hint: mac ? "⇧⌘O" : "Ctrl+Shift+O" },
     { id: "forwards", label: "Manage port forwards on this connection", hint: mac ? "⇧⌘P" : "Ctrl+Shift+P" },
     { id: "tools", label: "Open tools: health, backup, import, keys", hint: "" },
+    { id: "snippets", label: "Snippets", hint: mac ? "⇧⌘S" : "Ctrl+Shift+S" },
     { id: "enable-blocks", label: "Enable command blocks in this session", hint: "" },
   ];
 
@@ -94,6 +97,7 @@
       case "tools": return (toolsTab = "health", toolsOpen = !toolsOpen);
       case "files": return openFiles();
       case "forwards": return openForwards();
+      case "snippets": return (snippetsOpen = !snippetsOpen);
       case "enable-blocks": return ws.focusedPane && ws.enableBlocks(ws.focusedPane);
     }
   }
@@ -154,7 +158,7 @@
   // terminal control keys. On macOS the native menu owns the shortcuts.
   function keydown(e: KeyboardEvent) {
     if (mac || !e.ctrlKey || !e.shiftKey) return;
-    const map: Record<string, string> = { T: "new-tab", N: "new-connection", M: "new-folder", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar", F: "find", ",": "settings", O: "files", P: "forwards" };
+    const map: Record<string, string> = { T: "new-tab", N: "new-connection", M: "new-folder", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar", F: "find", ",": "settings", O: "files", P: "forwards", S: "snippets" };
     const id = map[e.key.toUpperCase()];
     if (id) { e.preventDefault(); run(id); }
   }
@@ -168,6 +172,7 @@
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     ws.blocksMode = (name) => profiles.find((p) => p.name === name)?.blocks;
+    sb.onPaneToTab = (id, tab) => ws.movePaneToTab(id, tab);
     sb.onPaneMove = (id, target, edge) => ws.movePane(id, target, edge);
     sb.onPaneDrop = (name, paneId, edge) => { banner = ""; return edge === "center" ? ws.openTab(name) : ws.splitAt(paneId, edge, name); };
     (async () => {
@@ -468,6 +473,39 @@
       out.reconnected = seen(victim, "again-42");
       ws.closePane(panes[1]);
       out.afterClose = ws.tabs.flatMap((t) => leaves(t.root)).length;
+      // snippets: save one through the form, then run and insert it into the focused local pane
+      {
+        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        const local = panes[0];
+        ws.focus(local);
+        await tick();
+        run("snippets");
+        await tick();
+        await sleep(300);
+        const setValue = (el: HTMLInputElement | HTMLTextAreaElement, v: string) => { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); };
+        document.querySelector<HTMLElement>('[role=dialog][aria-label=Snippets] .bar .btn.primary')?.click();
+        await tick();
+        setValue(document.querySelector<HTMLInputElement>('[role=dialog][aria-label=Snippets] .form input')!, "smoke snippet");
+        setValue(document.querySelector<HTMLTextAreaElement>('[role=dialog][aria-label=Snippets] .form textarea')!, "echo snip-$((6*7))");
+        document.querySelector<HTMLElement>('[role=dialog][aria-label=Snippets] .form button[type=submit]')?.click();
+        await sleep(500);
+        const listed = [...document.querySelectorAll("[role=dialog][aria-label=Snippets] .item b")].map((b) => b.textContent);
+        const header = document.querySelector("[role=dialog][aria-label=Snippets] .into")?.textContent;
+        const buttons = [...document.querySelectorAll<HTMLElement>("[role=dialog][aria-label=Snippets] .item .btn")];
+        buttons.find((b) => b.textContent === "Insert")?.click();
+        await sleep(400);
+        const tail = () => { const b = ws.session(local)?.term.buffer.active; const out: string[] = []; for (let y = Math.max(0, (b?.length ?? 0) - 40); b && y < b.length; y++) { const t = b.getLine(y)?.translateToString(true); if (t) out.push(t); } return out.slice(-4); };
+        const inserted = tail().join("").replace(/\s+/g, "").includes("echosnip-$((6*7))"); // the narrow pane wraps the line
+        const ranEarly = seen(local, "snip-42");
+        const closedAfterUse = !document.querySelector("[role=dialog][aria-label=Snippets]");
+        run("snippets");
+        await tick();
+        await sleep(300);
+        [...document.querySelectorAll<HTMLElement>("[role=dialog][aria-label=Snippets] .item .btn")].find((b) => b.textContent === "Run")?.click();
+        for (let i = 0; i < 40 && !seen(local, "snip-42"); i++) await sleep(100);
+        out.snippets = { listed, header, inserted, ranEarly, ranAfterRun: seen(local, "snip-42"), closedAfterUse, saved: (await SnippetsService.List())?.length };
+        await SnippetsService.Delete("smoke snippet");
+      }
       // the split buttons in the top bar
       const leafCount = () => ws.tabs.flatMap((t) => leaves(t.root)).length;
       const leavesBefore = leafCount();
@@ -558,6 +596,69 @@
           }
         }
       }
+      // across tabs: a pane dragged onto a tab or the + button moves there, and a tab dragged onto a pane merges into it
+      if (box) {
+        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        const press = (el: Element, x: number, y: number) => el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: x, clientY: y, pointerId: 1 }));
+        const mv = async (x: number, y: number) => { window.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y })); await tick(); };
+        const up = async (x: number, y: number) => { window.dispatchEvent(new PointerEvent("pointerup", { clientX: x, clientY: y })); await tick(); await sleep(400); };
+        const center = (el: Element) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2] as const; };
+        const tabOf = (id: string) => ws.tabs.find((t) => leaves(t.root).includes(id));
+        // start clean: earlier steps leave many tabs, and the ones past the edge of the strip cannot be hit
+        for (const t of [...ws.tabs]) ws.closeTab(t.id);
+        await tick();
+        // a tab with two panes, and a second tab
+        await ws.openTab(null);
+        await ws.split("row");
+        const two = ws.active!;
+        const [pa, pb] = leaves(two.root);
+        await ws.openTab(null);
+        const other = ws.active!;
+        ws.select(two.id);
+        await tick();
+        await sleep(300);
+        // pane -> another tab
+        const hdr = document.querySelector<HTMLElement>(`[data-pane="${pb}"] header`)!;
+        const [hx, hy] = center(hdr);
+        press(hdr, hx, hy);
+        await mv(hx + 20, hy + 20);
+        const [tx, ty] = center(document.querySelector(`[data-tab="${other.id}"]`)!);
+        await mv(tx, ty);
+        const highlighted = !!document.querySelector(`[data-tab="${other.id}"].drop`);
+        await up(tx, ty);
+        const toTab = { highlighted, movedTo: tabOf(pb)?.id === other.id, active: ws.active?.id === other.id, sourceKept: tabOf(pa)?.id === two.id, runs: false };
+        ws.session(pb)?.ws.send(enc.encode("echo crosstab-$((6*7))\n"));
+        for (let i = 0; i < 40 && !seen(pb, "crosstab-42"); i++) await sleep(100);
+        toTab.runs = seen(pb, "crosstab-42");
+        // pane -> the + button (a new tab)
+        ws.select(other.id);
+        await tick();
+        await sleep(300);
+        const h2 = document.querySelector<HTMLElement>(`[data-pane="${pb}"] header`)!;
+        const [h2x, h2y] = center(h2);
+        const tabsBefore = ws.tabs.length;
+        press(h2, h2x, h2y);
+        await mv(h2x + 20, h2y + 20);
+        const [px, py] = center(document.querySelector("[data-newtab]")!);
+        await mv(px, py);
+        await up(px, py);
+        const toNew = { newTabs: ws.tabs.length - tabsBefore, alone: leaves(tabOf(pb)!.root).length === 1 && tabOf(pb)?.id !== other.id };
+        // tab -> a pane of the active tab: the dragged tab's panes land beside it
+        const active = ws.active!;
+        const victim = ws.tabs.find((t) => t !== active)!;
+        const victimPanes = leaves(victim.root);
+        const targetPane = leaves(active.root)[0];
+        const tabsN = ws.tabs.length;
+        const tabBtn = document.querySelector(`[data-tab="${victim.id}"] .main`)!;
+        const [bx, by] = center(tabBtn);
+        press(tabBtn, bx, by);
+        await mv(bx + 30, by);
+        const tp = document.querySelector<HTMLElement>(`.tabview.on [data-pane="${targetPane}"]`)!.getBoundingClientRect();
+        await mv(tp.right - 20, tp.top + tp.height / 2);
+        const hint = document.querySelector(".dropzone")?.textContent ?? null;
+        await up(tp.right - 20, tp.top + tp.height / 2);
+        out.crossTab = { toTab, toNew, merge: { hint, tabsRemoved: tabsN - ws.tabs.length, together: victimPanes.every((id) => tabOf(id)?.id === active.id), activeIsDest: ws.active?.id === active.id } };
+      }
       // connecting: a saved connection shows a loading screen until ssh first writes, and can be cancelled
       if (box) {
         const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -604,7 +705,7 @@
 <svelte:window onkeydown={keydown} />
 
 <div class="app">
-  <TabBar custom={customChrome} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsplit={(d) => ws.split(d)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} />
+  <TabBar custom={customChrome} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsplit={(d) => ws.split(d)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} onsnippets={() => (snippetsOpen = !snippetsOpen)} />
   <div class="body">
     {#if sidebar}
       <Sidebar {profiles} {folders} {open} current={ws.panes[ws.focusedPane]?.target ?? ""} onconnect={(p) => connect(p)} onnew={newConnection} onedit={edit} ontools={(t) => { toolsTab = t; toolsOpen = true; }} onchanged={refresh} />
@@ -625,6 +726,7 @@
   <StatusBar {profiles} themeName={settings.label} />
 </div>
 
+{#if snippetsOpen}<SnippetsPanel into={ws.panes[ws.focusedPane] ? (ws.panes[ws.focusedPane].target ?? "Local shell") : ""} onuse={(c, run) => ws.typeSnippet(c, run)} onclose={() => (snippetsOpen = false)} />{/if}
 {#if forwardsTarget}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/if}
 {#if filesTarget}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/if}
 {#if toolsOpen}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/if}

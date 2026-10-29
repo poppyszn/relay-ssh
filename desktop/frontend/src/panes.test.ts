@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leaves, movePane, neighbor, removeLeaf, setRatio, splitLeaf, swapLeaves, type Node } from "./panes";
+import { insertBeside, leaves, movePane, neighbor, removeLeaf, setRatio, splitLeaf, swapLeaves, type Node } from "./panes";
 
 const one: Node = { id: "a" };
 
@@ -75,5 +75,26 @@ describe("rearranging panes", () => {
 
   it("swaps two panes in place", () => {
     expect(leaves(swapLeaves(tree, "a", "c"))).toEqual(["c", "b", "a"]);
+  });
+});
+
+describe("placing a whole layout beside a pane", () => {
+  const dest: Node = { sid: "s1", dir: "row", ratio: 0.5, a: { id: "a" }, b: { id: "b" } };
+  const incoming: Node = { sid: "x", dir: "col", ratio: 0.4, a: { id: "p" }, b: { id: "q" } };
+
+  it("puts the layout on the chosen side of the pane, keeping its own splits", () => {
+    const right = insertBeside(dest, "b", incoming, "right", () => "n");
+    expect(leaves(right)).toEqual(["a", "b", "p", "q"]);
+    expect(leaves(insertBeside(dest, "a", incoming, "left", () => "n"))).toEqual(["p", "q", "a", "b"]);
+    const bottom = insertBeside({ id: "a" }, "a", incoming, "bottom", () => "n");
+    expect(bottom).toEqual({ sid: "n", dir: "col", ratio: 0.5, a: { id: "a" }, b: incoming });
+  });
+
+  it("works for a single pane too", () => {
+    expect(leaves(insertBeside(dest, "a", { id: "z" }, "top", () => "n"))).toEqual(["z", "a", "b"]);
+  });
+
+  it("returns the layout unchanged when the target is not in it", () => {
+    expect(insertBeside(dest, "nope", incoming, "right", () => "n")).toBe(dest);
   });
 });

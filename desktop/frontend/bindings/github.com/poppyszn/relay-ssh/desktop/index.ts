@@ -4,12 +4,14 @@
 import * as FilesService from "./filesservice.js";
 import * as ForwardsService from "./forwardsservice.js";
 import * as ProfilesService from "./profilesservice.js";
+import * as SnippetsService from "./snippetsservice.js";
 import * as TerminalService from "./terminalservice.js";
 import * as ToolsService from "./toolsservice.js";
 export {
     FilesService,
     ForwardsService,
     ProfilesService,
+    SnippetsService,
     TerminalService,
     ToolsService
 };
@@ -26,5 +28,6 @@ export type {
     Listing,
     PreviewResult,
     Profile,
+    Snippet,
     TunnelDTO
 } from "./models.js";

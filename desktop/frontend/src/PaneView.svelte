@@ -57,7 +57,7 @@
       {#key node.id}<BlocksHint id={node.id} />{/key}
     {/if}
     {#if sb.paneDrop?.id === node.id}
-      <div class="dropzone {sb.paneDrop.edge}" class:below-header={multi} aria-hidden="true"><span>{sb.drag?.kind === "pane" ? (sb.paneDrop.edge === "center" ? "Swap places" : `Move ${sb.paneDrop.edge}`) : sb.paneDrop.edge === "center" ? "Open in a new tab" : `Split ${sb.paneDrop.edge}`}</span></div>
+      <div class="dropzone {sb.paneDrop.edge}" class:below-header={multi} aria-hidden="true"><span>{sb.paneDrop.verb ? `${sb.paneDrop.verb} ${sb.paneDrop.edge}` : sb.drag?.kind === "pane" ? (sb.paneDrop.edge === "center" ? "Swap places" : `Move ${sb.paneDrop.edge}`) : sb.paneDrop.edge === "center" ? "Open in a new tab" : `Split ${sb.paneDrop.edge}`}</span></div>
     {/if}
     {#if ws.searchPane === node.id && ws.session(node.id)}<SearchBar session={ws.session(node.id)!} onclose={() => ws.closeSearch()} />{/if}
     {#if info?.ended}

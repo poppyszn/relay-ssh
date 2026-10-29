@@ -1,7 +1,7 @@
 import { tick } from "svelte";
 import { openSession, type Session } from "./terminal";
 import * as P from "./panes";
-import { blocksWanted, loginQuiet, reorder } from "./lib";
+import { blocksWanted, loginQuiet, reorder, snippetText } from "./lib";
 import { settings } from "./settings.svelte";
 import type { BlockRef } from "./blocks";
 import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
@@ -94,6 +94,44 @@ class Workspace {
     tick().then(() => this.sessions.get(id)?.term.focus());
   }
 
+  /** Moves pane `id` into another tab (beside that tab's focused pane), or into a new tab. The session keeps running. */
+  movePaneToTab(id: string, tabId: string | "new") {
+    const src = this.tabs.find((t) => P.leaves(t.root).includes(id));
+    if (!src || tabId === src.id) return;
+    const rest = P.removeLeaf(src.root, id);
+    let dest: Tab | undefined;
+    if (tabId === "new") {
+      if (!rest) return; // it is already alone in its tab
+      dest = { id: uid("t"), root: { id }, focus: id };
+      this.tabs.push(dest);
+    } else {
+      dest = this.tabs.find((t) => t.id === tabId);
+      if (!dest) return;
+      dest.root = P.insertBeside(dest.root, dest.focus, { id }, "right", () => uid("s"));
+      dest.focus = id;
+    }
+    if (rest) {
+      src.root = rest;
+      if (src.focus === id) src.focus = P.leaves(rest)[0];
+    } else {
+      this.tabs.splice(this.tabs.indexOf(src), 1);
+    }
+    this.activeId = dest.id;
+    tick().then(() => this.sessions.get(id)?.term.focus());
+  }
+
+  /** Folds tab `tabId`, with all its panes, into the tab that holds pane `targetId`, on the given side of it. */
+  mergeTab(tabId: string, targetId: string, edge: "left" | "right" | "top" | "bottom") {
+    const src = this.tabs.find((t) => t.id === tabId);
+    const dest = this.tabs.find((t) => P.leaves(t.root).includes(targetId));
+    if (!src || !dest || src === dest) return;
+    dest.root = P.insertBeside(dest.root, targetId, src.root, edge, () => uid("s"));
+    dest.focus = src.focus;
+    this.tabs.splice(this.tabs.indexOf(src), 1);
+    this.activeId = dest.id;
+    tick().then(() => this.sessions.get(dest.focus)?.term.focus());
+  }
+
   /** Moves a tab into the gap before position `slot`. */
   moveTab(tabId: string, slot: number) {
     const from = this.tabs.findIndex((t) => t.id === tabId);
@@ -169,6 +207,17 @@ class Workspace {
     info.error = "Cancelled before the host answered.";
     info.connecting = false;
     this.sessions.get(id)?.dispose();
+  }
+
+  /** Types a saved snippet into the focused pane (without Enter unless `run`). False when there is no live pane. */
+  typeSnippet(command: string, run: boolean): boolean {
+    const id = this.focusedPane;
+    const s = this.sessions.get(id);
+    if (!s || !this.panes[id] || this.panes[id].ended) return false;
+    s.term.paste(snippetText(command)); // bracketed when the shell asks for it, so multi-line text is not run line by line
+    if (run) s.term.input("\r", true);
+    s.term.focus();
+    return true;
   }
 
   /** Types the shell-integration snippet into a remote shell, on the user's request. */

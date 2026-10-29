@@ -49,7 +49,11 @@ class SidebarState {
   drag = $state<{ kind: DragKind; id: string; label: string; x: number; y: number } | null>(null);
   dropTarget = $state<string | null>(null);
   /** The terminal pane a dragged connection is over, and which part of it. */
-  paneDrop = $state<{ id: string; edge: PaneEdge } | null>(null);
+  paneDrop = $state<{ id: string; edge: PaneEdge; verb?: string } | null>(null);
+  /** The tab (or "new") a dragged pane is over in the top bar. */
+  tabDrop = $state<string | null>(null);
+  /** Called when a pane is dropped on a tab or the new-tab button (set by the app). */
+  onPaneToTab: (paneId: string, tab: string) => void = () => {};
   /** Called when a connection is dropped on a pane (set by the app). */
   onPaneDrop: (connection: string, paneId: string, edge: PaneEdge) => void = () => {};
   /** Called when a pane is dropped on another pane (set by the app). */
@@ -170,6 +174,8 @@ class SidebarState {
     }
     this.paneDrop = null;
     if (kind === "pane") {
+      const tab = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-tab], [data-newtab]");
+      this.tabDrop = tab ? (tab.dataset.tab ?? "new") : null;
       this.dropTarget = null;
       return;
     }
@@ -189,9 +195,11 @@ class SidebarState {
     const target = this.dropTarget;
     const ok = this.dropOk;
     const pane = this.paneDrop;
+    const tab = this.tabDrop;
     this.cancelDrag();
     this.justDragged = true;
     setTimeout(() => (this.justDragged = false), 0);
+    if (d?.kind === "pane" && tab) return this.onPaneToTab(d.id, tab);
     if (d && pane) return d.kind === "pane" ? this.onPaneMove(d.id, pane.id, pane.edge) : this.onPaneDrop(d.id, pane.id, pane.edge);
     if (!d || target === null || !ok) return;
     const where = target || "the top level";
@@ -208,6 +216,7 @@ class SidebarState {
     this.drag = null;
     this.dropTarget = null;
     this.paneDrop = null;
+    this.tabDrop = null;
     document.body.classList.remove("dragging");
   }
   async confirmPending() {
