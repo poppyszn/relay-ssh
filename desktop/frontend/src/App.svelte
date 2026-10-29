@@ -13,8 +13,9 @@
   import ProfileForm from "./ProfileForm.svelte";
   import SettingsPanel from "./SettingsPanel.svelte";
   import ToolsPanel from "./ToolsPanel.svelte";
+  import FilesPanel from "./FilesPanel.svelte";
   import { settings } from "./settings.svelte";
-  import { ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+  import { FilesService, ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 
   const mac = navigator.userAgent.includes("Mac");
   let profiles = $state<Profile[]>([]);
@@ -23,6 +24,7 @@
   let sidebar = $state(true);
   let settingsOpen = $state(false);
   let toolsOpen = $state(false);
+  let filesTarget = $state("");
   let form = $state<{ initial: Profile; oldName: string } | null>(null);
   let confirmDelete = $state<Profile | null>(null);
   let benchHost = $state<HTMLElement>();
@@ -34,6 +36,7 @@
     { id: "new-tab", label: "New local tab", hint: mac ? "⌘T" : "Ctrl+Shift+T" },
     { id: "split-right", label: "Split pane right", hint: mac ? "⌘D" : "Ctrl+Shift+D" },
     { id: "split-down", label: "Split pane down", hint: mac ? "⇧⌘D" : "Ctrl+Alt+D" },
+    { id: "files", label: "Browse files on this connection", hint: mac ? "⇧⌘O" : "Ctrl+Shift+O" },
     { id: "tools", label: "Open tools: health, backup, import, keys", hint: "" },
     { id: "enable-blocks", label: "Enable command blocks in this session", hint: "" },
   ];
@@ -69,6 +72,7 @@
       case "find": return ws.toggleSearch();
       case "settings": return (settingsOpen = !settingsOpen);
       case "tools": return (toolsOpen = !toolsOpen);
+      case "files": return openFiles();
       case "enable-blocks": return ws.focusedPane && ws.enableBlocks(ws.focusedPane);
     }
   }
@@ -79,6 +83,14 @@
     toolsOpen = false;
     await ws.openTab(null);
     ws.session(ws.focusedPane)?.ws.send(new TextEncoder().encode("ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_relay"));
+  }
+
+  // The file browser works on a saved connection (it reuses that tab's login).
+  function openFiles() {
+    const t = ws.panes[ws.focusedPane]?.target;
+    if (!t) return (banner = "Open a saved connection in this pane to browse its files.");
+    banner = "";
+    filesTarget = t;
   }
 
   async function save(prof: Profile) {
@@ -101,7 +113,7 @@
   // terminal control keys. On macOS the native menu owns the shortcuts.
   function keydown(e: KeyboardEvent) {
     if (mac || !e.ctrlKey || !e.shiftKey) return;
-    const map: Record<string, string> = { T: "new-tab", N: "new-connection", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar", F: "find", ",": "settings" };
+    const map: Record<string, string> = { T: "new-tab", N: "new-connection", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar", F: "find", ",": "settings", O: "files" };
     const id = map[e.key.toUpperCase()];
     if (id) { e.preventDefault(); run(id); }
   }
@@ -115,8 +127,9 @@
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     (async () => {
-      const mode = await TerminalService.BenchMode();
-      if (mode === "smoke") return smoke();
+      // RELAY_BENCH is "run", "idle", "smoke", or "smoke|<connection>|<remote dir>" to also test files
+      const [mode, box, dir] = (await TerminalService.BenchMode()).split("|");
+      if (mode === "smoke") return smoke(box, dir);
       if (mode) return runBench(benchHost!, mode);
       await refresh();
       await ws.openTab(null);
@@ -127,7 +140,7 @@
   // RELAY_BENCH=smoke: drive the real UI path (profiles, open a local tab,
   // split it, run a command in each pane) and report, so a build can be
   // verified without clicking.
-  async function smoke() {
+  async function smoke(box = "", dir = "") {
     const out: Record<string, unknown> = { origin: location.origin };
     const enc = new TextEncoder();
     const seen = (id: string, text: string) => {
@@ -241,6 +254,19 @@
       await ToolsService.Backup(dest, "smoke-pass");
       await ToolsService.Restore(dest + ".age", "smoke-pass");
       out.tools = { healthRows, keyRows, profilesBefore: countBefore, profilesAfter: (await ProfilesService.List())?.length, needsPass: await ToolsService.NeedsPassphrase(dest + ".age") };
+      // files: the real panel and service against a real sshd (only when a connection is given)
+      if (box && dir) {
+        filesTarget = box;
+        await new Promise((r) => setTimeout(r, 1500));
+        const rows = [...document.querySelectorAll(".item .name")].map((n) => n.textContent);
+        // ssh trusts known_hosts from the passwd home, not $HOME, so a throwaway server
+        // is untrusted here: the panel must show the readable host-key message.
+        for (let i = 0; i < 60 && !document.querySelector(".msg.bad"); i++) await new Promise((r) => setTimeout(r, 100));
+        const shown = document.querySelector(".msg.bad")?.textContent ?? null;
+        filesTarget = "";
+        await tick();
+        out.files = { panelRows: rows, error: shown, panelClosed: !document.querySelector("[aria-label=Files][role=dialog]") };
+      }
       // ended pane -> reconnect
       const victim = panes[0];
       ws.session(victim)?.ws.close();
@@ -262,7 +288,7 @@
 <svelte:window onkeydown={keydown} />
 
 <div class="app">
-  <TabBar onsidebar={() => (sidebar = !sidebar)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => (toolsOpen = !toolsOpen)} />
+  <TabBar onsidebar={() => (sidebar = !sidebar)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => (toolsOpen = !toolsOpen)} onfiles={openFiles} />
   <div class="body">
     {#if sidebar}
       <Sidebar {profiles} active={open} onconnect={(p) => connect(p)} onnew={() => run("new-connection")} onedit={(p) => (form = { initial: p, oldName: p.name })} onpalette={() => (palette = true)} />
@@ -283,6 +309,7 @@
   <StatusBar {profiles} themeName={settings.themeDef.name} />
 </div>
 
+{#if filesTarget}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/if}
 {#if toolsOpen}<ToolsPanel onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/if}
 {#if settingsOpen}<SettingsPanel onclose={() => (settingsOpen = false)} />{/if}
 {#if palette}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/if}

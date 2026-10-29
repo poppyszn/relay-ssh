@@ -191,7 +191,11 @@ Done: a Tools dialog (wrench in the tab bar, Shell menu, or palette) over a `Too
 - **Import**: `~/.ssh/config` Host entries become connections. Fixed along the way: adjacent Host blocks with no blank line were skipped, one incomplete entry aborted the whole import, and entries without HostName or User now get ssh's defaults (alias, current user). Bad entries are skipped and reported. The CLI line budget went 2900 to 3000 for this (recorded in CLAUDE.md).
 - **Keys**: adopted keys (in backups) and private keys found in ~/.ssh with the connections that use each; Adopt copies a key into the vault and repoints connections at it; Generate opens a local tab with `ssh-keygen` typed but not run, so passphrase prompts stay in the terminal (no passphrase ever passes through argv).
 
-Remaining in Phase 4: port forward management (start and stop forwards at runtime) and the file browser (D3: shell out to `sftp`/`scp`).
+File browser (D3, done): a Files dialog (folder icon in the tab bar, Shell menu, palette) for the focused saved connection. It lists folders (path bar, up, refresh, hidden toggle), uploads, downloads (native dialogs), makes folders, renames and deletes (confirm; only empty folders). It shells out to the system `sftp` and reuses the terminal's authenticated connection through OpenSSH multiplexing: profile sessions now start with `ControlMaster=auto` (`ControlPersist=60s`, socket under `/tmp/relay-ssh-<uid>`), and file operations attach with `ControlMaster=no`, so passwords, passphrases and 2FA are never needed or seen here. Safety: batch paths are quoted and anything containing a control character (a newline would inject another sftp command) is refused; a rejected login or an untrusted or changed host key produces a plain-language message. Verified against a real throwaway `sshd` (list, upload, download, mkdir, rename, delete, auth failure, injection attempt) and in the dev window.
+
+Not done: Windows (OpenSSH there has no multiplexing, so file operations would need their own login), recursive delete, drag and drop, transfer progress.
+
+Remaining in Phase 4: port forward management (start and stop forwards at runtime through `ssh -O forward` and `-O cancel` on the multiplex socket).
 
 ## 10. Working agreement (carried over from the CLI)
 

@@ -26,6 +26,7 @@
   ],
   "exclude": [
     "../src/App.svelte",
+    "../src/FilesPanel.svelte",
     "../src/Palette.svelte",
     "../src/PaneView.svelte",
     "../src/ProfileForm.svelte",

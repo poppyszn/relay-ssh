@@ -9,6 +9,19 @@ export interface Endpoint {
     "token": string;
 }
 
+/**
+ * FileEntry is one row of a remote directory listing.
+ */
+export interface FileEntry {
+    "name": string;
+    "dir": boolean;
+    "link": boolean;
+    "size": number;
+    "modified": string;
+    "perm": string;
+    "owner": string;
+}
+
 export interface FixReport {
     "errors": string[] | null;
     "checks": HealthCheck[] | null;
@@ -34,6 +47,14 @@ export interface KeyInfo {
     "path": string;
     "adopted": boolean;
     "usedBy": string[] | null;
+}
+
+/**
+ * Listing is a directory and its entries.
+ */
+export interface Listing {
+    "path": string;
+    "entries": FileEntry[] | null;
 }
 
 /**
