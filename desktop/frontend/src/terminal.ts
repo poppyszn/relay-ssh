@@ -73,6 +73,10 @@ export interface Session {
   onBlocks?: () => void;
   /** Called when the user presses a block's menu button; `anchor` is the button's position. */
   onBlockMenu?: (block: BlockRef, anchor: DOMRect) => void;
+  /** Called when Go reports that password auto-fill succeeded. */
+  onFilled?: () => void;
+  /** Called when Go reports that password auto-fill was refused. */
+  onFillRefused?: () => void;
   dispose(): void;
 }
 
@@ -130,13 +134,20 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
     s.authed = true;
     s.authBy = by;
     s.authedAt = Date.now();
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ t: "authed" }));
+    }
   };
   // ssh prints this (via its LocalCommand) once the login has authenticated; the parser swallows it.
   term.parser.registerOscHandler(7771, (d) => (d === "auth" ? (authenticated("marker"), true) : false));
   ws.onmessage = (e) => {
     if (typeof e.data === "string") {
-      // a login that is shared with an open tab has no authentication step to wait for
-      if ((JSON.parse(e.data) as { t?: string }).t === "mux") authenticated("mux");
+      try {
+        const msg = JSON.parse(e.data) as { t?: string };
+        if (msg.t === "mux") authenticated("mux");
+        else if (msg.t === "filled") s.onFilled?.();
+        else if (msg.t === "fillrefused") s.onFillRefused?.();
+      } catch {}
       return;
     }
     const data = new Uint8Array(e.data as ArrayBuffer);
