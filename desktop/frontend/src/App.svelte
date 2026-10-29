@@ -385,6 +385,100 @@
         form = null;
         await tick();
       }
+      // vault: status bar lock button, create vault dialog, connection form password UI, lock/unlock
+      {
+        const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        const setVal = (el: HTMLInputElement, v: string) => { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); };
+        const stBefore = await vault.refresh();
+
+        // 1. Click status bar vault button to open VaultPanel
+        document.querySelector<HTMLElement>(".vault-btn")?.click();
+        await tick();
+        await wait(300);
+
+        const openTitle = document.querySelector("[role=dialog] h2")?.textContent ?? "";
+        let created = false;
+        if (!stBefore.exists) {
+          const pass1 = document.querySelector<HTMLInputElement>('[role=dialog] input[aria-label="Master password"]');
+          const pass2 = document.querySelector<HTMLInputElement>('[role=dialog] input[aria-label="Confirm master password"]');
+          if (pass1 && pass2) {
+            setVal(pass1, "smoke-master-pass");
+            setVal(pass2, "smoke-master-pass");
+            await tick();
+            document.querySelector<HTMLElement>('[role=dialog] form button[type=submit]')?.click();
+            await wait(800);
+          }
+          const stAfterCreate = await vault.refresh();
+          created = stAfterCreate.exists && stAfterCreate.unlocked;
+        } else {
+          created = stBefore.exists;
+        }
+
+        // Close vault dialog if open
+        vaultOpen = false;
+        await tick();
+        await wait(200);
+
+        // 2. Open new connection form, switch auth to password
+        newConnection("");
+        await tick();
+        await wait(400);
+
+        [...document.querySelectorAll<HTMLElement>('[role=radiogroup] button')].find((b) => b.textContent?.includes("Password"))?.click();
+        await tick();
+        await wait(200);
+
+        const formNote = document.querySelector(".note")?.textContent ?? "";
+        const hasCorrectNote = formNote.includes("Stored encrypted in Relay's vault") && !formNote.includes("It is never stored");
+
+        const nameInput = document.querySelector<HTMLInputElement>('input[placeholder="web-1"]');
+        const passInput = document.querySelector<HTMLInputElement>('input[type=password][aria-label="Password"]');
+
+        let savedBadgeShown = false;
+        if (nameInput && passInput) {
+          setVal(nameInput, "smoke-vault-conn");
+          const inputs = [...document.querySelectorAll<HTMLInputElement>("input")];
+          const uIn = inputs.find((i) => i.value === "root" || i.closest("label")?.textContent?.includes("User"));
+          const hIn = inputs.find((i) => i.closest("label")?.textContent?.includes("Host"));
+          if (hIn) setVal(hIn, "127.0.0.1");
+          if (uIn) setVal(uIn, "smokeuser");
+          setVal(passInput, "smoke-secret-pass");
+          await tick();
+
+          document.querySelector<HTMLFormElement>("form")?.dispatchEvent(new Event("submit", { bubbles: true }));
+          await wait(800);
+
+          // 3. Re-open the connection form for editing to verify "A password is saved" badge
+          await refresh();
+          const savedConn = profiles.find((p) => p.name === "smoke-vault-conn");
+          if (savedConn) {
+            edit(savedConn);
+            await tick();
+            await wait(400);
+            savedBadgeShown = (document.querySelector(".badge-saved")?.textContent ?? "").includes("A password is saved");
+            form = null;
+            await tick();
+            await wait(200);
+          }
+        }
+
+        // 4. Lock vault
+        await vault.lock();
+        const stLocked = await vault.refresh();
+
+        // 5. Cleanup profile
+        await ProfilesService.Delete("smoke-vault-conn").catch(() => {});
+        await refresh();
+
+        out.vault = {
+          openTitle,
+          created,
+          hasCorrectNote,
+          savedBadgeShown,
+          lockedAfterLock: !stLocked.unlocked,
+          vaultExists: stLocked.exists,
+        };
+      }
       // files: the real panel and service against a real sshd (only when a connection is given)
       if (box && dir) {
         filesTarget = box;
