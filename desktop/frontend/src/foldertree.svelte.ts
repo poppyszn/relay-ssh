@@ -56,6 +56,8 @@ class SidebarState {
   onPaneToTab: (paneId: string, tab: string) => void = () => {};
   /** Called when a connection is dropped on a pane (set by the app). */
   onPaneDrop: (connection: string, paneId: string, edge: PaneEdge) => void = () => {};
+  /** Called when a connection row is clicked once: the app shows its open session, if it has one (set by the app). */
+  onFocusConnection: (name: string) => void = () => {};
   /** Called when a pane is dropped on another pane (set by the app). */
   onPaneMove: (paneId: string, targetId: string, edge: PaneEdge) => void = () => {};
   dropOk = $state(true);

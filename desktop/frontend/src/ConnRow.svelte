@@ -16,9 +16,9 @@
 
 <div class="row" class:current class:selected={sb.selectedConn === profile.name} class:dragging={sb.drag?.kind === "profile" && sb.drag.id === profile.name} style="padding-left: {14 + 14 * depth + 8}px" use:dragSource={{ kind: "profile", id: profile.name, label: profile.name }}>
   {#each Array(Math.max(0, depth)) as _, i}<span class="guide" style="left: {18 + 14 * i}px"></span>{/each}
-  <!-- One click selects; a double-click (or Enter on the focused row, which arrives with detail 0) opens a new session. -->
-  <button class="main" onclick={(e) => { if (sb.justDragged) return; if (e.detail === 0) onconnect(profile); else sb.selectedConn = profile.name; }}
-          ondblclick={() => { if (sb.justDragged) return; sb.learnOpen(); onconnect(profile); }} title="Double-click to open {profile.name} in a new tab">
+  <!-- One click selects the row and shows its open session (if any); a double-click (or Enter on the focused row, which arrives with detail 0) opens a new session. -->
+  <button class="main" onclick={(e) => { if (sb.justDragged) return; if (e.detail === 0) onconnect(profile); else { sb.selectedConn = profile.name; sb.onFocusConnection(profile.name); } }}
+          ondblclick={() => { if (sb.justDragged) return; sb.learnOpen(); onconnect(profile); }} title={live ? `Click to show ${profile.name}. Double-click to open another tab.` : `Double-click to open ${profile.name} in a new tab`}>
     <span class="l1">
       <span class="dot" class:live></span>
       <span class="name">{profile.name}</span>
