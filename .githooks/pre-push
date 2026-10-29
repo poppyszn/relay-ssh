@@ -1,0 +1,36 @@
+#!/bin/sh
+# Pre-push: run the desktop app's checks before anything leaves this machine.
+#
+# Only on macOS: the app is built and tested there, and GitHub's runners do not
+# run the desktop checks yet. Elsewhere the hook does nothing.
+#
+# Skip once:      git push --no-verify        (or RELAY_SKIP_HOOKS=1 git push)
+# Install:        make hooks                  (sets core.hooksPath for this clone)
+
+[ -n "$RELAY_SKIP_HOOKS" ] && exit 0
+os="${RELAY_HOOK_OS:-$(uname -s)}"   # RELAY_HOOK_OS lets the hook be tested on any OS
+[ "$os" = "Darwin" ] || exit 0
+
+# Pushing only deletions (a branch or tag removal) has nothing to check.
+zero=0000000000000000000000000000000000000000
+checkable=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$local_sha" != "$zero" ] && checkable=1
+done
+[ -n "$checkable" ] || exit 0
+
+root="$(git rev-parse --show-toplevel)" || exit 1
+cd "$root" || exit 1
+
+if [ ! -d desktop/frontend/node_modules ]; then
+  echo "pre-push: desktop/frontend/node_modules is missing. Run: (cd desktop/frontend && npm install)" >&2
+  exit 1
+fi
+
+echo "pre-push: running make desktop-check (macOS). Skip with: git push --no-verify"
+if ! make desktop-check; then
+  echo >&2
+  echo "pre-push: desktop-check failed, so nothing was pushed." >&2
+  echo "          Fix it, or push anyway with: git push --no-verify" >&2
+  exit 1
+fi

@@ -35,6 +35,9 @@ make desktop-check              # app: guardrails, Go tests, typecheck, frontend
 SSSH_HOME=/tmp/relay-home wails3 dev -config desktop/build/config.yml -port 9245   # run the app
 ```
 
+Run `make hooks` once to install the pre-push hook: on macOS it runs `make desktop-check` before every
+push (skip once with `git push --no-verify`). On other systems it does nothing.
+
 `SSSH_HOME` points Relay at a throwaway home so you never touch your real SSH setup. Run `desktop`
 commands from the `desktop/` directory.
 

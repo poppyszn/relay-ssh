@@ -1,7 +1,7 @@
 BINARY := sssh
 PKG    := ./cmd/sssh
 
-.PHONY: help build install test race vet fmt guardrails check desktop-check clean
+.PHONY: help build install test race vet fmt guardrails check desktop-check hooks clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -33,6 +33,9 @@ desktop-check: ## Gate for the Relay desktop module (guardrails, Go tests, typec
 	./desktop/scripts/guardrails.sh
 	cd desktop && go vet . && go test .
 	cd desktop/frontend && npm run check 2>&1 | tee /dev/stderr | grep -q " 0 ERRORS " && npm test && npm run build
+
+hooks: ## Use the repo's git hooks (a pre-push that runs desktop-check on macOS)
+	git config core.hooksPath .githooks
 
 clean: ## Remove build output
 	rm -f $(BINARY)
