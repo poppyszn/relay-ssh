@@ -130,3 +130,11 @@ export interface TunnelDTO {
     "listen": string;
     "target": string;
 }
+
+/**
+ * VaultStatus describes the presence and unlock state of the vault.
+ */
+export interface VaultStatus {
+    "exists": boolean;
+    "unlocked": boolean;
+}

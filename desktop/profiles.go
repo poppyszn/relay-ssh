@@ -91,7 +91,23 @@ func (ProfilesService) Save(oldName string, prof Profile) error {
 	if err := paths.EnsureDirs(p); err != nil {
 		return err
 	}
-	return core.SaveProfile(p, oldName, fromProfile(prof))
+	if err := core.SaveProfile(p, oldName, fromProfile(prof)); err != nil {
+		return err
+	}
+
+	// Keep vault in step with connection changes.
+	// These calls must not fail the save if the vault is locked.
+	v := getVault()
+	if oldName != "" && oldName != prof.Name {
+		_ = v.Rename(oldName, prof.Name)
+	}
+	if prof.Auth != "password" {
+		_ = v.Forget(prof.Name)
+		if oldName != "" {
+			_ = v.Forget(oldName)
+		}
+	}
+	return nil
 }
 
 // Delete removes a profile by name.
@@ -100,8 +116,11 @@ func (ProfilesService) Delete(name string) error {
 	if err != nil {
 		return err
 	}
-	_, err = core.RemoveProfile(p, name)
-	return err
+	if _, err := core.RemoveProfile(p, name); err != nil {
+		return err
+	}
+	_ = getVault().Forget(name)
+	return nil
 }
 
 // PreviewResult is the form's live preview: the exact Host block the profile
