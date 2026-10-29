@@ -56,6 +56,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dot-off); flex: none; }
 .dot.ok { background: var(--ok); }
 .dot.err { background: var(--err); }
+.dot.warn { background: var(--warn); }
 .chip { font-size: 11px; line-height: 1.5; padding: 0 7px; border-radius: 3px; background: var(--line); color: var(--text2); }
 .label { font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
 .btn { background: var(--line); border: 1px solid var(--floatline); border-radius: 4px; padding: 8px 16px; }

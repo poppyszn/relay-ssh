@@ -5,6 +5,7 @@
   import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
   import PaneView from "./PaneView.svelte";
   import SearchBar from "./SearchBar.svelte";
+  import ConnectingOverlay from "./ConnectingOverlay.svelte";
 
   let { node, tabId, multi, profiles }: { node: Node; tabId: string; multi: boolean; profiles: Profile[] } = $props();
 
@@ -34,14 +35,18 @@
   <section class="leaf" class:focused={multi && tab?.focus === node.id} onpointerdowncapture={() => ws.focus(node.id)}>
     {#if multi}
       <header>
-        <span class="dot" class:ok={info && !info.ended} class:err={info?.ended}></span>
+        <span class="dot" class:ok={info && !info.ended && !info.connecting} class:warn={info?.connecting} class:err={info?.ended}></span>
         <strong>{info?.target ?? "Local"}</strong>
         {#if prof}<span class="sub">{prof.user}@{prof.host}</span>{/if}
+        {#if info?.connecting}<span class="wait">connecting…</span>{/if}
         {#if info?.ended}<span class="gone">disconnected</span>{/if}
         <button class="close" aria-label="Close pane" onclick={() => ws.closePane(node.id)}>&times;</button>
       </header>
     {/if}
     <div class="term" use:attach={node.id}></div>
+    {#if info?.connecting && info.target}
+      <div class="cover" class:below-header={multi}><ConnectingOverlay target={info.target} {prof} since={info.since} oncancel={() => ws.cancelConnect(node.id)} /></div>
+    {/if}
     {#if ws.searchPane === node.id && ws.session(node.id)}<SearchBar session={ws.session(node.id)!} onclose={() => ws.closeSearch()} />{/if}
     {#if info?.ended}
       <div class="ended" role="alert">
@@ -73,6 +78,10 @@
   header strong { color: var(--text); font-weight: 500; }
   .dot { width: 7px; height: 7px; }
   .gone { color: var(--err-text); }
+  .wait { color: var(--warn); }
+  /* Over the terminal (not the pane header). */
+  .cover { position: absolute; inset: 0; z-index: 2; }
+  .cover.below-header { top: 28px; }
   .close { all: unset; margin-left: auto; width: 28px; height: 100%; display: grid; place-items: center; font-size: 15px; cursor: pointer; opacity: 0.6; }
   .close:hover { opacity: 1; }
   .term { flex: 1; min-height: 0; min-width: 0; position: relative; overflow: hidden; }

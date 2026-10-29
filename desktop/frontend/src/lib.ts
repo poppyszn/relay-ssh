@@ -92,3 +92,18 @@ export function canDrop(kind: "profile" | "folder", id: string, target: string, 
   if (folders.includes(joinFolder(target, folderBase(id)))) return { ok: false, reason: `A folder named ${folderBase(id)} already exists there` };
   return { ok: true };
 }
+
+/** "4s", "1m 1s": how long a connection attempt has been running. */
+export function formatElapsed(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+}
+
+/** What to tell the user while ssh is silent: nothing for a few seconds, then that it is slow, then why. */
+export function connectingHint(ms: number, viaJump: boolean): string {
+  if (ms < 8_000) return "";
+  if (ms < 30_000) return viaJump ? "Taking longer than usual. The jump host or the server is slow to answer." : "Taking longer than usual.";
+  return viaJump
+    ? "Still no answer. The jump host or the server may be unreachable, offline or behind a firewall."
+    : "Still no answer. The host may be unreachable, offline or behind a firewall.";
+}

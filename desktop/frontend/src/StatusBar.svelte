@@ -13,7 +13,7 @@
 
 <footer>
   {#if info}
-    <span class="seg"><span class="dot" class:ok={!info.ended} class:err={info.ended}></span>{info.ended ? "Disconnected" : "Connected"}</span>
+    <span class="seg"><span class="dot" class:ok={!info.ended && !info.connecting} class:warn={info.connecting} class:err={info.ended}></span>{info.ended ? "Disconnected" : info.connecting ? "Connecting…" : "Connected"}</span>
     <span class="seg mono">{prof ? `${prof.user}@${prof.host}:${prof.port}` : "local shell"}</span>
     {#if prof?.jump}<span class="seg">via {prof.jump}</span>{/if}
     {#if info.blocks}<span class="seg ok">Blocks</span>{/if}

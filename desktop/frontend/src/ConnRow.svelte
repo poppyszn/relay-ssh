@@ -15,7 +15,7 @@
 </script>
 
 <div class="row" class:current class:dragging={sb.drag?.kind === "profile" && sb.drag.id === profile.name} style="padding-left: {14 + 14 * depth + 8}px" use:dragSource={{ kind: "profile", id: profile.name, label: profile.name }}>
-  {#each Array(depth) as _, i}<span class="guide" style="left: {18 + 14 * i}px"></span>{/each}
+  {#each Array(Math.max(0, depth)) as _, i}<span class="guide" style="left: {18 + 14 * i}px"></span>{/each}
   <button class="main" onclick={() => !sb.justDragged && onconnect(profile)} title="Open {profile.name}">
     <span class="l1">
       <span class="dot" class:live></span>
