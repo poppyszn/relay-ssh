@@ -195,7 +195,9 @@ File browser (D3, done): a Files dialog (folder icon in the tab bar, Shell menu,
 
 Not done: Windows (OpenSSH there has no multiplexing, so file operations would need their own login), recursive delete, drag and drop, transfer progress.
 
-Remaining in Phase 4: port forward management (start and stop forwards at runtime through `ssh -O forward` and `-O cancel` on the multiplex socket).
+Port forwards (done): a Port forwards dialog (tab bar, Shell menu, palette) for the focused saved connection. It shows whether the connection is open and every forward on it: the saved connection's tunnels plus any added here, with a live state dot (local and SOCKS ports are probed; remote ones are held by the server, so a stop made here is remembered). Add local, remote or SOCKS forwards, Stop or Start any of them, and Save a forward you added on the fly into the connection so it starts with every login. It drives OpenSSH multiplexing (`ssh -O check`, `-O forward`, `-O cancel`) against the master the terminal tab started; no tunnelling code lives in Relay. Notes: ssh cannot list a master's forwards, so runtime ones are tracked in memory (lost on restart of the app, though still active on the master); local and SOCKS ports are checked free before asking ssh, because ssh reports success if it can bind only `::1` and `127.0.0.1` is taken by another program; ports and targets are validated against a strict pattern so nothing can smuggle in extra ssh options. Verified against a real throwaway `sshd` with real traffic through local, SOCKS and remote forwards, and in the dev window against a live master. A deadlock found by those tests (a lock held across a probe) is fixed.
+
+Phase 4 is complete except for Windows, where OpenSSH has no connection sharing (file transfers and live forwards would need their own login).
 
 ## 10. Working agreement (carried over from the CLI)
 
