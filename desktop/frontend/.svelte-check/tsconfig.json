@@ -25,7 +25,11 @@
     "svelte/bindings"
   ],
   "exclude": [
+    "../src/AddMenu.svelte",
     "../src/App.svelte",
+    "../src/Branch.svelte",
+    "../src/Card.svelte",
+    "../src/ConnRow.svelte",
     "../src/FilesPanel.svelte",
     "../src/ForwardDiagram.svelte",
     "../src/ForwardsPanel.svelte",

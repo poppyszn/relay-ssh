@@ -16,10 +16,13 @@
   import FilesPanel from "./FilesPanel.svelte";
   import ForwardsPanel from "./ForwardsPanel.svelte";
   import { settings } from "./settings.svelte";
+  import { sb } from "./foldertree.svelte";
   import { FilesService, ForwardsService, ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 
   const mac = navigator.userAgent.includes("Mac");
   let profiles = $state<Profile[]>([]);
+  let folders = $state<string[]>([]);
+  let toolsTab = $state<"health" | "backup" | "import" | "keys">("health");
   let banner = $state("");
   let palette = $state(false);
   let sidebar = $state(true);
@@ -32,10 +35,10 @@
   let benchHost = $state<HTMLElement>();
   let customChrome = $state(false);
 
-  const folders = $derived([...new Set(profiles.map((p) => p.folder).filter(Boolean))].sort());
   const open = $derived(new Set(ws.tabs.flatMap((t) => leaves(t.root).map((id) => ws.panes[id]?.target ?? "")).filter(Boolean)));
   const actions = [
     { id: "new-connection", label: "New connection", hint: mac ? "⌘N" : "Ctrl+Shift+N" },
+    { id: "new-folder", label: "New folder", hint: mac ? "⇧⌘N" : "" },
     { id: "new-tab", label: "New local tab", hint: mac ? "⌘T" : "Ctrl+Shift+T" },
     { id: "split-right", label: "Split pane right", hint: mac ? "⌘D" : "Ctrl+Shift+D" },
     { id: "split-down", label: "Split pane down", hint: mac ? "⇧⌘D" : "Ctrl+Alt+D" },
@@ -47,7 +50,7 @@
 
   async function refresh() {
     try {
-      profiles = (await ProfilesService.List()) ?? [];
+      [profiles, folders] = [(await ProfilesService.List()) ?? [], (await ProfilesService.Folders()) ?? []];
     } catch (e) {
       banner = String(e);
     }
@@ -64,7 +67,8 @@
     palette = false;
     switch (id) {
       case "new-tab": return ws.openTab(null);
-      case "new-connection": return (form = { initial: blankProfile(), oldName: "" });
+      case "new-connection": return newConnection(sb.selectedFolder);
+      case "new-folder": return (sidebar = true, sb.startCreate(""));
       case "quick-open": return (palette = !palette);
       case "split-right": return ws.split("row");
       case "split-down": return ws.split("col");
@@ -75,7 +79,7 @@
       case "toggle-sidebar": return (sidebar = !sidebar);
       case "find": return ws.toggleSearch();
       case "settings": return (settingsOpen = !settingsOpen);
-      case "tools": return (toolsOpen = !toolsOpen);
+      case "tools": return (toolsTab = "health", toolsOpen = !toolsOpen);
       case "files": return openFiles();
       case "forwards": return openForwards();
       case "enable-blocks": return ws.focusedPane && ws.enableBlocks(ws.focusedPane);
@@ -113,6 +117,11 @@
     forwardsTarget = t;
   }
 
+  // A new connection starts in the selected folder, if there is one.
+  function newConnection(folder: string) {
+    form = { initial: { ...blankProfile(), folder }, oldName: "" };
+  }
+
   async function save(prof: Profile) {
     await ProfilesService.Save(form!.oldName, prof);
     form = null;
@@ -133,7 +142,7 @@
   // terminal control keys. On macOS the native menu owns the shortcuts.
   function keydown(e: KeyboardEvent) {
     if (mac || !e.ctrlKey || !e.shiftKey) return;
-    const map: Record<string, string> = { T: "new-tab", N: "new-connection", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar", F: "find", ",": "settings", O: "files", P: "forwards" };
+    const map: Record<string, string> = { T: "new-tab", N: "new-connection", M: "new-folder", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar", F: "find", ",": "settings", O: "files", P: "forwards" };
     const id = map[e.key.toUpperCase()];
     if (id) { e.preventDefault(); run(id); }
   }
@@ -328,6 +337,63 @@
         rootClass: document.documentElement.classList.contains("custom-chrome"),
         htmlBg: getComputedStyle(document.documentElement).backgroundColor,
       };
+      // sidebar: create folders and move things by dragging, through the real UI
+      {
+        const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        sidebar = true;
+        await tick();
+        const makeFolder = async (name: string) => {
+          document.querySelector<HTMLElement>("[data-add-button]")!.click();
+          await tick();
+          [...document.querySelectorAll<HTMLElement>("[role=menuitem]")].find((b) => b.querySelector(".t")?.textContent === "Folder")!.click();
+          await tick();
+          const input = document.querySelector<HTMLInputElement>('input[placeholder="Folder name"]')!;
+          input.value = name;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+          await wait(500);
+        };
+        const drag = async (from: Element, to: Element) => {
+          const f = from.getBoundingClientRect(), t = to.getBoundingClientRect();
+          const [fx, fy, tx, ty] = [f.left + 60, f.top + f.height / 2, t.left + 80, t.top + t.height / 2];
+          from.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: fx, clientY: fy, pointerId: 1 }));
+          window.dispatchEvent(new PointerEvent("pointermove", { clientX: fx + 12, clientY: fy + 12 }));
+          window.dispatchEvent(new PointerEvent("pointermove", { clientX: tx, clientY: ty }));
+          await tick();
+          window.dispatchEvent(new PointerEvent("pointerup", { clientX: tx, clientY: ty }));
+          await tick();
+        };
+        const confirmMove = async () => {
+          const card = document.querySelector('[role=alertdialog]');
+          const text = card?.querySelector(".text")?.textContent ?? null;
+          card?.querySelector<HTMLElement>(".btn.primary")?.click();
+          await wait(600);
+          return text;
+        };
+        const rowOf = (name: string) => [...document.querySelectorAll(".row")].find((r) => r.querySelector(".name")?.textContent === name)!;
+        const folderOf = (name: string) => [...document.querySelectorAll(".head")].find((r) => r.querySelector(".label-text")?.textContent === name)!;
+
+        const victim = profiles.find((p) => !p.folder) ?? profiles[0];
+        const originalFolder = victim.folder;
+        await makeFolder("smoke-a");
+        await makeFolder("smoke-b");
+        const created = await ProfilesService.Folders();
+        await drag(rowOf(victim.name), folderOf("smoke-a"));
+        const sawConfirm = await confirmMove();
+        const movedTo = (await ProfilesService.List())!.find((p) => p.name === victim.name)!.folder;
+        await drag(folderOf("smoke-b"), folderOf("smoke-a"));
+        const sawFolderConfirm = await confirmMove();
+        const nested = await ProfilesService.Folders();
+        // a folder cannot be dropped into itself: no confirmation appears
+        await drag(folderOf("smoke-a"), folderOf("smoke-a"));
+        const selfDropCard = !!document.querySelector("[role=alertdialog]");
+        sb.cancelDrag();
+        out.sidebar = { created, sawConfirm, movedTo, sawFolderConfirm, nested, selfDropCard };
+        // clean up
+        await ProfilesService.MoveProfile(victim.name, originalFolder);
+        for (const f of ["smoke-a/smoke-b", "smoke-a", "smoke-b"]) await ProfilesService.DeleteFolder(f).catch(() => {});
+        await refresh();
+      }
       // ended pane -> reconnect
       const victim = panes[0];
       ws.session(victim)?.ws.close();
@@ -349,10 +415,10 @@
 <svelte:window onkeydown={keydown} />
 
 <div class="app">
-  <TabBar custom={customChrome} onsidebar={() => (sidebar = !sidebar)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => (toolsOpen = !toolsOpen)} onfiles={openFiles} onforwards={openForwards} />
+  <TabBar custom={customChrome} onsidebar={() => (sidebar = !sidebar)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} />
   <div class="body">
     {#if sidebar}
-      <Sidebar {profiles} active={open} onconnect={(p) => connect(p)} onnew={() => run("new-connection")} onedit={edit} onpalette={() => (palette = true)} />
+      <Sidebar {profiles} {folders} {open} current={ws.panes[ws.focusedPane]?.target ?? ""} onconnect={(p) => connect(p)} onnew={newConnection} onedit={edit} onpalette={() => (palette = true)} ontools={(t) => { toolsTab = t; toolsOpen = true; }} onchanged={refresh} />
     {/if}
     <main>
       {#if banner}<p class="banner" role="alert">{banner}<button aria-label="Dismiss" onclick={() => (banner = "")}>&times;</button></p>{/if}
@@ -372,7 +438,7 @@
 
 {#if forwardsTarget}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/if}
 {#if filesTarget}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/if}
-{#if toolsOpen}<ToolsPanel onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/if}
+{#if toolsOpen}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/if}
 {#if settingsOpen}<SettingsPanel onclose={() => (settingsOpen = false)} />{/if}
 {#if palette}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/if}
 {#if form}
