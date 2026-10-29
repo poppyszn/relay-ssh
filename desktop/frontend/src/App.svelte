@@ -277,6 +277,20 @@
         fontSize: t2?.options.fontSize,
         colsChanged: t2?.cols !== colsBefore,
       };
+      // the light theme and "system" (which follows the OS) reach CSS, colour-scheme and xterm
+      const probeTheme = async (name: string) => {
+        settings.theme = name;
+        await tick();
+        await new Promise((r) => setTimeout(r, 200));
+        const root = document.documentElement;
+        return {
+          term: getComputedStyle(root).getPropertyValue("--term").trim(),
+          scheme: root.style.colorScheme,
+          xtermBg: (ws.session(live)?.term.options.theme as { background?: string } | undefined)?.background,
+          resolved: settings.resolved,
+        };
+      };
+      out.themes = { daylight: await probeTheme("daylight"), system: await probeTheme("system") };
       settings.theme = before.theme;
       settings.fontSize = before.size;
       await tick();
@@ -472,7 +486,7 @@
       </div>
     </main>
   </div>
-  <StatusBar {profiles} themeName={settings.themeDef.name} />
+  <StatusBar {profiles} themeName={settings.label} />
 </div>
 
 {#if forwardsTarget}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/if}
@@ -506,11 +520,11 @@
   .welcome { justify-items: center; }
   .banner { margin: 0; padding: 8px 14px; display: flex; align-items: center; color: var(--err-text); background: var(--err-bg); border-bottom: 1px solid var(--err); }
   .banner button { all: unset; margin-left: auto; cursor: pointer; font-size: 16px; }
-  .scrim { position: fixed; inset: 0; background: rgba(6, 10, 16, 0.66); display: flex; align-items: center; justify-content: center; z-index: 30; }
+  .scrim { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; z-index: 30; }
   .confirm { width: min(420px, 92vw); background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; padding: 18px 20px; }
   .confirm p { margin: 0 0 16px; }
   .buttons { display: flex; justify-content: flex-end; gap: 8px; }
-  .toast { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 8px; padding: 9px 16px; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); font-size: 12.5px; color: var(--text); }
+  .toast { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 8px; padding: 9px 16px; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 10px 30px var(--shadow); font-size: 12.5px; color: var(--text); }
   .toast svg { color: var(--ok); }
-  .danger-fill { background: var(--err); border-color: var(--err); color: #1a0508; }
+  .danger-fill { background: var(--err); border-color: var(--err); color: var(--on-err); }
 </style>

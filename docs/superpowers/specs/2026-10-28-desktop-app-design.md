@@ -176,7 +176,7 @@ Scrollbar: xterm 6 draws its own scrollbar, so it is restyled in `theme.css` to 
 
 Done (stage C): scrollback search (xterm search addon; find bar with match count, previous/next, match case; Cmd/Ctrl+F from the Shell menu; Enter and Shift+Enter step through matches; Esc closes). Settings panel (Cmd+, or the gear): three dark themes (Midnight, Graphite, Obsidian), font (JetBrains Mono or system monospace), size, line spacing, copy on select, cursor blink. Themes set CSS variables on the page and the xterm theme on every open terminal, live; settings persist in localStorage (best effort). Also fixed: a failed connection left a half-built terminal and its WebGL context in the pane, and the ack timer and resize observer were never cleaned up on close.
 
-Remaining: a clipboard check in the real window (native Edit menu copy/paste is expected to work; copy on select is the explicit fallback), a light theme, the block options menu and Relay-drawn header (section 9e), Windows ConPTY, and Phases 4 and 5.
+Remaining: a clipboard check in the real window (native Edit menu copy/paste is expected to work; copy on select is the explicit fallback), the Relay-drawn block header (section 9e), Windows ConPTY, and Phases 4 and 5.
 
 ## 9e. Backlog notes from the owner (2026-10-29)
 
@@ -202,6 +202,10 @@ Phase 4 is complete except for Windows, where OpenSSH has no connection sharing 
 ## 9g. Data model change: explicit folders (2026-10-29)
 
 `connections.toml` gains an optional top-level `folders = ["archive/old", ...]` listing folders that exist even when empty, so the sidebar can create a folder or subfolder before anything is in it. Folders holding connections exist without being listed, and every ancestor of a folder exists ("a/b" implies "a"). Files without the key load unchanged; the list is sorted and de-duplicated on save; each entry is validated (non-empty, no leading or trailing slash, no empty segment). A folder emptied by moving, editing or deleting its last connection is kept (added to the list), because folders are user-managed. Operations (desktop `ProfilesService`, outside the CLI line budget): create folder, rename or move folder (everything beneath follows; refuses moving into itself or onto an existing folder), delete folder (refuses one holding connections and names them; removes empty subfolders), move connection. The CLI is unaffected: `ls --tree` still reads each connection's `folder`.
+
+## 9h. Light theme (2026-10-29)
+
+Themes are plain data in `themes.ts` (UI variables, xterm palette, search-highlight colours) instead of values scattered through components; `settings.apply()` writes them to `:root` and sets `color-scheme`. A fourth theme, **Daylight**, is light, and **System** follows the OS (`prefers-color-scheme`, live) by resolving to Daylight or Midnight. Every colour a component used to hard-code (whites, scrims, shadows, accent and error tints, status stripes, block bands) is now a variable, derived from each theme's accent, ok and err colours where possible, so a new theme is one entry. A unit test checks the contrast of every theme (text and muted text on each surface, accent and error text, button labels, terminal foreground, the sixteen ANSI colours, and that xterm's background matches the page). Verified in the browser pane against every view and in the real window (CSS variables, `color-scheme` and xterm background change for Daylight and System). Not verified: the native window frame and shadow in the light theme. Also fixed: generated `.svelte-check` files were tracked in git and are now ignored.
 
 ## 10. Working agreement (carried over from the CLI)
 

@@ -158,19 +158,19 @@
 </div>
 
 <style>
-  .scrim { position: fixed; inset: 0; background: rgba(6, 10, 16, 0.62); z-index: 25; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .panel { width: min(860px, 100%); height: min(600px, 100%); display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); overflow: hidden; }
+  .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 25; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .panel { width: min(860px, 100%); height: min(600px, 100%); display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 30px 80px var(--shadow); overflow: hidden; }
   header { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 14px 0 22px; border-bottom: 1px solid var(--line2); }
-  h2 { margin: 0; font-size: 15px; font-weight: 600; color: #fff; }
+  h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--strong); }
   .x { width: 30px; height: 30px; border: 0; background: none; border-radius: 4px; color: var(--muted); font-size: 18px; }
-  .x:hover { background: var(--line); color: #fff; }
+  .x:hover { background: var(--line); color: var(--strong); }
   .body { flex: 1; min-height: 0; display: flex; }
   nav { width: 190px; flex: none; background: var(--bar); border-right: 1px solid var(--line2); padding: 8px 0; }
   nav button { display: block; width: 100%; text-align: left; padding: 10px 22px; border: 0; background: none; color: var(--text2); }
   nav button:hover { background: var(--hover); }
-  nav button.on { background: var(--active); color: #fff; box-shadow: inset 3px 0 var(--accent); font-weight: 500; }
+  nav button.on { background: var(--active); color: var(--strong); box-shadow: inset 3px 0 var(--accent); font-weight: 500; }
   .content { flex: 1; min-width: 0; overflow: auto; padding: 20px 26px 26px; }
-  h3 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: #fff; }
+  h3 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--strong); }
   h3.gap { margin-top: 30px; padding-top: 22px; border-top: 1px solid var(--line2); }
   p { margin: 0 0 12px; color: var(--muted); line-height: 1.5; }
   .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
@@ -184,7 +184,7 @@
   .checks li:first-child, .keys li:first-child { border-top: 0; }
   .checks b { font-weight: 500; min-width: 140px; }
   .detail { color: var(--muted); }
-  .dot.warn { background: #e6c07b; }
+  .dot.warn { background: var(--warn); }
   .keys li { position: relative; display: grid; gap: 2px; padding: 12px 14px; border-top: 1px solid var(--line2); }
   .kname { display: flex; align-items: center; gap: 8px; }
   .kmeta { font-size: 11.5px; color: var(--muted); }
@@ -193,7 +193,7 @@
   .adopt { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); padding: 5px 12px; }
   .empty { color: var(--muted); padding: 16px; }
   .note { padding: 9px 12px; border: 1px solid var(--line2); margin: 10px 0 0; }
-  .note.good { color: var(--ok); border-color: rgba(154, 208, 122, 0.4); background: rgba(154, 208, 122, 0.07); }
-  .note.bad { color: var(--err-text); border-color: rgba(240, 123, 134, 0.5); background: var(--err-bg); }
-  .danger-fill { background: var(--err); border-color: var(--err); color: #1a0508; font-weight: 600; }
+  .note.good { color: var(--ok); border-color: var(--ok-edge); background: var(--ok-bg); }
+  .note.bad { color: var(--err-text); border-color: var(--err-edge); background: var(--err-bg); }
+  .danger-fill { background: var(--err); border-color: var(--err); color: var(--on-err); font-weight: 600; }
 </style>

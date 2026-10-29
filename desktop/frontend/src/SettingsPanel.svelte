@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DENSITY, FONTS, THEMES, settings } from "./settings.svelte";
+  import { DENSITY, FONTS, SYSTEM, THEMES, settings } from "./settings.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
   const sizes = () => settings.fontSize;
@@ -19,6 +19,10 @@
             <span>{t.name}</span>
           </button>
         {/each}
+        <button role="radio" aria-checked={settings.theme === SYSTEM} class:on={settings.theme === SYSTEM} onclick={() => (settings.theme = SYSTEM)} title="Follow the macOS light or dark appearance">
+          <span class="swatch split" style="--l: {THEMES.midnight.vars.term}; --r: {THEMES.daylight.vars.term}; --a: {THEMES.daylight.vars.accent}"><i></i></span>
+          <span>System</span>
+        </button>
       </div>
     </section>
 
@@ -50,17 +54,19 @@
 </div>
 
 <style>
-  .scrim { position: fixed; inset: 0; background: rgba(6, 10, 16, 0.5); z-index: 25; display: flex; justify-content: flex-end; padding: 48px 12px 0 0; }
-  .panel { width: 340px; align-self: flex-start; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6); overflow: hidden; }
+  .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 25; display: flex; justify-content: flex-end; padding: 48px 12px 0 0; }
+  .panel { width: 340px; align-self: flex-start; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 24px 70px var(--shadow); overflow: hidden; }
   header { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 12px 0 18px; border-bottom: 1px solid var(--line2); }
-  h2 { margin: 0; font-size: 14px; font-weight: 600; color: #fff; }
+  h2 { margin: 0; font-size: 14px; font-weight: 600; color: var(--strong); }
   header button { width: 30px; height: 30px; border: 0; background: none; border-radius: 4px; color: var(--muted); font-size: 18px; }
-  header button:hover { background: var(--line); color: #fff; }
+  header button:hover { background: var(--line); color: var(--strong); }
   section { padding: 14px 18px 16px; border-bottom: 1px solid var(--line2); display: grid; gap: 10px; }
   section.last { border-bottom: 0; }
   .themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .swatch.split { background: linear-gradient(90deg, var(--l) 50%, var(--r) 50%); }
+  .swatch.split i { background: var(--a); }
   .themes button { display: grid; gap: 6px; padding: 6px; background: var(--field); border: 1px solid var(--fieldline); border-radius: 4px; color: var(--text2); font-size: 12px; }
-  .themes button.on { border-color: var(--accent); color: #fff; box-shadow: 0 0 0 1px var(--accent); }
+  .themes button.on { border-color: var(--accent); color: var(--strong); box-shadow: 0 0 0 1px var(--accent); }
   .swatch { display: block; height: 38px; border-radius: 3px; position: relative; overflow: hidden; }
   .swatch i { position: absolute; left: 6px; top: 8px; width: 22px; height: 3px; }
   .row { display: flex; gap: 8px; }
@@ -73,7 +79,7 @@
   .seg button { padding: 7px 0; background: var(--field); border: 1px solid var(--fieldline); margin-left: -1px; color: var(--text2); font-size: 12px; }
   .seg button:first-child { margin-left: 0; border-radius: 4px 0 0 4px; }
   .seg button:last-child { border-radius: 0 4px 4px 0; }
-  .seg button.on { background: var(--accent-soft); border-color: var(--accent); color: #fff; position: relative; z-index: 1; }
+  .seg button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--strong); position: relative; z-index: 1; }
   .check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
   .check input { width: 16px; height: 16px; margin: 2px 0 0; padding: 0; accent-color: var(--accent); }
   .check span { display: grid; gap: 1px; }

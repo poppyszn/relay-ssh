@@ -126,32 +126,32 @@
 <style>
   aside { position: relative; width: 268px; flex: none; display: flex; flex-direction: column; background: var(--rail); border-right: 1px solid var(--line); min-height: 0; }
   .head { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 10px 16px; }
-  .title { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; color: #fff; }
+  .title { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; color: var(--strong); }
   .n { font-size: 11px; font-weight: 400; color: var(--dim); }
-  .add { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px 0 9px; border: 0; border-radius: 4px; background: var(--accent); color: #06131f; font-weight: 600; font-size: 12px; }
-  .add:hover { background: #4aa8ee; }
+  .add { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px 0 9px; border: 0; border-radius: 4px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 12px; }
+  .add:hover { background: var(--accent-hover); }
   .searchrow { padding: 0 12px 10px; }
   .search { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px 0 10px; background: var(--field); border: 1px solid var(--line); border-radius: 4px; color: var(--muted); }
-  .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 154, 225, 0.18); }
+  .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
   .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; padding: 0; box-shadow: none; }
   .search input:focus { box-shadow: none; }
   .search .kbd { background: none; cursor: pointer; }
   .err { margin: 0 12px 8px; padding: 7px 10px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--err-text); background: var(--err-bg); border: 1px solid var(--err); }
   .err button { all: unset; margin-left: auto; cursor: pointer; font-size: 15px; }
   nav { flex: 1; overflow: auto; position: relative; }
-  .bar { display: flex; justify-content: space-between; padding: 8px 16px; background: var(--bar); border-top: 1px solid #1f2b3a; border-bottom: 1px solid #1f2b3a; margin-top: -1px; }
+  .bar { display: flex; justify-content: space-between; padding: 8px 16px; background: var(--bar); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: -1px; }
   .new { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px 0 22px; background: var(--hover); color: var(--accent-text); }
   .edit { flex: 1; min-width: 0; height: 24px; padding: 0 8px; font-size: 13px; font-weight: 500; }
   .empty { padding: 16px; margin: 0; color: var(--muted); }
   .rootzone { margin: 10px 12px; padding: 14px; text-align: center; font-size: 12px; color: var(--dim); border: 1px dashed var(--floatline); }
-  .rootzone.ok { color: var(--accent-text); border-color: var(--accent); background: rgba(59, 154, 225, 0.12); }
+  .rootzone.ok { color: var(--accent-text); border-color: var(--accent); background: var(--accent-soft); }
   .rootzone.bad { color: var(--err-text); border-color: var(--err); }
   footer { display: flex; align-items: center; justify-content: space-between; height: 40px; padding: 0 8px 0 16px; border-top: 1px solid var(--line); background: var(--bar); font-size: 11.5px; color: var(--dim); }
   .tools { display: flex; gap: 2px; }
   .tools button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; background: none; border-radius: 4px; color: var(--muted); }
-  .tools button:hover { background: var(--line); color: #fff; }
-  .ghost { position: fixed; z-index: 50; pointer-events: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; background: #243449; border: 1px solid var(--accent); border-radius: 6px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5); transform: rotate(-1.5deg); color: var(--muted); }
-  .ghost b { color: #fff; font-weight: 600; }
+  .tools button:hover { background: var(--line); color: var(--strong); }
+  .ghost { position: fixed; z-index: 50; pointer-events: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; background: var(--active); border: 1px solid var(--accent); border-radius: 6px; box-shadow: 0 12px 30px var(--shadow); transform: rotate(-1.5deg); color: var(--muted); }
+  .ghost b { color: var(--strong); font-weight: 600; }
   .ghost.bad { border-color: var(--err); }
   .ghost span { font-size: 11px; color: var(--err-text); }
   :global(body.dragging) { cursor: grabbing; user-select: none; }

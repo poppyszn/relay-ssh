@@ -159,31 +159,31 @@
 </div>
 
 <style>
-  .scrim { position: fixed; inset: 0; background: rgba(6, 10, 16, 0.62); z-index: 25; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .panel { width: min(920px, 100%); height: min(620px, 100%); display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); overflow: hidden; }
+  .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 25; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .panel { width: min(920px, 100%); height: min(620px, 100%); display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 30px 80px var(--shadow); overflow: hidden; }
   header { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 14px 0 22px; border-bottom: 1px solid var(--line2); }
-  h2 { margin: 0; font-size: 15px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 10px; }
+  h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--strong); display: flex; align-items: center; gap: 10px; }
   .host { font-size: 12px; font-weight: 400; color: var(--muted); background: var(--line); padding: 1px 8px; border-radius: 3px; }
   .x { width: 30px; height: 30px; border: 0; background: none; border-radius: 4px; color: var(--muted); font-size: 18px; }
-  .x:hover { background: var(--line); color: #fff; }
+  .x:hover { background: var(--line); color: var(--strong); }
   .bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line2); }
   .bar input[type="text"], .bar > input { flex: 1; height: 32px; font-size: 12.5px; }
   .icon { width: 32px; height: 32px; display: grid; place-items: center; background: var(--field); border: 1px solid var(--fieldline); border-radius: 4px; color: var(--text2); }
-  .icon:hover:not(:disabled) { border-color: var(--accent); color: #fff; }
+  .icon:hover:not(:disabled) { border-color: var(--accent); color: var(--strong); }
   .icon:disabled { opacity: 0.4; }
   .hid { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
   .hid input { width: 14px; height: 14px; padding: 0; accent-color: var(--accent); }
   .tools { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line2); min-height: 52px; }
   .tools .btn { padding: 6px 14px; }
   .sp { flex: 1; }
-  .confirm { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(240, 123, 134, 0.08); border-bottom: 1px solid var(--line2); }
+  .confirm { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--err-bg); border-bottom: 1px solid var(--line2); }
   .confirm span { flex: 1; }
-  .danger-fill { background: var(--err); border-color: var(--err); color: #1a0508; }
+  .danger-fill { background: var(--err); border-color: var(--err); color: var(--on-err); }
   .msg { margin: 0; padding: 8px 14px; font-size: 12.5px; border-bottom: 1px solid var(--line2); }
   .msg.bad { color: var(--err-text); background: var(--err-bg); }
   .msg.good { color: var(--ok); }
   .list { flex: 1; min-height: 0; overflow: auto; }
-  .row { display: grid; grid-template-columns: minmax(0, 1fr) 90px 150px 110px; align-items: center; padding: 0 14px; height: 34px; border-bottom: 1px solid #1c2736; }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) 90px 150px 110px; align-items: center; padding: 0 14px; height: 34px; border-bottom: 1px solid var(--line); }
   .row.head { position: sticky; top: 0; background: var(--bar); font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); z-index: 1; }
   .item { cursor: default; }
   .item:hover { background: var(--hover); }

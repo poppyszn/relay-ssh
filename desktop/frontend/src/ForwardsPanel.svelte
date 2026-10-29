@@ -103,20 +103,20 @@
 </div>
 
 <style>
-  .scrim { position: fixed; inset: 0; background: rgba(6, 10, 16, 0.62); z-index: 25; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .panel { width: min(780px, 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); overflow: hidden; }
+  .scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 25; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .panel { width: min(780px, 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 30px 80px var(--shadow); overflow: hidden; }
   header { height: 52px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 0 14px 0 22px; border-bottom: 1px solid var(--line2); }
-  h2 { margin: 0; font-size: 15px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 10px; }
+  h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--strong); display: flex; align-items: center; gap: 10px; }
   .host { font-size: 12px; font-weight: 400; color: var(--muted); background: var(--line); padding: 1px 8px; border-radius: 3px; }
   .state { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 400; color: var(--muted); }
   .x { width: 30px; height: 30px; border: 0; background: none; border-radius: 4px; color: var(--muted); font-size: 18px; }
-  .x:hover { background: var(--line); color: #fff; }
+  .x:hover { background: var(--line); color: var(--strong); }
   .empty { padding: 36px 28px 40px; text-align: center; display: grid; gap: 6px; justify-items: center; }
   .empty p { margin: 0; color: var(--text2); }
   .dim { color: var(--muted); font-size: 12px; }
   .body { min-height: 120px; max-height: 340px; overflow: auto; }
   .none { margin: 0; padding: 34px 22px; color: var(--muted); text-align: center; }
-  .row { display: grid; grid-template-columns: 90px 1fr 1.3fr 90px 150px; align-items: center; gap: 10px; padding: 0 22px; height: 44px; border-bottom: 1px solid #1c2736; }
+  .row { display: grid; grid-template-columns: 90px 1fr 1.3fr 90px 150px; align-items: center; gap: 10px; padding: 0 22px; height: 44px; border-bottom: 1px solid var(--line); }
   .row.head { height: 34px; background: var(--bar); font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); position: sticky; top: 0; }
   .row .dot { width: 7px; height: 7px; margin-right: 4px; display: inline-block; }
   .pick { cursor: default; }

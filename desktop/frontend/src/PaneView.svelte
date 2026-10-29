@@ -68,7 +68,7 @@
   .col > .handle::after { inset: -3px 0; }
   .handle:hover { background: var(--accent); }
   .leaf { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; background: var(--term); }
-  .leaf.focused { box-shadow: inset 0 0 0 1px rgba(59, 154, 225, 0.55); }
+  .leaf.focused { box-shadow: inset 0 0 0 1px var(--accent-edge); }
   header { height: 28px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 0 0 14px; background: var(--bar); border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
   header strong { color: var(--text); font-weight: 500; }
   .dot { width: 7px; height: 7px; }
@@ -80,7 +80,7 @@
      padding of a parent. Block dividers bleed past it (theme.css). */
   .term :global(.pane-term) { position: absolute; inset: 0; background: var(--term); }
   .term :global(.pane-term .xterm) { padding: 14px 24px 18px; }
-  .ended { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 10px 14px 10px 16px; background: var(--active); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); white-space: nowrap; z-index: 3; }
+  .ended { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 10px 14px 10px 16px; background: var(--active); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 10px 30px var(--shadow); white-space: nowrap; z-index: 3; }
   .ended div { display: grid; gap: 1px; }
   .ended span { font-size: 11.5px; color: var(--muted); }
 </style>

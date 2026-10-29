@@ -67,23 +67,23 @@
 </div>
 
 <style>
-  .scrim { position: fixed; inset: 0; background: rgba(6, 10, 16, 0.62); display: flex; justify-content: center; padding-top: 110px; z-index: 20; }
-  .box { width: min(640px, 92vw); max-height: 70vh; align-self: flex-start; display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6); overflow: hidden; }
+  .scrim { position: fixed; inset: 0; background: var(--scrim); display: flex; justify-content: center; padding-top: 110px; z-index: 20; }
+  .box { width: min(640px, 92vw); max-height: 70vh; align-self: flex-start; display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 24px 70px var(--shadow); overflow: hidden; }
   .field { display: flex; align-items: center; gap: 12px; padding: 0 18px; height: 52px; border-bottom: 1px solid var(--line2); color: var(--muted); }
-  .field input { flex: 1; height: 100%; border: 0; background: none; padding: 0; font-size: 16px; color: #fff; box-shadow: none; }
+  .field input { flex: 1; height: 100%; border: 0; background: none; padding: 0; font-size: 16px; color: var(--strong); box-shadow: none; }
   .field input:focus { box-shadow: none; }
   .hint { font-size: 11.5px; }
   .list { overflow: auto; padding: 6px 0 4px; }
   .sect { padding: 8px 18px 6px; }
   .row { display: flex; align-items: center; gap: 12px; padding: 10px 18px; cursor: pointer; }
-  .row.sel { background: rgba(59, 154, 225, 0.16); box-shadow: inset 3px 0 var(--accent); }
+  .row.sel { background: var(--accent-hl); box-shadow: inset 3px 0 var(--accent); }
   .col { display: grid; gap: 1px; min-width: 0; }
-  .name { font-weight: 600; color: #fff; }
-  .sub { font-size: 11.5px; color: #9aa8bd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name { font-weight: 600; color: var(--strong); }
+  .sub { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tags { margin-left: auto; display: flex; gap: 6px; align-items: center; }
   .act .kbd { margin-left: auto; }
   .none { padding: 14px 18px; color: var(--muted); }
-  .foot { display: flex; gap: 16px; padding: 10px 18px; border-top: 1px solid var(--line2); font-size: 11.5px; color: #9aa8bd; background: var(--foot); }
+  .foot { display: flex; gap: 16px; padding: 10px 18px; border-top: 1px solid var(--line2); font-size: 11.5px; color: var(--muted); background: var(--foot); }
   .foot b { font-weight: 400; }
   .right { margin-left: auto; }
 </style>

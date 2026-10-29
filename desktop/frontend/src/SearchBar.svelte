@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
   import type { Session } from "./terminal";
+  import { settings } from "./settings.svelte";
 
   let { session, onclose }: { session: Session; onclose: () => void } = $props();
 
@@ -9,12 +10,12 @@
   let count = $state({ index: -1, total: 0 });
   let input: HTMLInputElement;
 
-  // Match highlights: yellow like the design, brighter for the current match.
-  const decorations = {
-    matchBackground: "#5d4e2b", matchBorder: "#8a7440", matchOverviewRuler: "#e6c07b",
-    activeMatchBackground: "#e6c07b", activeMatchBorder: "#f3d398", activeMatchColorOverviewRuler: "#f3d398",
+  // Match highlights come from the theme: yellow, brighter for the current match.
+  const decorations = () => {
+    const c = settings.themeDef.search;
+    return { matchBackground: c.match, matchBorder: c.matchBorder, matchOverviewRuler: c.active, activeMatchBackground: c.active, activeMatchBorder: c.activeBorder, activeMatchColorOverviewRuler: c.activeBorder };
   };
-  const opts = () => ({ caseSensitive, decorations });
+  const opts = () => ({ caseSensitive, decorations: decorations() });
 
   $effect(() => {
     const sub = session.search.onDidChangeResults((r) => (count = { index: r.resultIndex, total: r.resultCount }));
@@ -51,12 +52,12 @@
 </div>
 
 <style>
-  .bar { position: absolute; top: 12px; right: 18px; z-index: 5; display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--active); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); }
-  input { height: 28px; min-width: 170px; font-size: 12.5px; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59, 154, 225, 0.18); }
+  .bar { position: absolute; top: 12px; right: 18px; z-index: 5; display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--active); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 8px 24px var(--shadow); }
+  input { height: 28px; min-width: 170px; font-size: 12.5px; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
   .count { min-width: 56px; text-align: center; font-size: 11.5px; color: var(--muted); }
   .count.none { color: var(--err-text); }
   button { width: 26px; height: 26px; display: grid; place-items: center; border: 0; background: none; border-radius: 4px; color: var(--text); font-size: 16px; }
   button:hover { background: var(--line); }
   .aa { width: auto; padding: 0 6px; font-size: 12px; color: var(--muted); }
-  .aa.on { color: #fff; background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+  .aa.on { color: var(--strong); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
 </style>
