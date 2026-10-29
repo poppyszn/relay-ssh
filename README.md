@@ -33,7 +33,9 @@ companion that reads and writes the same data.
 **Desktop app (Relay)**
 
 - Connection tree with folders and subfolders, tags, search, jump hosts, agent forwarding and saved port
-  forwards. Drag connections and folders to reorganise; every move asks for confirmation first.
+  forwards. Double-click a connection to open it. Drag connections and folders to reorganise (every move asks
+  for confirmation first), drag a connection onto a terminal to split it, drag tabs to reorder them and
+  panes by their header to rearrange them.
 - Terminal with tabs, split panes, scrollback search, fonts and four themes (three dark, one light, or follow the system). With shell integration on,
   each command becomes a block with its directory, git branch, exit status and duration, started from the bottom of the pane, and a ⋯ menu
   on each block copies the command, its output, or both.
