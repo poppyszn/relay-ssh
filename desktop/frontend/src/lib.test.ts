@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blankProfile, blocksWanted, connectingHint, loginQuiet, formatElapsed, groupByFolder, matches, paneEdge, parseTags, reorder, slotAt } from "./lib";
+import { blankProfile, blocksWanted, snippetPreview, snippetText, connectingHint, loginQuiet, formatElapsed, groupByFolder, matches, paneEdge, parseTags, reorder, slotAt } from "./lib";
 
 const mk = (o: object) => ({ ...blankProfile(), host: "h", user: "u", ...o }) as ReturnType<typeof blankProfile>;
 
@@ -168,5 +168,29 @@ describe("automatic command blocks", () => {
     // quiet long enough since the later of the marker and the last output
     expect(loginQuiet(true, 1_000, 1_000, 1_800)).toBe(true);
     expect(loginQuiet(true, 1_000, 1_900, 2_700)).toBe(true);
+  });
+});
+
+describe("snippets", () => {
+  it("types a command as written, with the line endings a terminal expects", () => {
+    expect(snippetText("ls -la")).toBe("ls -la");
+    expect(snippetText("df -h\r\ndu -sh *\r\n\r\n")).toBe("df -h\ndu -sh *");
+    expect(snippetText("  echo hi  \n")).toBe("  echo hi");
+  });
+
+  it("previews the first line and says how many more there are", () => {
+    expect(snippetPreview("ls")).toBe("ls");
+    expect(snippetPreview("df -h\ndu -sh *\nls")).toBe("df -h  (+2 lines)");
+    expect(snippetPreview("a\nb")).toBe("a  (+1 line)");
+    expect(snippetPreview("x".repeat(200)).length).toBeLessThanOrEqual(90);
+  });
+});
+
+describe("pane drop zones without a middle", () => {
+  it("always picks an edge, for a layout that has no 'swap' or 'new tab' to offer", () => {
+    const r = { left: 0, top: 0, width: 400, height: 300 };
+    expect(paneEdge(r, 200, 150, false)).toMatch(/^(left|right|top|bottom)$/);
+    expect(paneEdge(r, 190, 100, false)).toBe("top");
+    expect(paneEdge(r, 100, 150, false)).toBe("left");
   });
 });

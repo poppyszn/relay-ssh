@@ -109,6 +109,14 @@ export interface Profile {
 }
 
 /**
+ * Snippet is a saved command the user can type into a terminal.
+ */
+export interface Snippet {
+    "name": string;
+    "command": string;
+}
+
+/**
  * TunnelDTO and Profile are the JSON shapes the frontend sees. They mirror
  * config.Profile, which carries TOML tags only.
  */

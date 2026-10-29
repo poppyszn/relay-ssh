@@ -41,6 +41,7 @@ companion that reads and writes the same data.
   on each block copies the command, its output, or both.
   Local zsh and bash are set up automatically; for a remote host you opt in (a button, or
   automatically per connection or for all of them, once the login has finished).
+- **Snippets:** saved commands (`~/.config/sssh/snippets.toml`) that you insert into, or run in, any terminal.
 - **Tools:** health check with one-click fixes, passphrase-encrypted backup and restore, import from
   `~/.ssh/config`, and key management.
 - **Files:** browse, upload and download over `sftp`, reusing the login of the connection's terminal tab.
@@ -152,7 +153,7 @@ forward_agent = true
 - [x] Per-block menu: copy command, output, or both
 - [x] Light theme (Daylight) and System, which follows the OS
 - [x] Block header: directory and git branch on every block
-- [ ] Snippets
+- [x] Snippets: saved commands to insert or run in any terminal
 
 ## Contributing
 

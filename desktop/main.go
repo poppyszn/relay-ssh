@@ -30,7 +30,7 @@ func main() {
 	app = application.New(application.Options{
 		Name:        "Relay",
 		Description: "SSH connection manager and terminal",
-		Services:    []application.Service{application.NewService(term), application.NewService(&ProfilesService{}), application.NewService(&ToolsService{}), application.NewService(&FilesService{}), application.NewService(&ForwardsService{})},
+		Services:    []application.Service{application.NewService(term), application.NewService(&ProfilesService{}), application.NewService(&ToolsService{}), application.NewService(&FilesService{}), application.NewService(&ForwardsService{}), application.NewService(&SnippetsService{})},
 		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
 		Mac:         application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
 	})
@@ -103,6 +103,7 @@ func buildMenu(app *application.App) *application.Menu {
 	shell.Add("Find…").SetAccelerator(acc("Cmd+F", "Ctrl+Shift+F")).OnClick(send("find"))
 	shell.Add("Browse Files…").SetAccelerator(acc("Cmd+Shift+O", "Ctrl+Shift+O")).OnClick(send("files"))
 	shell.Add("Port Forwards…").SetAccelerator(acc("Cmd+Shift+P", "Ctrl+Shift+P")).OnClick(send("forwards"))
+	shell.Add("Snippets…").SetAccelerator(acc("Cmd+Shift+S", "Ctrl+Shift+S")).OnClick(send("snippets"))
 	shell.Add("Tools…").OnClick(send("tools"))
 	shell.Add("Settings…").SetAccelerator(acc("Cmd+,", "Ctrl+Shift+,")).OnClick(send("settings"))
 	shell.Add("Quick Open…").SetAccelerator(acc("Cmd+K", "Ctrl+Shift+K")).OnClick(send("quick-open"))

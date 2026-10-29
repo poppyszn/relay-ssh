@@ -4,9 +4,10 @@
   import WindowControls from "./WindowControls.svelte";
   import { Window } from "@wailsio/runtime";
   import { connSearch } from "./connsearch.svelte";
-  import { slotAt } from "./lib";
+  import { slotAt, paneEdge } from "./lib";
+  import { sb } from "./foldertree.svelte";
 
-  let { custom, onsidebar, onsearch, onpalette, onsplit, onsettings, ontools, onfiles, onforwards }: { custom: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsplit: (dir: "row" | "col") => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void } = $props();
+  let { custom, onsidebar, onsearch, onpalette, onsplit, onsettings, ontools, onfiles, onforwards, onsnippets }: { custom: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsplit: (dir: "row" | "col") => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void; onsnippets: () => void } = $props();
   const mac = navigator.userAgent.includes("Mac");
 
   // Reordering tabs by dragging (pointer events, like the sidebar: native drag and drop is avoided).
@@ -22,6 +23,15 @@
     const move = (ev: PointerEvent) => {
       if (!active && Math.abs(ev.clientX - sx) < 6) return;
       active = true;
+      // Over a terminal that is not this tab's own: dropping adds the whole tab to that pane's side.
+      const pane = document.elementFromPoint(ev.clientX, ev.clientY)?.closest<HTMLElement>("[data-pane]");
+      const own = ws.tabs.find((t) => t.id === id);
+      if (pane && own && !leaves(own.root).includes(pane.dataset.pane ?? "")) {
+        sb.paneDrop = { id: pane.dataset.pane!, edge: paneEdge(pane.getBoundingClientRect(), ev.clientX, ev.clientY, false), verb: "Add tab" };
+        drag = { id, slot: -1, x: 0 };
+        return;
+      }
+      sb.paneDrop = null;
       const rects = tabs();
       const slot = slotAt(rects.map((r) => r.left + r.width / 2), ev.clientX);
       const edge = slot < rects.length ? rects[slot].left : (rects[rects.length - 1]?.right ?? 0);
@@ -31,8 +41,11 @@
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("keydown", key);
+      const onto = sb.paneDrop;
+      sb.paneDrop = null;
       if (active) {
-        if (commit && drag) ws.moveTab(id, drag.slot);
+        if (commit && onto && drag?.slot === -1 && onto.edge !== "center") ws.mergeTab(id, onto.id, onto.edge);
+        else if (commit && drag && drag.slot >= 0) ws.moveTab(id, drag.slot);
         justDragged = true;
         setTimeout(() => (justDragged = false), 0);
       }
@@ -57,7 +70,7 @@
   {#if custom}<WindowControls />{/if}
   <div class="tabs nodrag" role="tablist" bind:this={tabsEl}>
     {#each ws.tabs as t (t.id)}
-      <div class="tab" data-tab={t.id} class:active={t.id === ws.activeId} class:dragging={drag?.id === t.id} role="presentation">
+      <div class="tab" data-tab={t.id} class:active={t.id === ws.activeId} class:dragging={drag?.id === t.id} class:drop={sb.tabDrop === t.id && !leaves(t.root).includes(sb.drag?.id ?? "")} role="presentation">
         <button class="main" role="tab" aria-selected={t.id === ws.activeId} onclick={() => !justDragged && ws.select(t.id)} onpointerdown={(e) => press(e, t.id)}>
           <span class="dot {status(t)}"></span>
           <span class="title">{ws.tabTitle(t)}</span>
@@ -66,8 +79,8 @@
         <button class="x" aria-label="Close tab" onclick={() => ws.closeTab(t.id)}>&times;</button>
       </div>
     {/each}
-    {#if drag}<div class="slot" style="left: {drag.x}px"></div>{/if}
-    <button class="plus" aria-label="New local tab" title="New local tab" onclick={() => ws.openTab(null)}>+</button>
+    {#if drag && drag.slot >= 0}<div class="slot" style="left: {drag.x}px"></div>{/if}
+    <button class="plus" data-newtab class:drop={sb.tabDrop === "new"} aria-label="New local tab" title="New local tab" onclick={() => ws.openTab(null)}>+</button>
   </div>
   <div class="search nodrag" role="search">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
@@ -95,6 +108,9 @@
     <button aria-label="Port forwards" title="Port forwards on this connection" onclick={onforwards}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4" /></svg>
     </button>
+    <button aria-label="Snippets" title={mac ? "Snippets (⇧⌘S)" : "Snippets (Ctrl+Shift+S)"} onclick={onsnippets}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H5v16h3M16 4h3v16h-3M9 9l2 2-2 2M13 13h3" /></svg>
+    </button>
     <button aria-label="Tools" title="Tools: health, backup, import, keys" onclick={ontools}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3 17.8V21h3.2l6.3-6.3a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.4-.6-.6-2.4z" /></svg>
     </button>
@@ -109,8 +125,9 @@
   .strip.mac { padding-left: 84px; }
   .tabs { position: relative; display: flex; min-width: 0; overflow: hidden; }
   .tab.dragging { opacity: 0.45; }
+  .tab.drop, .plus.drop { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
   .slot { position: absolute; top: 4px; bottom: 4px; width: 2px; margin-left: -1px; background: var(--accent); z-index: 2; pointer-events: none; }
-  .tab { display: flex; align-items: center; height: 40px; min-width: 140px; max-width: 240px; border-right: 1px solid var(--line); color: var(--muted); }
+  .tab { display: flex; align-items: center; height: 40px; flex: 0 1 200px; min-width: 56px; max-width: 240px; border-right: 1px solid var(--line); color: var(--muted); }
   .tab.active { background: var(--bg); color: var(--text); box-shadow: inset 0 2px var(--accent); margin-bottom: -1px; height: 41px; }
   .tab:not(.active):hover { background: var(--hover); }
   .main { all: unset; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0 0 0 16px; height: 100%; cursor: pointer; font-weight: 500; }

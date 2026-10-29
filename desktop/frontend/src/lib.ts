@@ -123,11 +123,11 @@ export function slotAt(centres: number[], x: number): number {
 
 export type PaneEdge = "left" | "right" | "top" | "bottom" | "center";
 
-/** Where a drop inside a pane lands: toward the nearest edge, or the middle. */
-export function paneEdge(r: { left: number; top: number; width: number; height: number }, x: number, y: number): PaneEdge {
+/** Where a drop inside a pane lands: toward the nearest edge, or the middle (unless `middle` is false). */
+export function paneEdge(r: { left: number; top: number; width: number; height: number }, x: number, y: number, middle = true): PaneEdge {
   const dx = (x - r.left) / r.width;
   const dy = (y - r.top) / r.height;
-  if (dx >= 0.3 && dx <= 0.7 && dy >= 0.3 && dy <= 0.7) return "center";
+  if (middle && dx >= 0.3 && dx <= 0.7 && dy >= 0.3 && dy <= 0.7) return "center";
   const d = { left: dx, right: 1 - dx, top: dy, bottom: 1 - dy };
   return (Object.keys(d) as (keyof typeof d)[]).reduce((best, k) => (d[k] < d[best] ? k : best), "left");
 }
@@ -143,4 +143,16 @@ export function blocksWanted(mode: string | undefined, appAutomatic: boolean): b
  */
 export function loginQuiet(authed: boolean, authedAt: number, lastData: number, now: number, quietMs = 700): boolean {
   return authed && now - Math.max(authedAt, lastData) >= quietMs;
+}
+
+/** A snippet as it is typed: LF line endings, no trailing blank lines or spaces (the Enter key is separate). */
+export function snippetText(command: string): string {
+  return command.replace(/\r\n?/g, "\n").trimEnd();
+}
+
+/** One line for a list: the first line, shortened, and how many more lines follow. */
+export function snippetPreview(command: string): string {
+  const lines = snippetText(command).split("\n");
+  const first = lines[0].length > 80 ? lines[0].slice(0, 79) + "…" : lines[0];
+  return lines.length > 1 ? `${first}  (+${lines.length - 1} line${lines.length === 2 ? "" : "s"})` : first;
 }
