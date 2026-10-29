@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -69,17 +70,95 @@ func TestShellIntegrationEmitsPromptMarkers(t *testing.T) {
 			got := readUntil(t, s, "\x1b]133;D;0\a", "\x1b]133;D;1\a")
 			// A blank row after the command (before the next prompt marker) and a
 			// leading blank row in the prompt give each block vertical padding.
-			if !strings.Contains(got, "\x1b]133;D;0\a\r\n\x1b]133;A\a") {
+			if !strings.Contains(got, "\x1b]133;D;0\a\r\n\x1b]133;A;") {
 				t.Errorf("%s: no blank row between the finish marker and the next prompt:\n%q", shell, got)
 			}
 			// Everything between A and the end of the prompt (B) must include a newline.
-			if i, j := strings.Index(got, "\x1b]133;A\a"), strings.Index(got, "\x1b]133;B\a"); i < 0 || j < i || !strings.Contains(got[i:j], "\n") {
+			if i, j := strings.Index(got, "\x1b]133;A;"), strings.Index(got, "\x1b]133;B\a"); i < 0 || j < i || !strings.Contains(got[i:j], "\n") {
 				t.Errorf("%s: prompt does not start with a blank row:\n%q", shell, got)
 			}
-			for _, m := range []string{"\x1b]133;A\a", "\x1b]133;B\a", "\x1b]133;D;0\a", "\x1b]133;D;1\a"} {
+			for _, m := range []string{"\x1b]133;A;", "\x1b]133;B\a", "\x1b]133;D;0\a", "\x1b]133;D;1\a"} {
 				if !strings.Contains(got, m) {
 					t.Errorf("%s output missing %q:\n%q", shell, m, got)
 				}
+			}
+		})
+	}
+}
+
+// The prompt marker carries where the next command will run, as "A;<branch>;<cwd>",
+// for the block header. The cwd is shown as ~ under the home directory (and only
+// under it: a sibling that merely starts with the same text is not abbreviated),
+// and nothing a directory is named can inject terminal sequences.
+func TestShellIntegrationReportsBranchAndDirectory(t *testing.T) {
+	git, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("git not installed")
+	}
+	_ = git
+	for _, shell := range []string{"zsh", "bash"} {
+		t.Run(shell, func(t *testing.T) {
+			path, err := exec.LookPath(shell)
+			if err != nil {
+				t.Skipf("%s not installed", shell)
+			}
+			home := t.TempDir()
+			t.Setenv("HOME", home)
+			t.Setenv("ZDOTDIR", "")
+			other := home + "-other"
+			for _, d := range []string{home + "/proj", other, home + "/ev\x1bil;x"} {
+				if err := os.MkdirAll(d, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			t.Cleanup(func() { os.RemoveAll(other) })
+			argv, env := shellCommand(path, filepath.Join(t.TempDir(), "integration"))
+			s, err := startSession(argv, env, 80, 24)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer s.close()
+			cmds := "cd ~/proj\ngit init -q -b trunk .\ncd '" + other + "'\ncd ~/$'ev\\033il;x'\n"
+			if _, err := s.pty.Write([]byte(cmds)); err != nil {
+				t.Fatal(err)
+			}
+			// zsh already prints a control character as ^[ itself; bash gets it stripped.
+			evil := "~/evil;x"
+			if shell == "zsh" {
+				evil = "~/ev^[il;x"
+			}
+			want := []string{"\x1b]133;A;;~/proj\a", "\x1b]133;A;trunk;~/proj\a", "\x1b]133;A;;" + other + "\a", "\x1b]133;A;;" + evil + "\a"}
+			got := readUntil(t, s, want...)
+			for _, w := range want {
+				if !strings.Contains(got, w) {
+					t.Errorf("%s: missing %q in:\n%q", shell, w, got)
+				}
+			}
+		})
+	}
+}
+
+// The snippet a user pastes into a remote shell defines the same hooks.
+func TestRemoteSnippetReportsDirectory(t *testing.T) {
+	for _, shell := range []string{"zsh", "bash"} {
+		t.Run(shell, func(t *testing.T) {
+			path, err := exec.LookPath(shell)
+			if err != nil {
+				t.Skipf("%s not installed", shell)
+			}
+			home := t.TempDir()
+			if err := os.Mkdir(home+"/work", 0o755); err != nil {
+				t.Fatal(err)
+			}
+			snippet := strings.TrimSuffix(remoteSnippet, "; clear\n")
+			cmd := exec.Command(path, "-c", snippet+"; cd ~/work; __r")
+			cmd.Env = append(os.Environ(), "HOME="+home, "PS1=$ ")
+			out, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("%v: %s", err, out)
+			}
+			if want := "\x1b]133;D;0\a\n\x1b]133;A;;~/work\a"; !strings.Contains(string(out), want) {
+				t.Errorf("%s: want %q in %q", shell, want, out)
 			}
 		})
 	}

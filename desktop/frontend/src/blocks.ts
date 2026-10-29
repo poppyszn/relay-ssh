@@ -35,6 +35,23 @@ interface Block {
   badge?: HTMLElement;
 }
 
+/** Where a prompt's command will run, from the shell's "A;<branch>;<cwd>" marker. */
+export interface PromptContext {
+  branch: string;
+  cwd: string;
+}
+
+/** Parses the argument of an A marker. Old hooks send none; the cwd may itself contain ";". */
+export function parseContext(arg: string | undefined): PromptContext | undefined {
+  if (!arg) return undefined;
+  const i = arg.indexOf(";");
+  if (i < 0) return undefined;
+  const ctx = { branch: arg.slice(0, i), cwd: arg.slice(i + 1) };
+  return ctx.branch || ctx.cwd ? ctx : undefined;
+}
+
+const BRANCH = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="8" r="2.2"/><path d="M6 7.2v9.6M18 10.2c0 4-6 3-11 7"/></svg>';
+
 const DOTS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>';
 
 /**
@@ -51,8 +68,10 @@ export class BlockTracker {
   /** Enter presses that arrived before their prompt was drawn (type-ahead). */
   private ahead: number[] = [];
   /** A finished command waiting for the next prompt, so its block can include the padding row after it. */
-  private done?: { start: IMarker; cmd: IMarker; cmdCol: number; code: number; ms: number };
+  private done?: { start: IMarker; cmd: IMarker; cmdCol: number; code: number; ms: number; ctx?: PromptContext };
   private cmdCol = 0;
+  /** The pending prompt's directory and branch, shown as the block header. */
+  private ctx?: PromptContext;
   private active = false;
   private subs: IDisposable[] = [];
   private blocks: Block[] = [];
@@ -113,7 +132,8 @@ export class BlockTracker {
   }
 
   private osc(data: string): boolean {
-    const [kind, arg] = data.split(";");
+    const [kind, ...rest] = data.split(";");
+    const arg = rest.join(";");
     if (!this.active) {
       this.active = true;
       this.onFirst?.();
@@ -122,6 +142,7 @@ export class BlockTracker {
       this.draw();
       this.reset();
       this.start = this.term.registerMarker(0);
+      this.ctx = parseContext(arg);
     } else if (kind === "B") {
       this.cmd = this.term.registerMarker(0);
       this.cmdCol = this.term.buffer.active.cursorX;
@@ -131,23 +152,23 @@ export class BlockTracker {
         this.t0 = t;
       }
     } else if (kind === "D") {
-      this.finish(arg === undefined || arg === "" ? 0 : Number(arg));
+      this.finish(arg === "" ? 0 : Number(arg));
     }
     return true;
   }
 
   private reset() {
-    this.start = this.cmd = undefined;
+    this.start = this.cmd = this.ctx = undefined;
     this.ran = false;
   }
 
   private finish(code: number) {
-    const { start, cmd, ran, t0, term } = this;
+    const { start, cmd, ran, t0, term, ctx } = this;
     this.reset();
     this.done = undefined;
     // Nothing run, no prompt seen yet, or a full-screen program: no block.
     if (!start || !cmd || !ran || term.buffer.active.type === "alternate") return;
-    this.done = { start, cmd, cmdCol: this.cmdCol, code, ms: Date.now() - t0 };
+    this.done = { start, cmd, cmdCol: this.cmdCol, code, ms: Date.now() - t0, ctx };
   }
 
   /** Draws the pending block, ending where the next prompt begins. */
@@ -166,6 +187,7 @@ export class BlockTracker {
       // and onRender fires on every redraw.
       el.classList.add("relay-block", failed ? "err" : "ok");
     });
+    if (d.ctx) this.drawHeader(d.start, d.ctx);
     const end = term.registerMarker(0);
     const block: Block | undefined = end ? { start: d.start, cmd: d.cmd, end, cmdCol: d.cmdCol, failed } : undefined;
     if (block) {
@@ -197,6 +219,27 @@ export class BlockTracker {
       if (block) {
         block.badge = el;
         el.classList.toggle("hot", block === this.hot);
+      }
+    });
+  }
+
+  /** The block's first row is the blank padding row above the prompt: the header goes there. */
+  private drawHeader(start: IMarker, ctx: PromptContext) {
+    this.term.registerDecoration({ marker: start, x: 0, width: this.term.cols, height: 1, layer: "top" })?.onRender((el) => {
+      el.classList.add("relay-head");
+      if (el.firstChild) return; // built once; onRender fires on every redraw
+      if (ctx.cwd) {
+        const path = document.createElement("span");
+        path.className = "head-path";
+        path.textContent = ctx.cwd;
+        el.append(path);
+      }
+      if (ctx.branch) {
+        const branch = document.createElement("span");
+        branch.className = "head-branch";
+        branch.innerHTML = BRANCH; // a constant, never shell text
+        branch.append(document.createTextNode(ctx.branch));
+        el.append(branch);
       }
     });
   }

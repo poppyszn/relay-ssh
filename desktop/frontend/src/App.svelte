@@ -229,6 +229,7 @@
       out.webgl = ws.session(live)?.webgl;
       out.screen = sr ? { x: Math.round(sr.left), y: Math.round(sr.top), w: Math.round(sr.width), h: Math.round(sr.height) } : null;
       out.cols = term?.cols;
+      out.headers = [...document.querySelectorAll<HTMLElement>(".tabview.on .relay-head")].map((e) => e.textContent);
       out.probes = [...document.querySelectorAll<HTMLElement>(".tabview.on .relay-block, .tabview.on .relay-badge")].map((e) => ({ cls: e.className, ...probe(e) }));
       out.canvases = [...document.querySelectorAll<HTMLElement>(".tabview.on .xterm-screen canvas")].map((c) => ({ cls: c.className, z: getComputedStyle(c).zIndex, pos: getComputedStyle(c).position }));
       // layout: bottom-anchored with padding below the live prompt, blocks bleeding edge to edge
