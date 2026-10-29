@@ -1,5 +1,5 @@
 import { openSession, type Session } from "./terminal";
-import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+import { TerminalService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

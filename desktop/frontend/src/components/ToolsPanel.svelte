@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import { vault } from "./vault.svelte";
+  import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { vault } from "../state/vault.svelte";
 
   type Tab = "health" | "backup" | "import" | "keys" | "vault";
   let { initial = "health", onclose, onchanged, ongenerate, onvault }: { initial?: Tab; onclose: () => void; onchanged: () => void; ongenerate: () => void; onvault?: () => void } = $props();

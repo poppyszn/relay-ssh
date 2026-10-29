@@ -1,5 +1,5 @@
-import { ProfilesService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
-import { canDrop, folderBase, folderParent, joinFolder, paneEdge, type PaneEdge } from "./lib";
+import { ProfilesService, type Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+import { canDrop, folderBase, folderParent, joinFolder, paneEdge, type PaneEdge } from "../lib/lib";
 
 export type DragKind = "profile" | "folder" | "pane";
 export interface Pending { kind: DragKind; id: string; to: string; text: string; sub: string }

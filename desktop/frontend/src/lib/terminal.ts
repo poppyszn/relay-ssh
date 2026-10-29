@@ -2,9 +2,9 @@ import { Terminal, type IDisposable } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { BlockTracker, type BlockRef } from "./blocks";
-import { settings } from "./settings.svelte";
+import { settings } from "../state/settings.svelte";
 import "@xterm/xterm/css/xterm.css";
-import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+import { TerminalService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 // Ack to Go after this many bytes have been parsed by xterm. It must stay well
 // below Go's high watermark (1 MiB) or the pipe could stall waiting for an ack.

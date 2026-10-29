@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FilesService, type FileEntry } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { FilesService, type FileEntry } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
   let { target, onclose }: { target: string; onclose: () => void } = $props();
 

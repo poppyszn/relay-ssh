@@ -1,4 +1,4 @@
-import { VaultService, type VaultStatus } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+import { VaultService, type VaultStatus } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 const REMEMBERED_KEY = "relay.vault.remembered.v1";
 

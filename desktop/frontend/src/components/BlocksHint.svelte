@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ws } from "./workspace.svelte";
+  import { ws } from "../state/workspace.svelte";
 
   let { id }: { id: string } = $props();
 

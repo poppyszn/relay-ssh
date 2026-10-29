@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { ws } from "./workspace.svelte";
-  import { leaves } from "./panes";
+  import { ws } from "../state/workspace.svelte";
+  import { leaves } from "../lib/panes";
   import WindowControls from "./WindowControls.svelte";
   import { Window } from "@wailsio/runtime";
-  import { connSearch } from "./connsearch.svelte";
-  import { slotAt, paneEdge } from "./lib";
-  import { sb } from "./foldertree.svelte";
+  import { connSearch } from "../state/connsearch.svelte";
+  import { slotAt, paneEdge } from "../lib/lib";
+  import { sb } from "../state/foldertree.svelte";
 
   let { custom, onsidebar, onsearch, onpalette, onsplit, onsettings, ontools, onfiles, onforwards, onsnippets }: { custom: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsplit: (dir: "row" | "col") => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void; onsnippets: () => void } = $props();
   const mac = navigator.userAgent.includes("Mac");

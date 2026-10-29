@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { VaultService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import { vault } from "./vault.svelte";
+  import { VaultService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { vault } from "../state/vault.svelte";
 
   type Mode = "auto" | "create" | "unlock" | "unlock-connect" | "manage" | "reset";
 

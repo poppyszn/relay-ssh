@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { BlockRef } from "./blocks";
+  import type { BlockRef } from "../lib/blocks";
 
   let { block, rect, oncopy, onclose }: {
     block: BlockRef;

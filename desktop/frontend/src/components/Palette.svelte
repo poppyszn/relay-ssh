@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import { matches } from "./lib";
+  import type { Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { matches } from "../lib/lib";
 
   export interface Action { id: string; label: string; hint: string }
   let { profiles, active, actions, onconnect, onaction, onclose }: {

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { ws } from "./workspace.svelte";
-  import { vault } from "./vault.svelte";
-  import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { ws } from "../state/workspace.svelte";
+  import { vault } from "../state/vault.svelte";
+  import type { Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
   let { profiles, themeName, onvault }: { profiles: Profile[]; themeName: string; onvault?: () => void } = $props();
   const info = $derived(ws.panes[ws.focusedPane]);

@@ -3,8 +3,8 @@ import { flushSync, mount, unmount } from "svelte";
 import { describe, expect, it } from "vitest";
 import Branch from "./Branch.svelte";
 import ConnRow from "./ConnRow.svelte";
-import { sb } from "./foldertree.svelte";
-import { blankProfile } from "./lib";
+import { sb } from "../state/foldertree.svelte";
+import { blankProfile } from "../lib/lib";
 
 // The sidebar's "Open now" list renders rows at depth -1 (flush left, no indent guides).
 // Array(-1) throws, which broke the whole sidebar the moment a connection was opened.

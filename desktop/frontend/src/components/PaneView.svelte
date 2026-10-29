@@ -1,9 +1,9 @@
 <script lang="ts">
-  import type { Node } from "./panes";
-  import { isLeaf } from "./panes";
-  import { ws } from "./workspace.svelte";
-  import { sb, dragSource } from "./foldertree.svelte";
-  import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import type { Node } from "../lib/panes";
+  import { isLeaf } from "../lib/panes";
+  import { ws } from "../state/workspace.svelte";
+  import { sb, dragSource } from "../state/foldertree.svelte";
+  import type { Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import PaneView from "./PaneView.svelte";
   import SearchBar from "./SearchBar.svelte";
   import ConnectingOverlay from "./ConnectingOverlay.svelte";
