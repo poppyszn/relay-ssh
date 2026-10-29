@@ -85,7 +85,27 @@ func (ProfilesService) List() ([]Profile, error) {
 }
 
 // Save adds a profile (oldName == "") or updates and possibly renames one.
-func (ProfilesService) Save(oldName string, prof Profile) error {
+func (ps ProfilesService) Save(oldName string, prof Profile) error {
+	return ps.save(oldName, prof, "")
+}
+
+// SaveWithPassword saves the profile and keeps its password in the vault, bound to the
+// connection's host, user and port. It checks the password and the vault first, so a refusal
+// leaves nothing half-saved.
+func (ps ProfilesService) SaveWithPassword(oldName string, prof Profile, password string) error {
+	if prof.Auth != "password" {
+		return errors.New("passwords are only kept for connections that use password auth")
+	}
+	if !validSecret(password) {
+		return ErrBadSecret
+	}
+	if !getVault().Status().Unlocked {
+		return ErrVaultLocked
+	}
+	return ps.save(oldName, prof, password)
+}
+
+func (ProfilesService) save(oldName string, prof Profile, password string) error {
 	p, err := paths.Default()
 	if err != nil {
 		return err
@@ -96,7 +116,38 @@ func (ProfilesService) Save(oldName string, prof Profile) error {
 	if msg := keyProblem(p, oldName, prof); msg != "" {
 		return errors.New(msg)
 	}
-	return core.SaveProfile(p, oldName, fromProfile(prof))
+	oldBinding := ""
+	if oldName != "" {
+		if store, err := config.Load(p.StoreFile); err == nil {
+			if old, ok := core.ResolveProfile(store, oldName); ok {
+				oldBinding = bindingOf(old)
+			}
+		}
+	}
+	if err := core.SaveProfile(p, oldName, fromProfile(prof)); err != nil {
+		return err
+	}
+
+	// Keep the vault in step. A locked vault cannot be touched, so these are best effort
+	// (the form asks to unlock before a rename); an entry left behind is inert, because it is
+	// only released for the connection details it was saved with.
+	v := getVault()
+	newBinding := bindingOf(fromProfile(prof))
+	if prof.Auth != "password" {
+		_ = v.Forget(prof.Name)
+		if oldName != "" {
+			_ = v.Forget(oldName)
+		}
+	} else if oldName != "" {
+		// An edit made here moves the binding along only if it was intact; see Vault.Rename.
+		_ = v.Rename(oldName, prof.Name, oldBinding, newBinding)
+	}
+	if password != "" {
+		if err := v.Set(prof.Name, password, newBinding); err != nil {
+			return fmt.Errorf("the connection was saved but its password was not stored: %w", err)
+		}
+	}
+	return nil
 }
 
 // Delete removes a profile by name.
@@ -105,8 +156,11 @@ func (ProfilesService) Delete(name string) error {
 	if err != nil {
 		return err
 	}
-	_, err = core.RemoveProfile(p, name)
-	return err
+	if _, err := core.RemoveProfile(p, name); err != nil {
+		return err
+	}
+	_ = getVault().Forget(name)
+	return nil
 }
 
 // PreviewResult is the form's live preview: the exact Host block the profile

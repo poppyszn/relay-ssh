@@ -1,4 +1,5 @@
 import { THEMES, type ThemeDef } from "./themes";
+import { VaultService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 export { THEMES };
 
@@ -18,7 +19,16 @@ export const DENSITY: Record<string, { name: string; lineHeight: number }> = {
   airy: { name: "Airy", lineHeight: 1.4 },
 };
 
-interface Saved { theme: string; font: string; fontSize: number; density: string; copyOnSelect: boolean; cursorBlink: boolean; autoBlocks: boolean }
+interface Saved {
+  theme: string;
+  font: string;
+  fontSize: number;
+  density: string;
+  copyOnSelect: boolean;
+  cursorBlink: boolean;
+  autoBlocks: boolean;
+  vaultTimeout?: number;
+}
 const KEY = "relay.settings.v1";
 
 function load(): Partial<Saved> {
@@ -38,6 +48,9 @@ class Settings {
   cursorBlink = $state(true);
   /** Set up command blocks by itself in ssh sessions (a connection can override this). */
   autoBlocks = $state(false);
+  /** Inactivity timeout in minutes before auto-locking the secret vault (0 = lock on quit). */
+  vaultTimeout = $state(15);
+  private sentVaultTimeout = -1;
 
   constructor() {
     const s = load();
@@ -48,6 +61,7 @@ class Settings {
     if (typeof s.copyOnSelect === "boolean") this.copyOnSelect = s.copyOnSelect;
     if (typeof s.cursorBlink === "boolean") this.cursorBlink = s.cursorBlink;
     if (typeof s.autoBlocks === "boolean") this.autoBlocks = s.autoBlocks;
+    if (typeof s.vaultTimeout === "number" && s.vaultTimeout >= 0) this.vaultTimeout = s.vaultTimeout;
   }
 
   /** Whether macOS is currently in light mode; only consulted for the "system" theme. */
@@ -79,11 +93,24 @@ class Settings {
     const root = document.documentElement;
     for (const [k, v] of Object.entries(this.themeDef.vars)) root.style.setProperty(`--${k}`, v);
     root.style.colorScheme = this.themeDef.scheme; // native scrollbars, inputs and the selection colour follow
-    const saved: Saved = { theme: this.theme, font: this.font, fontSize: this.fontSize, density: this.density, copyOnSelect: this.copyOnSelect, cursorBlink: this.cursorBlink, autoBlocks: this.autoBlocks };
+    const saved: Saved = {
+      theme: this.theme,
+      font: this.font,
+      fontSize: this.fontSize,
+      density: this.density,
+      copyOnSelect: this.copyOnSelect,
+      cursorBlink: this.cursorBlink,
+      autoBlocks: this.autoBlocks,
+      vaultTimeout: this.vaultTimeout,
+    };
     try {
       localStorage.setItem(KEY, JSON.stringify(saved));
     } catch {
       // best effort: settings just will not persist
+    }
+    if (this.vaultTimeout !== this.sentVaultTimeout) {
+      this.sentVaultTimeout = this.vaultTimeout;
+      VaultService.SetIdleTimeout(this.vaultTimeout).catch(() => {});
     }
   }
 }

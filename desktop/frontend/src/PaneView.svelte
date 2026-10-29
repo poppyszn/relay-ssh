@@ -44,6 +44,7 @@
         <span class="dot" class:ok={info && !info.ended && !info.connecting} class:warn={info?.connecting} class:err={info?.ended}></span>
         <strong>{info?.target ?? "Local"}</strong>
         {#if prof}<span class="sub">{prof.user}@{prof.host}</span>{/if}
+        {#if info?.filled}<span class="filled-note">password filled</span>{/if}
         {#if info?.connecting}<span class="wait">connecting…</span>{/if}
         {#if info?.ended}<span class="gone">disconnected</span>{/if}
         <button class="close" data-nodrag aria-label="Close pane" onclick={() => ws.closePane(node.id)}>&times;</button>
@@ -55,6 +56,12 @@
     {/if}
     {#if info?.target && !info.connecting && !info.ended && !info.blocks && !ws.autoBlocksFor(info.target)}
       {#key node.id}<BlocksHint id={node.id} />{/key}
+    {/if}
+    {#if info?.fillHint}
+      <div class="fill-hint" role="status">
+        <span>{info.fillHint}</span>
+        <button class="hint-dismiss" aria-label="Dismiss hint" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].fillHint = ""; }}>&times;</button>
+      </div>
     {/if}
     {#if sb.paneDrop?.id === node.id}
       <div class="dropzone {sb.paneDrop.edge}" class:below-header={multi} aria-hidden="true"><span>{sb.paneDrop.verb ? `${sb.paneDrop.verb} ${sb.paneDrop.edge}` : sb.drag?.kind === "pane" ? (sb.paneDrop.edge === "center" ? "Swap places" : `Move ${sb.paneDrop.edge}`) : sb.paneDrop.edge === "center" ? "Open in a new tab" : `Split ${sb.paneDrop.edge}`}</span></div>
@@ -119,4 +126,8 @@
   .ended .dismiss:hover { color: var(--text); background: var(--line); }
   .ended div { display: grid; gap: 1px; }
   .ended span { font-size: 11.5px; color: var(--muted); }
+  .filled-note { font-size: 11px; color: var(--ok); margin-left: 4px; }
+  .fill-hint { position: absolute; top: 36px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 8px; background: var(--bar); border: 1px solid var(--accent); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 12px; box-shadow: 0 4px 16px var(--shadow); }
+  .hint-dismiss { all: unset; cursor: pointer; font-size: 14px; color: var(--muted); padding: 0 2px; }
+  .hint-dismiss:hover { color: var(--text); }
 </style>

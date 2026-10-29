@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blankProfile, blocksWanted, nextSession, snippetPreview, snippetText, connectingHint, loginQuiet, formatElapsed, groupByFolder, matches, paneEdge, parseTags, reorder, slotAt } from "./lib";
+import { blankProfile, blocksWanted, nextSession, parsePasswordPrompt, snippetPreview, snippetText, connectingHint, loginQuiet, formatElapsed, groupByFolder, matches, paneEdge, parseTags, PromptTracker, reorder, slotAt } from "./lib";
 
 const mk = (o: object) => ({ ...blankProfile(), host: "h", user: "u", ...o }) as ReturnType<typeof blankProfile>;
 
@@ -207,5 +207,99 @@ describe("jumping to a connection's open session", () => {
     expect(nextSession(["p4", "p7"], "p4")).toBe("p7");
     expect(nextSession(["p4", "p7"], "p7")).toBe("p4");
     expect(nextSession(["p4"], "p4")).toBe("p4");
+  });
+});
+
+describe("parsePasswordPrompt", () => {
+  const accountCases = [
+    { line: "alice@10.0.0.5's password: ", want: { kind: "account", user: "alice", host: "10.0.0.5" } },
+    { line: "bob@example.com's password: ", want: { kind: "account", user: "bob", host: "example.com" } },
+    { line: "root@bastion.corp.internal's password:", want: { kind: "account", user: "root", host: "bastion.corp.internal" } },
+    { line: "deploy-user@srv-01's password:   ", want: { kind: "account", user: "deploy-user", host: "srv-01" } },
+    { line: "admin@[192.168.1.50]'s password: ", want: { kind: "account", user: "admin", host: "192.168.1.50" } },
+    { line: "admin@[fe80::1]'s password: ", want: { kind: "account", user: "admin", host: "fe80::1" } },
+    { line: "user@host:2222's password: ", want: { kind: "account", user: "user", host: "host" } },
+  ];
+
+  for (const tc of accountCases) {
+    it(`detects account prompt: ${JSON.stringify(tc.line)}`, () => {
+      expect(parsePasswordPrompt(tc.line)).toEqual(tc.want);
+    });
+  }
+
+  const genericCases = [
+    "Password: ",
+    "Password:",
+    "password: ",
+    "Password:   ",
+    "(alice@host) Password: ",
+    "(bob@10.0.0.1) password: ",
+    "(root) Password: ",
+    "  Password: ",
+  ];
+
+  for (const line of genericCases) {
+    it(`detects generic prompt: ${JSON.stringify(line)}`, () => {
+      expect(parsePasswordPrompt(line)).toEqual({ kind: "generic" });
+    });
+  }
+
+  const rejectCases = [
+    { reason: "passphrase prompt", line: "Enter passphrase for key '/Users/precious/.ssh/id_ed25519': " },
+    { reason: "passphrase prompt without quotes", line: "Enter passphrase for key /home/alice/.ssh/id_rsa: " },
+    { reason: "2FA verification code", line: "Verification code: " },
+    { reason: "host key confirmation", line: "Are you sure you want to continue connecting (yes/no/[fingerprint])? " },
+    { reason: "sudo password prompt", line: "[sudo] password for alice: " },
+    { reason: "sudo password prompt variant", line: "sudo: password for root: " },
+    { reason: "permission denied notice", line: "Permission denied (publickey,password)." },
+    { reason: "permission denied keyboard-interactive", line: "Permission denied (keyboard-interactive)." },
+    { reason: "text not ending at prompt", line: "Password: wrong password entered" },
+    { reason: "command output containing password", line: "Changing password for alice." },
+    { reason: "command output containing password 2", line: "The default password is password." },
+    { reason: "passwd command prompt", line: "Enter current password: " },
+    { reason: "passwd command prompt new", line: "New password: " },
+    { reason: "passwd command prompt retype", line: "Retype new password: " },
+    { reason: "motd / banner line", line: "Welcome to Ubuntu 24.04 LTS (GNU/Linux 6.8.0-45-generic)" },
+    { reason: "shell prompt", line: "alice@bastion:~$ " },
+    { reason: "empty line", line: "" },
+    { reason: "whitespace line", line: "    " },
+  ];
+
+  for (const tc of rejectCases) {
+    it(`rejects ${tc.reason}: ${JSON.stringify(tc.line)}`, () => {
+      expect(parsePasswordPrompt(tc.line)).toBeNull();
+    });
+  }
+});
+
+describe("PromptTracker", () => {
+  const acct = (user: string, host: string) => ({ kind: "account" as const, user, host });
+
+  it("asks for a fill once while the same prompt stays on screen", () => {
+    const t = new PromptTracker();
+    expect(t.observe(acct("a", "h"))).toBe("send");
+    expect(t.observe(acct("a", "h"))).toBeNull();
+    expect(t.observe(acct("a", "h"))).toBeNull();
+  });
+
+  it("flags a prompt that comes back after it was answered", () => {
+    const t = new PromptTracker();
+    expect(t.observe(acct("a", "h"))).toBe("send");
+    expect(t.observe(null)).toBeNull(); // ssh moved on to a new line
+    expect(t.observe(acct("a", "h"))).toBe("rejected");
+  });
+
+  it("answers each hop of a jump chain separately", () => {
+    const t = new PromptTracker();
+    expect(t.observe(acct("op", "bastion"))).toBe("send");
+    expect(t.observe(null)).toBeNull();
+    expect(t.observe(acct("ubuntu", "10.0.0.10"))).toBe("send");
+  });
+
+  it("treats a bare Password: as its own prompt", () => {
+    const t = new PromptTracker();
+    expect(t.observe({ kind: "generic" })).toBe("send");
+    expect(t.observe(null)).toBeNull();
+    expect(t.observe({ kind: "generic" })).toBe("rejected");
   });
 });

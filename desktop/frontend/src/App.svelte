@@ -14,17 +14,22 @@
   import { copyText } from "./clipboard";
   import { settings } from "./settings.svelte";
   import { sb } from "./foldertree.svelte";
-  import { FilesService, ForwardsService, ProfilesService, SnippetsService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { vault } from "./vault.svelte";
+  import { FilesService, ForwardsService, ProfilesService, SnippetsService, TerminalService, ToolsService, VaultService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
   const mac = navigator.userAgent.includes("Mac");
   let profiles = $state<Profile[]>([]);
   let folders = $state<string[]>([]);
-  let toolsTab = $state<"health" | "backup" | "import" | "keys">("health");
+  let toolsTab = $state<"health" | "backup" | "import" | "keys" | "vault">("health");
   let banner = $state("");
   let palette = $state(false);
   let sidebar = $state(true);
   let settingsOpen = $state(false);
   let toolsOpen = $state(false);
+  let vaultOpen = $state(false);
+  let unlockConnect = $state<{ profile: Profile; split: boolean } | null>(null);
+  let VaultPanel = $state<typeof import("./VaultPanel.svelte").default | null>(null);
+  $effect(() => { if ((vaultOpen || unlockConnect) && !VaultPanel) import("./VaultPanel.svelte").then((m) => (VaultPanel = m.default)); });
   let filesTarget = $state("");
   let forwardsTarget = $state("");
   let snippetsOpen = $state(false);
@@ -69,6 +74,14 @@
   async function connect(p: Profile, split = false) {
     palette = false;
     banner = "";
+    if (p.auth === "password" && vault.exists && !vault.unlocked && vault.hasRemembered(p.name)) {
+      unlockConnect = { profile: p, split };
+      return;
+    }
+    await doConnect(p, split);
+  }
+
+  async function doConnect(p: Profile, split = false) {
     if (split && ws.active) await ws.split("row", p.name);
     else await ws.openTab(p.name);
   }
@@ -90,6 +103,7 @@
       case "find": return ws.toggleSearch();
       case "settings": return (settingsOpen = !settingsOpen);
       case "tools": return (toolsTab = "health", toolsOpen = !toolsOpen);
+      case "vault": return (vaultOpen = !vaultOpen);
       case "files": return openFiles();
       case "forwards": return openForwards();
       case "snippets": return (snippetsOpen = !snippetsOpen);
@@ -133,8 +147,9 @@
     form = { initial: { ...blankProfile(), folder }, oldName: "" };
   }
 
-  async function save(prof: Profile) {
-    await ProfilesService.Save(form!.oldName, prof);
+  async function save(prof: Profile, password = "") {
+    if (password) await ProfilesService.SaveWithPassword(form!.oldName, prof, password);
+    else await ProfilesService.Save(form!.oldName, prof);
     form = null;
     await refresh();
   }
@@ -167,6 +182,7 @@
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     ws.blocksMode = (name) => profiles.find((p) => p.name === name)?.blocks;
+    ws.profileAuth = (name) => profiles.find((p) => p.name === name)?.auth;
     sb.onFocusConnection = (name) => {
       const ids = ws.tabs.flatMap((t) => leaves(t.root)).filter((id) => ws.panes[id]?.target === name);
       const id = nextSession(ids, ws.focusedPane);
@@ -175,6 +191,9 @@
     sb.onPaneToTab = (id, tab) => ws.movePaneToTab(id, tab);
     sb.onPaneMove = (id, target, edge) => ws.movePane(id, target, edge);
     sb.onPaneDrop = (name, paneId, edge) => { banner = ""; return edge === "center" ? ws.openTab(name) : ws.splitAt(paneId, edge, name); };
+    const offVault = Events.On("vault", () => vault.refresh());
+    vault.refresh();
+    VaultService.SetIdleTimeout(settings.vaultTimeout).catch(() => {});
     (async () => {
       customChrome = await TerminalService.CustomChrome();
       document.documentElement.classList.toggle("custom-chrome", customChrome);
@@ -185,7 +204,7 @@
       await refresh();
       await ws.openTab(null);
     })();
-    return off;
+    return () => { off(); offVault(); };
   });
 
   // RELAY_BENCH=smoke: drive the real UI path (profiles, open a local tab,
@@ -365,6 +384,101 @@
         out.keysWithPassphrase = { chips, asked, wrong, right, picker: { options, groups }, picked: (document.querySelector<HTMLSelectElement>('select[aria-label=Key]'))?.value };
         form = null;
         await tick();
+      }
+      // vault: status bar lock button, create vault dialog, connection form password UI, lock/unlock
+      {
+        const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        const setVal = (el: HTMLInputElement, v: string) => { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); };
+        const stBefore = await vault.refresh();
+
+        // 1. Click status bar vault button to open VaultPanel
+        const until = async (probe: () => unknown, ms = 8000) => { for (let t = 0; t < ms && !probe(); t += 50) await wait(50); };
+        document.querySelector<HTMLElement>(".vault-btn")?.click();
+        await tick();
+        await until(() => document.querySelector("[role=dialog] h2")); // the panel is a lazy chunk
+
+        const openTitle = document.querySelector("[role=dialog] h2")?.textContent ?? "";
+        let created = false;
+        if (!stBefore.exists) {
+          const pass1 = document.querySelector<HTMLInputElement>('[role=dialog] input[aria-label="Master password"]');
+          const pass2 = document.querySelector<HTMLInputElement>('[role=dialog] input[aria-label="Confirm master password"]');
+          if (pass1 && pass2) {
+            setVal(pass1, "smoke-master-pass");
+            setVal(pass2, "smoke-master-pass");
+            await tick();
+            document.querySelector<HTMLElement>('[role=dialog] form button[type=submit]')?.click();
+            await wait(800);
+          }
+          const stAfterCreate = await vault.refresh();
+          created = stAfterCreate.exists && stAfterCreate.unlocked;
+        } else {
+          created = stBefore.exists;
+        }
+
+        // Close vault dialog if open
+        vaultOpen = false;
+        await tick();
+        await wait(200);
+
+        // 2. Open new connection form, switch auth to password
+        newConnection("");
+        await tick();
+        await wait(400);
+
+        [...document.querySelectorAll<HTMLElement>('[role=radiogroup] button')].find((b) => b.textContent?.includes("Password"))?.click();
+        await tick();
+        await wait(200);
+
+        const formNote = document.querySelector(".note")?.textContent ?? "";
+        const hasCorrectNote = formNote.includes("Stored encrypted in Relay's vault") && !formNote.includes("It is never stored");
+
+        const nameInput = document.querySelector<HTMLInputElement>('input[placeholder="web-1"]');
+        const passInput = document.querySelector<HTMLInputElement>('input[type=password][aria-label="Password"]');
+
+        let savedBadgeShown = false;
+        if (nameInput && passInput) {
+          setVal(nameInput, "smoke-vault-conn");
+          const inputs = [...document.querySelectorAll<HTMLInputElement>("input")];
+          const uIn = inputs.find((i) => i.value === "root" || i.closest("label")?.textContent?.includes("User"));
+          const hIn = inputs.find((i) => i.closest("label")?.textContent?.includes("Host"));
+          if (hIn) setVal(hIn, "127.0.0.1");
+          if (uIn) setVal(uIn, "smokeuser");
+          setVal(passInput, "smoke-secret-pass");
+          await tick();
+
+          document.querySelector<HTMLFormElement>("form")?.dispatchEvent(new Event("submit", { bubbles: true }));
+          await wait(800);
+
+          // 3. Re-open the connection form for editing to verify "A password is saved" badge
+          await refresh();
+          const savedConn = profiles.find((p) => p.name === "smoke-vault-conn");
+          if (savedConn) {
+            edit(savedConn);
+            await tick();
+            await wait(400);
+            savedBadgeShown = (document.querySelector(".badge-saved")?.textContent ?? "").includes("A password is saved");
+            form = null;
+            await tick();
+            await wait(200);
+          }
+        }
+
+        // 4. Lock vault
+        await vault.lock();
+        const stLocked = await vault.refresh();
+
+        // 5. Cleanup profile
+        await ProfilesService.Delete("smoke-vault-conn").catch(() => {});
+        await refresh();
+
+        out.vault = {
+          openTitle,
+          created,
+          hasCorrectNote,
+          savedBadgeShown,
+          lockedAfterLock: !stLocked.unlocked,
+          vaultExists: stLocked.exists,
+        };
       }
       // files: the real panel and service against a real sshd (only when a connection is given)
       if (box && dir) {
@@ -782,18 +896,40 @@
       </div>
     </main>
   </div>
-  <StatusBar {profiles} themeName={settings.label} />
+  <StatusBar {profiles} themeName={settings.label} onvault={() => (vaultOpen = true)} />
 </div>
 
 {#if snippetsOpen}{#await import("./SnippetsPanel.svelte") then { default: SnippetsPanel }}<SnippetsPanel into={ws.panes[ws.focusedPane] ? (ws.panes[ws.focusedPane].target ?? "Local shell") : ""} onuse={(c, run) => ws.typeSnippet(c, run)} onclose={() => (snippetsOpen = false)} />{/await}{/if}
 {#if forwardsTarget}{#await import("./ForwardsPanel.svelte") then { default: ForwardsPanel }}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/await}{/if}
 {#if filesTarget}{#await import("./FilesPanel.svelte") then { default: FilesPanel }}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/await}{/if}
-{#if toolsOpen}{#await import("./ToolsPanel.svelte") then { default: ToolsPanel }}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/await}{/if}
+{#if toolsOpen}{#await import("./ToolsPanel.svelte") then { default: ToolsPanel }}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} onvault={() => { toolsOpen = false; vaultOpen = true; }} />{/await}{/if}
 {#if ws.blockMenu}<BlockMenu block={ws.blockMenu.block} rect={ws.blockMenu.rect} oncopy={copied} onclose={() => (ws.blockMenu = null)} />{/if}
 {#if toast}<div class="toast" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>{toast}</div>{/if}
 {#if settingsOpen}{#await import("./SettingsPanel.svelte") then { default: SettingsPanel }}<SettingsPanel onclose={() => (settingsOpen = false)} />{/await}{/if}
 <DragGhost />
 {#if palette}{#await import("./Palette.svelte") then { default: Palette }}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/await}{/if}
+{#if vaultOpen && VaultPanel}
+  <VaultPanel mode="auto" onclose={() => (vaultOpen = false)} />
+{/if}
+{#if unlockConnect && VaultPanel}
+  <VaultPanel
+    mode="unlock-connect"
+    connName={unlockConnect.profile.name}
+    onsuccess={async () => {
+      const { profile, split } = unlockConnect!;
+      unlockConnect = null;
+      await doConnect(profile, split);
+    }}
+    onskip={async () => {
+      const { profile, split } = unlockConnect!;
+      unlockConnect = null;
+      await doConnect(profile, split);
+    }}
+    onclose={() => {
+      unlockConnect = null;
+    }}
+  />
+{/if}
 {#if form && ProfileForm}
   <ProfileForm initial={form.initial} oldName={form.oldName} {profiles} {folders} onsave={save} ondelete={() => (confirmDelete = profiles.find((p) => p.name === form!.oldName) ?? null)} oncancel={() => (form = null)} />
 {/if}

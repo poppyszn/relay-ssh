@@ -1,8 +1,9 @@
 <script lang="ts">
   import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { vault } from "./vault.svelte";
 
-  type Tab = "health" | "backup" | "import" | "keys";
-  let { initial = "health", onclose, onchanged, ongenerate }: { initial?: Tab; onclose: () => void; onchanged: () => void; ongenerate: () => void } = $props();
+  type Tab = "health" | "backup" | "import" | "keys" | "vault";
+  let { initial = "health", onclose, onchanged, ongenerate, onvault }: { initial?: Tab; onclose: () => void; onchanged: () => void; ongenerate: () => void; onvault?: () => void } = $props();
 
   // svelte-ignore state_referenced_locally
   let tab = $state<Tab>(initial);
@@ -11,6 +12,7 @@
     { id: "backup", label: "Backup & restore" },
     { id: "import", label: "Import" },
     { id: "keys", label: "Keys" },
+    { id: "vault", label: "Vault" },
   ];
 
   const msg = (e: unknown) => (e as Error)?.message ?? String(e);
@@ -167,7 +169,7 @@
             <p class="note" class:good={added.length > 0}>{added.length ? `Imported ${added.length}: ${added.join(", ")}` : "No new connections found."}</p>
             {#each skipped as s}<p class="note bad">Skipped {s}</p>{/each}
           {/if}
-        {:else}
+        {:else if tab === "keys"}
           <div class="head"><div><h3>Keys</h3><p>Adopted keys are copied into Relay's vault and included in backups. Other keys stay where they are and are not backed up. For a key with a passphrase, adopting also asks for it once so ssh does not ask every time.</p></div>
             <div class="actions"><button class="btn" onclick={adoptOther}>Adopt a key…</button><button class="btn" onclick={ongenerate}>Generate…</button></div></div>
           {#if keyError}<p class="note bad">{keyError}</p>{/if}
@@ -186,6 +188,26 @@
                 {:else if k.encrypted}<button class="btn adopt" title="Load this key into the ssh-agent{mac ? ' and the Keychain' : ''} so ssh stops asking for its passphrase" onclick={() => { ask = { path: k.path, name: k.name, mode: "remember" }; keyPass = ""; keyError = ""; }}>Remember passphrase</button>{/if}</li>
             {:else}<li class="empty">No private keys found in ~/.ssh.</li>{/each}
           </ul>
+        {:else if tab === "vault"}
+          <div class="head">
+            <div>
+              <h3>Encrypted Vault</h3>
+              <p>Relay can store SSH passwords in an encrypted vault on disk, protected with Filippo Valsorda's age encryption and unlocked with your master password.</p>
+            </div>
+          </div>
+          <div class="note" style="margin-bottom: 16px;">
+            <p style="margin: 0 0 6px;">
+              Status: <strong>{vault.exists ? (vault.unlocked ? "Unlocked" : "Locked") : "Not set up"}</strong>
+            </p>
+            {#if vault.remembered.length > 0}
+              <p style="margin: 0; font-size: 12px; color: var(--muted);">{vault.remembered.length} password{vault.remembered.length === 1 ? "" : "s"} saved in vault</p>
+            {/if}
+          </div>
+          <div class="actions">
+            {#if onvault}
+              <button class="btn primary" onclick={onvault}>{vault.exists ? (vault.unlocked ? "Manage vault" : "Unlock vault") : "Create vault"}</button>
+            {/if}
+          </div>
         {/if}
       </div>
     </div>

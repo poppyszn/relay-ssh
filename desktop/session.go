@@ -21,10 +21,13 @@ const (
 )
 
 type control struct {
-	T string `json:"t"`
-	N int    `json:"n,omitempty"`
-	C uint16 `json:"c,omitempty"`
-	R uint16 `json:"r,omitempty"`
+	T    string `json:"t"`
+	N    int    `json:"n,omitempty"`
+	C    uint16 `json:"c,omitempty"`
+	R    uint16 `json:"r,omitempty"`
+	Kind string `json:"kind,omitempty"`
+	User string `json:"user,omitempty"`
+	Host string `json:"host,omitempty"`
 }
 
 // session ties one PTY process to one WebSocket. Go never interprets the
@@ -39,16 +42,29 @@ type session struct {
 	pending  []byte
 	eof      bool
 	closed   bool
+
+	target      string
+	authed      bool
+	totalFills  int
+	nextHop     int // fills must follow the order ssh authenticates the hops in
+	filledConns map[string]bool
 }
 
-func startSession(argv, env []string, cols, rows uint16) (*session, error) {
+func startSession(argv, env []string, cols, rows uint16, target ...string) (*session, error) {
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Env = append(append(os.Environ(), "TERM=xterm-256color", "COLORTERM=truecolor"), env...)
 	f, err := pty.StartWithSize(cmd, &pty.Winsize{Cols: cols, Rows: rows})
 	if err != nil {
 		return nil, err
 	}
-	s := &session{cmd: cmd, pty: f}
+	s := &session{
+		cmd:         cmd,
+		pty:         f,
+		filledConns: make(map[string]bool),
+	}
+	if len(target) > 0 {
+		s.target = target[0]
+	}
 	s.cond = sync.NewCond(&s.mu)
 	return s, nil
 }
@@ -96,6 +112,12 @@ func (s *session) run(ctx context.Context, c *websocket.Conn) {
 				s.cond.Broadcast()
 			case "resize":
 				_ = pty.Setsize(s.pty, &pty.Winsize{Cols: m.C, Rows: m.R})
+			case "authed":
+				s.mu.Lock()
+				s.authed = true
+				s.mu.Unlock()
+			case "fill":
+				go s.handleFill(ctx, c, m)
 			}
 		}
 	}()

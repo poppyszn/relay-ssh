@@ -45,6 +45,18 @@
       </div>
     </section>
 
+    <section>
+      <div class="label">Vault</div>
+      <div class="row">
+        <select bind:value={settings.vaultTimeout} aria-label="Lock the vault after">
+          <option value={5}>Lock after 5 minutes of inactivity</option>
+          <option value={15}>Lock after 15 minutes of inactivity</option>
+          <option value={60}>Lock after 1 hour of inactivity</option>
+          <option value={0}>Lock when app quits</option>
+        </select>
+      </div>
+    </section>
+
     <section class="last">
       <div class="label">Behaviour</div>
       <label class="check"><input type="checkbox" bind:checked={settings.copyOnSelect} /><span>Copy on select<small>Selecting text copies it to the clipboard.</small></span></label>

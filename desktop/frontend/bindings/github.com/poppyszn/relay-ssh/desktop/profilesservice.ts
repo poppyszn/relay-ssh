@@ -88,3 +88,12 @@ export function RenameFolder($from: string, to: string): $CancellablePromise<voi
 export function Save(oldName: string, prof: $models.Profile): $CancellablePromise<void> {
     return $Call.ByID(3186380550, oldName, prof);
 }
+
+/**
+ * SaveWithPassword saves the profile and keeps its password in the vault, bound to the
+ * connection's host, user and port. It checks the password and the vault first, so a refusal
+ * leaves nothing half-saved.
+ */
+export function SaveWithPassword(oldName: string, prof: $models.Profile, password: string): $CancellablePromise<void> {
+    return $Call.ByID(4126889167, oldName, prof, password);
+}
