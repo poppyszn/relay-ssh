@@ -85,7 +85,12 @@ one incomplete entry aborted the whole import, and entries without `HostName` or
 `User` failed validation instead of getting ssh's own defaults. The fix parses
 blocks properly, applies ssh's defaults, and reports what was skipped and why.
 It is tested, fixes two real bugs, and the `desktop/` code is excluded from this
-count. 3000 leaves about 65 lines of headroom.
+count. That left about 65 lines of headroom, and the same day the optional `folders`
+list (empty folders for the desktop sidebar: model field, validation, and a small
+helper so deleting or moving a connection never makes its folder vanish) used
+it up: the CLI is now exactly at 3000. The folder operations themselves live in
+`desktop/`, outside this count, so the next CLI change needs a real saving or a
+reasoned bump.
 
 ## How to work
 

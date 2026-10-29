@@ -129,3 +129,30 @@ func TestLoadRejectsAnInvalidStore(t *testing.T) {
 		t.Fatal("expected an error for key auth with no key, got nil")
 	}
 }
+
+func TestStoreKeepsExplicitFoldersSortedAndDeduplicated(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "connections.toml")
+	s := Store{Version: Version, Folders: []string{"b", "a/x", "a", "a"}, Profiles: []Profile{{Name: "p", Host: "h", User: "u", Port: 22, Auth: AuthAgent}}}
+	if err := Save(path, s); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(got.Folders, ",") != "a,a/x,b" {
+		t.Errorf("folders = %v, want sorted and deduplicated", got.Folders)
+	}
+	// an older file with no folders key still loads
+	old := filepath.Join(t.TempDir(), "old.toml")
+	if err := os.WriteFile(old, []byte("version = 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(old); err != nil {
+		t.Errorf("a store without folders must load: %v", err)
+	}
+	// and a bad folder is refused before it reaches disk
+	if err := Save(path, Store{Version: Version, Folders: []string{"/bad"}}); err == nil {
+		t.Error("an invalid folder path must be refused")
+	}
+}

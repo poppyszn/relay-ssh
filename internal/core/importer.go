@@ -123,13 +123,11 @@ func parseHostBlocks(r io.Reader) []config.Profile {
 	return out
 }
 
-// defaultUser is who ssh would log in as when a Host entry names no User.
+// defaultUser is who ssh logs in as when a Host entry names no User. Empty if
+// unknown, so validation skips the entry rather than guessing (root, say).
 func defaultUser() string {
 	if u, err := user.Current(); err == nil && u.Username != "" {
 		return u.Username
 	}
-	if u := os.Getenv("USER"); u != "" {
-		return u
-	}
-	return "root"
+	return os.Getenv("USER")
 }

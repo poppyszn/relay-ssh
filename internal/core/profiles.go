@@ -60,6 +60,7 @@ func RemoveProfile(p paths.Paths, name string) (config.Profile, error) {
 		}
 	}
 	s.Profiles = kept
+	KeepFolder(&s, target.Folder)
 	if err := config.Save(p.StoreFile, s); err != nil {
 		return config.Profile{}, err
 	}
@@ -88,10 +89,12 @@ func SaveProfile(p paths.Paths, oldName string, prof config.Profile) error {
 			return fmt.Errorf("profile %q already exists", prof.Name)
 		}
 		profiles := make([]config.Profile, len(s.Profiles))
+		leftFolder := ""
 		for i, cur := range s.Profiles {
 			switch {
 			case cur.Name == oldName:
 				profiles[i] = prof
+				leftFolder = cur.Folder
 			case cur.Jump == oldName:
 				cur.Jump = prof.Name
 				profiles[i] = cur
@@ -100,6 +103,9 @@ func SaveProfile(p paths.Paths, oldName string, prof config.Profile) error {
 			}
 		}
 		s.Profiles = profiles
+		if leftFolder != prof.Folder {
+			KeepFolder(&s, leftFolder)
+		}
 	}
 	if err := config.Save(p.StoreFile, s); err != nil {
 		return err
