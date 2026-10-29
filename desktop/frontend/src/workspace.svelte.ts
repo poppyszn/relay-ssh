@@ -80,6 +80,17 @@ class Workspace {
     await this.start(id);
   }
 
+  /** Moves pane `id` beside pane `target` (or swaps them for "center"); the session keeps running. */
+  movePane(id: string, target: string, edge: "left" | "right" | "top" | "bottom" | "center") {
+    const tab = this.tabs.find((t) => P.leaves(t.root).includes(id));
+    if (!tab || !P.leaves(tab.root).includes(target)) return;
+    const root = edge === "center" ? P.swapLeaves(tab.root, id, target) : P.movePane(tab.root, id, target, edge, () => uid("s"));
+    if (!root) return;
+    tab.root = root;
+    tab.focus = id;
+    tick().then(() => this.sessions.get(id)?.term.focus());
+  }
+
   /** Moves a tab into the gap before position `slot`. */
   moveTab(tabId: string, slot: number) {
     const from = this.tabs.findIndex((t) => t.id === tabId);

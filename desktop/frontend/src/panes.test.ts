@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { leaves, neighbor, removeLeaf, setRatio, splitLeaf, type Node } from "./panes";
+import { leaves, movePane, neighbor, removeLeaf, setRatio, splitLeaf, swapLeaves, type Node } from "./panes";
 
 const one: Node = { id: "a" };
 
@@ -43,5 +43,37 @@ describe("splitLeaf before", () => {
     const t = splitLeaf({ id: "a" }, "a", "b", "row", "s1", true);
     expect(leaves(t)).toEqual(["b", "a"]);
     expect(leaves(splitLeaf({ id: "a" }, "a", "b", "row", "s1"))).toEqual(["a", "b"]);
+  });
+});
+
+describe("rearranging panes", () => {
+  // a | (b / c)
+  const tree: Node = { sid: "s1", dir: "row", ratio: 0.5, a: { id: "a" }, b: { sid: "s2", dir: "col", ratio: 0.5, a: { id: "b" }, b: { id: "c" } } };
+
+  it("moves a pane beside another, on the chosen side", () => {
+    expect(leaves(movePane(tree, "a", "c", "right", () => "n")!)).toEqual(["b", "c", "a"]);
+    expect(leaves(movePane(tree, "a", "b", "top", () => "n")!)).toEqual(["a", "b", "c"]);
+    expect(leaves(movePane(tree, "c", "a", "left", () => "n")!)).toEqual(["c", "a", "b"]);
+  });
+
+  it("splits the target the right way round", () => {
+    const t = movePane({ sid: "s", dir: "row", ratio: 0.5, a: { id: "a" }, b: { id: "b" } }, "a", "b", "bottom", () => "n")!;
+    expect(t).toEqual({ sid: "n", dir: "col", ratio: 0.5, a: { id: "b" }, b: { id: "a" } });
+  });
+
+  it("keeps every pane exactly once", () => {
+    for (const edge of ["left", "right", "top", "bottom"] as const) {
+      expect(leaves(movePane(tree, "b", "a", edge, () => "n")!).sort()).toEqual(["a", "b", "c"]);
+    }
+  });
+
+  it("does nothing for a pane dropped on itself, an unknown pane, or a lone pane", () => {
+    expect(movePane(tree, "a", "a", "left", () => "n")).toBeNull();
+    expect(movePane(tree, "a", "zzz", "left", () => "n")).toBeNull();
+    expect(movePane({ id: "a" }, "a", "b", "left", () => "n")).toBeNull();
+  });
+
+  it("swaps two panes in place", () => {
+    expect(leaves(swapLeaves(tree, "a", "c"))).toEqual(["c", "b", "a"]);
   });
 });

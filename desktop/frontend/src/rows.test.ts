@@ -54,3 +54,46 @@ describe("dragging from the buttons a mouse actually hits", () => {
     unmount(c);
   });
 });
+
+describe("opening a connection", () => {
+  const mk = () => {
+    const opened: string[] = [];
+    const target = document.createElement("div");
+    const c = mount(ConnRow, { target, props: { profile: { ...blankProfile(), name: "web", host: "h", user: "u" }, depth: 0, live: false, current: false, onconnect: (p: { name: string }) => opened.push(p.name), onedit: () => {} } });
+    flushSync();
+    sb.justDragged = false; // an earlier drag test may have left it set
+    return { opened, target, c, main: target.querySelector<HTMLElement>(".main")! };
+  };
+
+  // happy-dom ignores `detail` in the MouseEvent init, so it is set on the event.
+  const click = (el: Element, detail: number) => {
+    const e = new MouseEvent("click", { bubbles: true });
+    Object.defineProperty(e, "detail", { value: detail });
+    el.dispatchEvent(e);
+  };
+
+  it("a single click only selects the row", () => {
+    const { opened, target, c, main } = mk();
+    click(main, 1);
+    flushSync();
+    expect(opened).toEqual([]);
+    expect(sb.selectedConn).toBe("web");
+    expect(target.querySelector(".row.selected")).not.toBeNull();
+    unmount(c);
+  });
+
+  it("a double-click opens it, and remembers that the user knows", () => {
+    const { opened, c, main } = mk();
+    main.dispatchEvent(new MouseEvent("dblclick", { bubbles: true, detail: 2 }));
+    expect(opened).toEqual(["web"]);
+    expect(sb.learnedOpen).toBe(true);
+    unmount(c);
+  });
+
+  it("Enter on the focused row opens it (a keyboard click has detail 0)", () => {
+    const { opened, c, main } = mk();
+    click(main, 0);
+    expect(opened).toEqual(["web"]);
+    unmount(c);
+  });
+});

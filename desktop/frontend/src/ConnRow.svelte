@@ -14,9 +14,11 @@
   const tags = $derived((profile.tags ?? []).slice(0, 2));
 </script>
 
-<div class="row" class:current class:dragging={sb.drag?.kind === "profile" && sb.drag.id === profile.name} style="padding-left: {14 + 14 * depth + 8}px" use:dragSource={{ kind: "profile", id: profile.name, label: profile.name }}>
+<div class="row" class:current class:selected={sb.selectedConn === profile.name} class:dragging={sb.drag?.kind === "profile" && sb.drag.id === profile.name} style="padding-left: {14 + 14 * depth + 8}px" use:dragSource={{ kind: "profile", id: profile.name, label: profile.name }}>
   {#each Array(Math.max(0, depth)) as _, i}<span class="guide" style="left: {18 + 14 * i}px"></span>{/each}
-  <button class="main" onclick={() => !sb.justDragged && onconnect(profile)} title="Open {profile.name}">
+  <!-- One click selects; a double-click (or Enter on the focused row, which arrives with detail 0) opens a new session. -->
+  <button class="main" onclick={(e) => { if (sb.justDragged) return; if (e.detail === 0) onconnect(profile); else sb.selectedConn = profile.name; }}
+          ondblclick={() => { if (sb.justDragged) return; sb.learnOpen(); onconnect(profile); }} title="Double-click to open {profile.name} in a new tab">
     <span class="l1">
       <span class="dot" class:live></span>
       <span class="name">{profile.name}</span>
@@ -33,6 +35,7 @@
 <style>
   .row { position: relative; display: flex; align-items: stretch; padding-right: 4px; user-select: none; }
   .row:hover { background: var(--hover); }
+  .row.selected { background: var(--active); }
   .row.current { background: var(--active); box-shadow: inset 3px 0 var(--accent); }
   .row.dragging { opacity: 0.38; }
   .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); pointer-events: none; }

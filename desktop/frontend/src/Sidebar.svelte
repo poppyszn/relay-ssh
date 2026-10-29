@@ -26,7 +26,6 @@
   let addOpen = $state(false);
   const searching = $derived(connSearch.query.trim() !== "");
   const tree = $derived(buildTree(profiles, folders, connSearch.query));
-  const live = $derived(profiles.filter((p) => open.has(p.name)));
   const focus = (el: HTMLElement) => el.focus();
 
   $effect(() => {
@@ -55,13 +54,6 @@
   {#if sb.error}<p class="err" role="alert">{sb.error}<button aria-label="Dismiss" onclick={() => (sb.error = "")}>&times;</button></p>{/if}
 
   <nav aria-label="Connections" data-scroll>
-    {#if live.length && !searching}
-      <div class="bar"><span class="label">Open now</span><span class="label">{live.length}</span></div>
-      {#each live as p (p.name)}
-        <ConnRow profile={p} depth={-1} live current={current === p.name} {onconnect} {onedit} />
-      {/each}
-    {/if}
-
     {#if tree.unfiled.length}
       <div data-drop="">
         {#each tree.unfiled as p (p.name)}
@@ -80,6 +72,10 @@
     {/each}
     {#if !tree.unfiled.length && !tree.roots.length && sb.creatingIn !== ""}
       <p class="empty">{profiles.length === 0 ? "No connections yet. Use Add to create one." : "No matches."}</p>
+    {/if}
+
+    {#if profiles.length && !sb.learnedOpen && !searching}
+      <p class="tip"><b>Double-click</b> a connection to open it in a new tab. Drag it onto a terminal to split.</p>
     {/if}
 
     {#if sb.drag}
@@ -103,14 +99,6 @@
   </footer>
 </aside>
 
-{#if sb.drag}
-  <div class="ghost" style="left: {sb.drag.x + 14}px; top: {sb.drag.y + 10}px" class:bad={sb.dropTarget !== null && !sb.dropOk}>
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1" /><circle cx="15" cy="6" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="9" cy="18" r="1" /><circle cx="15" cy="18" r="1" /></svg>
-    <b>{sb.drag.label}</b>
-    {#if sb.dropTarget !== null && !sb.dropOk}<span>{sb.dropReason}</span>{/if}
-  </div>
-{/if}
-
 <style>
   aside { position: relative; width: 268px; flex: none; display: flex; flex-direction: column; background: var(--rail); border-right: 1px solid var(--line); min-height: 0; }
   .head { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 12px 16px; border-bottom: 1px solid var(--line); }
@@ -121,9 +109,10 @@
   .err { margin: 0 12px 8px; padding: 7px 10px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--err-text); background: var(--err-bg); border: 1px solid var(--err); }
   .err button { all: unset; margin-left: auto; cursor: pointer; font-size: 15px; }
   nav { flex: 1; overflow: auto; position: relative; }
-  .bar { display: flex; justify-content: space-between; padding: 8px 16px; background: var(--bar); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: -1px; }
   .new { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px 0 22px; background: var(--hover); color: var(--accent-text); }
   .edit { flex: 1; min-width: 0; height: 24px; padding: 0 8px; font-size: 13px; font-weight: 500; }
+  .tip { margin: 12px 16px; font-size: 11.5px; line-height: 1.5; color: var(--dim); }
+  .tip b { color: var(--muted); font-weight: 600; }
   .empty { padding: 16px; margin: 0; color: var(--muted); }
   .rootzone { margin: 10px 12px; padding: 14px; text-align: center; font-size: 12px; color: var(--dim); border: 1px dashed var(--floatline); }
   .rootzone.ok { color: var(--accent-text); border-color: var(--accent); background: var(--accent-soft); }
@@ -132,9 +121,4 @@
   .tools { display: flex; gap: 2px; }
   .tools button { width: 28px; height: 28px; display: grid; place-items: center; border: 0; background: none; border-radius: 4px; color: var(--muted); }
   .tools button:hover { background: var(--line); color: var(--strong); }
-  .ghost { position: fixed; z-index: 50; pointer-events: none; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; background: var(--active); border: 1px solid var(--accent); border-radius: 6px; box-shadow: 0 12px 30px var(--shadow); transform: rotate(-1.5deg); color: var(--muted); }
-  .ghost b { color: var(--strong); font-weight: 600; }
-  .ghost.bad { border-color: var(--err); }
-  .ghost span { font-size: 11px; color: var(--err-text); }
-  :global(body.dragging) { cursor: grabbing; user-select: none; }
 </style>

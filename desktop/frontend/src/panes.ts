@@ -37,3 +37,21 @@ export function setRatio(n: Node, sid: string, ratio: number): Node {
   const r = Math.min(0.85, Math.max(0.15, ratio));
   return n.sid === sid ? { ...n, ratio: r } : { ...n, a: setRatio(n.a, sid, ratio), b: setRatio(n.b, sid, ratio) };
 }
+
+/**
+ * Moves leaf `id` beside leaf `target`, on the given side. Null when nothing can move:
+ * dropped on itself, either pane unknown, or no other pane to move beside.
+ */
+export function movePane(n: Node, id: string, target: string, edge: "left" | "right" | "top" | "bottom", newSid: () => string): Node | null {
+  const all = leaves(n);
+  if (id === target || !all.includes(id) || !all.includes(target)) return null;
+  const rest = removeLeaf(n, id);
+  if (!rest) return null;
+  return splitLeaf(rest, target, id, edge === "left" || edge === "right" ? "row" : "col", newSid(), edge === "left" || edge === "top");
+}
+
+/** Exchanges the places of leaves `a` and `b`. */
+export function swapLeaves(n: Node, a: string, b: string): Node {
+  if (isLeaf(n)) return n.id === a ? { id: b } : n.id === b ? { id: a } : n;
+  return { ...n, a: swapLeaves(n.a, a, b), b: swapLeaves(n.b, a, b) };
+}
