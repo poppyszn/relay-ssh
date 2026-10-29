@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import { connectingHint, formatElapsed } from "./lib";
+  import type { Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { connectingHint, formatElapsed } from "../lib/lib";
 
   let { target, prof, since, oncancel }: { target: string; prof?: Profile; since: number; oncancel: () => void } = $props();
 

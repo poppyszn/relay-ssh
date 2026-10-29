@@ -1,12 +1,12 @@
 <script lang="ts">
-  import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import { buildTree } from "./lib";
-  import { sb } from "./foldertree.svelte";
+  import type { Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { buildTree } from "../lib/lib";
+  import { sb } from "../state/foldertree.svelte";
   import Branch from "./Branch.svelte";
   import ConnRow from "./ConnRow.svelte";
   import AddMenu from "./AddMenu.svelte";
   import Card from "./Card.svelte";
-  import { connSearch } from "./connsearch.svelte";
+  import { connSearch } from "../state/connsearch.svelte";
 
   let { profiles, folders, open, current, onconnect, onnew, onedit, ontools, onchanged }: {
     profiles: Profile[];

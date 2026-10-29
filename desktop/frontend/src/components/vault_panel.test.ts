@@ -2,8 +2,8 @@
 import { flushSync, mount, unmount } from "svelte";
 import { describe, expect, it, vi } from "vitest";
 import VaultPanel from "./VaultPanel.svelte";
-import { vault } from "./vault.svelte";
-import { VaultService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+import { vault } from "../state/vault.svelte";
+import { VaultService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 describe("VaultPanel component", () => {
   it("renders Create mode when mode='create' or vault does not exist", () => {

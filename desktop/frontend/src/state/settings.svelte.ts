@@ -1,5 +1,5 @@
-import { THEMES, type ThemeDef } from "./themes";
-import { VaultService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+import { THEMES, type ThemeDef } from "../lib/themes";
+import { VaultService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 export { THEMES };
 

@@ -1,11 +1,11 @@
 import { tick } from "svelte";
 import type { Terminal } from "@xterm/xterm";
-import { openSession, type Session } from "./terminal";
-import * as P from "./panes";
-import { blocksWanted, loginQuiet, parsePasswordPrompt, PromptTracker, type PasswordPrompt, reorder, snippetText } from "./lib";
+import { openSession, type Session } from "../lib/terminal";
+import * as P from "../lib/panes";
+import { blocksWanted, loginQuiet, parsePasswordPrompt, PromptTracker, type PasswordPrompt, reorder, snippetText } from "../lib/lib";
 import { settings } from "./settings.svelte";
-import type { BlockRef } from "./blocks";
-import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+import type { BlockRef } from "../lib/blocks";
+import { TerminalService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 export interface Tab { id: string; root: P.Node; focus: string }
 /** `connecting` is true from the start of a saved connection until ssh first writes anything (a prompt, a banner or an error). */

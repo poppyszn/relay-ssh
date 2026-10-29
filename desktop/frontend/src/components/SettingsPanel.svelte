@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DENSITY, FONTS, SYSTEM, THEMES, settings } from "./settings.svelte";
+  import { DENSITY, FONTS, SYSTEM, THEMES, settings } from "../state/settings.svelte";
 
   let { onclose }: { onclose: () => void } = $props();
   const sizes = () => settings.fontSize;

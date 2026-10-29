@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import type { Session } from "./terminal";
-  import { settings } from "./settings.svelte";
+  import type { Session } from "../lib/terminal";
+  import { settings } from "../state/settings.svelte";
 
   let { session, onclose }: { session: Session; onclose: () => void } = $props();
 

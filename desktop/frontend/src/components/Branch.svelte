@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import type { TreeNode } from "./lib";
-  import { dragSource, sb } from "./foldertree.svelte";
+  import type { Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import type { TreeNode } from "../lib/lib";
+  import { dragSource, sb } from "../state/foldertree.svelte";
   import ConnRow from "./ConnRow.svelte";
   import Card from "./Card.svelte";
   import Branch from "./Branch.svelte";

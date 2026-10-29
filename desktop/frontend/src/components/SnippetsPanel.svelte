@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { SnippetsService, type Snippet } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import { snippetPreview } from "./lib";
+  import { SnippetsService, type Snippet } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { snippetPreview } from "../lib/lib";
 
   let { into, onuse, onclose }: {
     /** The pane snippets go into, for the header: "" when there is none. */

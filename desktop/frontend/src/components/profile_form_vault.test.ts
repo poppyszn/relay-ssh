@@ -2,9 +2,9 @@
 import { flushSync, mount, unmount } from "svelte";
 import { describe, expect, it, vi } from "vitest";
 import ProfileForm from "./ProfileForm.svelte";
-import { blankProfile } from "./lib";
-import { vault } from "./vault.svelte";
-import { ProfilesService, ToolsService, VaultService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+import { blankProfile } from "../lib/lib";
+import { vault } from "../state/vault.svelte";
+import { ProfilesService, ToolsService, VaultService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 describe("ProfileForm vault password integration", () => {
   vi.spyOn(ProfilesService, "Preview").mockResolvedValue({ config: "", problem: "" });

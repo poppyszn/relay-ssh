@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { sb } from "./foldertree.svelte";
+  import { sb } from "../state/foldertree.svelte";
 </script>
 
 {#if sb.drag}

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { ProfilesService, ToolsService, VaultService, type KeyInfo, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import { vault } from "./vault.svelte";
+  import { ProfilesService, ToolsService, VaultService, type KeyInfo, type Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { vault } from "../state/vault.svelte";
   import VaultPanel from "./VaultPanel.svelte";
 
   let { initial, oldName, profiles, folders, onsave, ondelete, oncancel }: {
