@@ -1,12 +1,14 @@
 <script lang="ts">
-  import { ProfilesService, ToolsService, type KeyInfo, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { ProfilesService, ToolsService, VaultService, type KeyInfo, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { vault } from "./vault.svelte";
+  import VaultPanel from "./VaultPanel.svelte";
 
   let { initial, oldName, profiles, folders, onsave, ondelete, oncancel }: {
     initial: Profile;
     oldName: string;
     profiles: Profile[];
     folders: string[];
-    onsave: (p: Profile) => Promise<void>;
+    onsave: (p: Profile, password: string) => Promise<void>;
     ondelete: () => void;
     oncancel: () => void;
   } = $props();
@@ -68,18 +70,79 @@
     const f = await ProfilesService.PickKeyFile().catch(() => "");
     if (f) p.key = f;
   }
+
+  // svelte-ignore state_referenced_locally
+  let hasSaved = $state(Boolean(oldName && vault.hasRemembered(oldName)));
+  let changingPassword = $state(false);
+  let passwordInput = $state("");
+  let pendingPassword = "";
+  let vaultPromptMode = $state<"create" | "unlock" | null>(null);
+
+  // svelte-ignore state_referenced_locally
+  if (oldName) {
+    VaultService.HasSecret(oldName).then((has) => {
+      if (has) {
+        hasSaved = true;
+        vault.remember(oldName);
+      }
+    }).catch(() => {});
+  }
+
+  async function forgetSavedPassword() {
+    if (oldName) {
+      try {
+        await VaultService.ForgetSecret(oldName);
+      } catch {}
+      vault.forget(oldName);
+    }
+    hasSaved = false;
+    changingPassword = false;
+    passwordInput = "";
+  }
+
   async function submit(e?: Event) {
     e?.preventDefault();
     if (tagInput.trim()) addTag();
+    error = "";
+
+    // A typed password, or a saved one that has to follow a rename, needs the vault open.
+    const typed = p.auth === "password" ? passwordInput : "";
+    const carrying = p.auth === "password" && hasSaved && oldName !== "" && oldName !== p.name;
+    if (typed || carrying) {
+      const st = await vault.refresh();
+      if (!st.unlocked && (st.exists || typed)) {
+        pendingPassword = typed;
+        passwordInput = "";
+        vaultPromptMode = st.exists ? "unlock" : "create";
+        return;
+      }
+    }
+    await commit(typed);
+  }
+
+  /** Saves the connection; the password (if any) goes with it, so the backend can bind it to the saved details. */
+  async function commit(password: string) {
     busy = true;
     error = "";
     try {
-      await onsave({ ...$state.snapshot(p), port: Number(p.port), key: p.auth === "key" ? p.key : "" } as Profile);
+      await onsave({ ...$state.snapshot(p), port: Number(p.port), key: p.auth === "key" ? p.key : "" } as Profile, password);
+      // The form is closed by now; keep the "has a saved password" hints in step.
+      if (p.auth !== "password" && oldName) vault.forget(oldName);
+      else if (oldName && oldName !== p.name && hasSaved) vault.rename(oldName, p.name);
+      if (password) vault.remember(p.name);
     } catch (err) {
       error = (err as Error).message ?? String(err);
     } finally {
+      passwordInput = "";
       busy = false;
     }
+  }
+
+  async function onVaultPromptSuccess() {
+    vaultPromptMode = null;
+    const pass = pendingPassword;
+    pendingPassword = "";
+    await commit(pass);
   }
   function keydown(e: KeyboardEvent) {
     if (e.key === "Escape") oncancel();
@@ -147,8 +210,31 @@
               {/if}
             </div>
             {#if keyChoice.startsWith("l:") || keyChoice === "other"}<p class="note">This key stays where it is and is not in backups. Adopt it in Tools → Keys to copy it into Relay's vault.</p>{/if}
+          {:else if p.auth === "password"}
+            {#if hasSaved && !changingPassword}
+              <div class="saved-pass-row">
+                <span class="badge-saved">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
+                  <span>A password is saved</span>
+                </span>
+                <div class="saved-pass-actions">
+                  <button type="button" class="btn small" onclick={() => (changingPassword = true)}>Change</button>
+                  <button type="button" class="btn small danger-text" onclick={forgetSavedPassword}>Forget</button>
+                </div>
+              </div>
+            {:else}
+              <div class="passrow">
+                <input type="password" bind:value={passwordInput} placeholder={changingPassword ? "New password" : "Password (optional)"} aria-label="Password" autocomplete="new-password" />
+                {#if changingPassword}
+                  <button type="button" class="btn small" onclick={() => { changingPassword = false; passwordInput = ""; }}>Cancel</button>
+                {/if}
+              </div>
+            {/if}
+            <p class="note">Stored encrypted in Relay's vault, unlocked with your master password. Leave empty to be asked each time.</p>
           {/if}
-          <p class="note">{p.auth === "agent" ? "Uses keys loaded in your ssh-agent." : p.auth === "key" ? "Passphrases are asked by ssh and never stored." : "ssh asks for the password in the terminal. It is never stored."}</p>
+          {#if p.auth === "agent" || p.auth === "key"}
+            <p class="note">{p.auth === "agent" ? "Uses keys loaded in your ssh-agent." : "Passphrases are asked by ssh and never stored."}</p>
+          {/if}
         </section>
 
         <section>
@@ -216,6 +302,13 @@
     </footer>
     <datalist id="folders">{#each folders as f}<option value={f}></option>{/each}</datalist>
   </form>
+  {#if vaultPromptMode}
+    <VaultPanel
+      mode={vaultPromptMode}
+      onclose={() => { vaultPromptMode = null; pendingPassword = ""; busy = false; }}
+      onsuccess={onVaultPromptSuccess}
+    />
+  {/if}
 </div>
 
 <style>
@@ -244,6 +337,13 @@
   .keyrow { display: flex; gap: 8px; }
   .keyrow select { flex: 1; min-width: 0; }
   .keyrow input { flex: 1; min-width: 0; }
+  .passrow { display: flex; gap: 8px; align-items: center; }
+  .passrow input { flex: 1; min-width: 0; }
+  .saved-pass-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: var(--field); border: 1px solid var(--fieldline); border-radius: 4px; }
+  .badge-saved { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ok); font-weight: 500; }
+  .saved-pass-actions { display: flex; gap: 6px; }
+  .btn.small { height: 26px; padding: 0 10px; font-size: 11.5px; }
+  .danger-text { color: var(--err-text, var(--warn)); }
   .note { margin: 0; font-size: 12px; color: var(--muted); }
   .tags { height: 36px; display: flex; align-items: center; gap: 6px; padding: 0 8px; background: var(--field); border: 1px solid var(--fieldline); border-radius: 4px; overflow: hidden; }
   .tags:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }

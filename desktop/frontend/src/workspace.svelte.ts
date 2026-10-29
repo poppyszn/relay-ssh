@@ -1,14 +1,36 @@
 import { tick } from "svelte";
+import type { Terminal } from "@xterm/xterm";
 import { openSession, type Session } from "./terminal";
 import * as P from "./panes";
-import { blocksWanted, loginQuiet, reorder, snippetText } from "./lib";
+import { blocksWanted, loginQuiet, parsePasswordPrompt, PromptTracker, type PasswordPrompt, reorder, snippetText } from "./lib";
 import { settings } from "./settings.svelte";
 import type { BlockRef } from "./blocks";
 import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 export interface Tab { id: string; root: P.Node; focus: string }
 /** `connecting` is true from the start of a saved connection until ssh first writes anything (a prompt, a banner or an error). */
-export interface PaneInfo { target: string | null; ended: boolean; error: string; blocks: boolean; connecting: boolean; since: number; /** The user closed the "session ended" banner. */ bannerHidden?: boolean }
+export interface PaneInfo {
+  target: string | null;
+  ended: boolean;
+  error: string;
+  blocks: boolean;
+  connecting: boolean;
+  since: number;
+  /** The user closed the "session ended" banner. */
+  bannerHidden?: boolean;
+  filled?: boolean;
+  fillHint?: string;
+}
+
+/** The password prompt ssh is showing at the cursor (or the line above when the cursor is on a blank one). */
+function promptOnScreen(term: Terminal): PasswordPrompt {
+  const buf = term.buffer.active;
+  const line = (y: number) => buf.getLine(y)?.translateToString(true) ?? "";
+  const here = line(buf.baseY + buf.cursorY);
+  const found = parsePasswordPrompt(here);
+  if (found || here.trim() || buf.cursorY === 0) return found;
+  return parsePasswordPrompt(line(buf.baseY + buf.cursorY - 1));
+}
 
 let seq = 0;
 const uid = (p: string) => `${p}${++seq}`;
@@ -24,6 +46,8 @@ class Workspace {
   panes = $state<Record<string, PaneInfo>>({});
   /** A connection's own command-block mode ("on", "off" or ""), supplied by the app. */
   blocksMode: (target: string) => string | undefined = () => undefined;
+  /** A connection's auth method ("agent", "key" or "password"), supplied by the app. */
+  profileAuth: (target: string) => string | undefined = () => undefined;
   private els = new Map<string, HTMLElement>();
   private sessions = new Map<string, Session>();
 
@@ -54,7 +78,7 @@ class Workspace {
   async openTab(target: string | null) {
     const id = uid("p");
     const tab: Tab = { id: uid("t"), root: { id }, focus: id };
-    this.panes[id] = { target, ended: false, error: "", blocks: false, connecting: false, since: 0 };
+    this.panes[id] = { target, ended: false, error: "", blocks: false, connecting: false, since: 0, filled: false, fillHint: "" };
     this.tabs.push(tab);
     this.activeId = tab.id;
     await this.start(id);
@@ -65,7 +89,7 @@ class Workspace {
     const tab = this.active;
     if (!tab) return this.openTab(target ?? null);
     const id = uid("p");
-    this.panes[id] = { target: target !== undefined ? target : (this.panes[tab.focus]?.target ?? null), ended: false, error: "", blocks: false, connecting: false, since: 0 };
+    this.panes[id] = { target: target !== undefined ? target : (this.panes[tab.focus]?.target ?? null), ended: false, error: "", blocks: false, connecting: false, since: 0, filled: false, fillHint: "" };
     tab.root = P.splitLeaf(tab.root, tab.focus, id, dir, uid("s"));
     tab.focus = id;
     await this.start(id);
@@ -76,7 +100,7 @@ class Workspace {
     const tab = this.tabs.find((t) => P.leaves(t.root).includes(paneId));
     if (!tab) return;
     const id = uid("p");
-    this.panes[id] = { target, ended: false, error: "", blocks: false, connecting: false, since: 0 };
+    this.panes[id] = { target, ended: false, error: "", blocks: false, connecting: false, since: 0, filled: false, fillHint: "" };
     tab.root = P.splitLeaf(tab.root, paneId, id, edge === "left" || edge === "right" ? "row" : "col", uid("s"), edge === "left" || edge === "top");
     tab.focus = id;
     this.activeId = tab.id;
@@ -165,6 +189,24 @@ class Workspace {
       if (s.received) info.connecting = false;
       s.term.onData((d) => {
         if (this.sessions.get(id) === s && this.panes[id]?.ended && d.includes("\r")) this.start(id);
+      });
+      const prompts = new PromptTracker();
+      s.onFilled = () => {
+        if (this.panes[id]) this.panes[id].filled = true;
+      };
+      s.onFillRefused = (why) => {
+        if (why === "changed" && this.panes[id]) {
+          this.panes[id].fillHint = "This connection's host, user or port changed since its password was saved, so it was not filled. Edit the connection and enter the password again.";
+        }
+      };
+      s.term.onWriteParsed(() => {
+        if (s.authed || !info.target || this.profileAuth(info.target) !== "password") return;
+        const act = prompts.observe(promptOnScreen(s.term));
+        if (act === "rejected") {
+          if (this.panes[id] && !this.panes[id].fillHint) this.panes[id].fillHint = "The stored password was rejected. Update it in the connection's settings.";
+        } else if (act === "send" && s.ws.readyState === WebSocket.OPEN) {
+          s.ws.send(JSON.stringify({ t: "fill", ...promptOnScreen(s.term)! }));
+        }
       });
       this.autoBlocks(id, s);
       s.onBlockMenu = (block, rect) => { this.blockMenu = { block, rect }; };

@@ -7,13 +7,15 @@ import * as ProfilesService from "./profilesservice.js";
 import * as SnippetsService from "./snippetsservice.js";
 import * as TerminalService from "./terminalservice.js";
 import * as ToolsService from "./toolsservice.js";
+import * as VaultService from "./vaultservice.js";
 export {
     FilesService,
     ForwardsService,
     ProfilesService,
     SnippetsService,
     TerminalService,
-    ToolsService
+    ToolsService,
+    VaultService
 };
 
 export type {
@@ -29,5 +31,6 @@ export type {
     PreviewResult,
     Profile,
     Snippet,
-    TunnelDTO
+    TunnelDTO,
+    VaultStatus
 } from "./models.js";

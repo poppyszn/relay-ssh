@@ -3,6 +3,7 @@ module github.com/poppyszn/relay-ssh/desktop
 go 1.27.3
 
 require (
+	filippo.io/age v1.3.2
 	github.com/BurntSushi/toml v1.6.0
 	github.com/coder/websocket v1.8.15
 	github.com/creack/pty v1.1.24
@@ -11,7 +12,6 @@ require (
 )
 
 require (
-	filippo.io/age v1.3.2 // indirect
 	filippo.io/hpke v0.4.0 // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect

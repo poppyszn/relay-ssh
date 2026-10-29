@@ -12,7 +12,7 @@ Three jobs, in order of importance:
 3. Jump hosts, tunnels, `scp`, and agent forwarding are saved profile properties,
    not flags you have to remember.
 
-It is not a terminal, a multiplexer, or an SSH client.
+It is not a terminal, a multiplexer, or an SSH client. The desktop app (Relay) wraps `sssh` with a native GUI, terminal tabs, and an optional encrypted vault for SSH passwords with safe auto-fill.
 
 ## The three invariants
 
@@ -51,8 +51,7 @@ that structurally impossible. Do not weaken it.
   The budget is two. Spend one only if the alternative is implementing crypto
   or a parser for a format you do not control.
 - **Does it store a secret?**
-  It should not. Passwords, passphrases, and 2FA codes are prompted for by
-  `ssh` itself. There is no keychain, no unlock screen, no encrypted field.
+  Relay stores **no** secrets by default. Passwords can be stored only if the user explicitly opts in per connection, and are kept only in the age-encrypted secret vault (`~/.config/sssh/vault.age`), unlocked with a master password, and never written to `connections.toml`, the generated SSH config, or logs. Key passphrases (delegated to ssh-agent and the macOS Keychain) and 2FA codes are never stored by Relay.
 
 ## Budgets, enforced by `scripts/guardrails.sh` in CI
 

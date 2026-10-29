@@ -115,7 +115,7 @@ func (t *TerminalService) handle(w http.ResponseWriter, r *http.Request) {
 	if t := q.Get("target"); t != "" && t != "local" && masterAlive(argv) {
 		_ = c.Write(r.Context(), websocket.MessageText, []byte(`{"t":"mux"}`))
 	}
-	s, err := startSession(argv, env, uint16(max(cols, 20)), uint16(max(rows, 5)))
+	s, err := startSession(argv, env, uint16(max(cols, 20)), uint16(max(rows, 5)), q.Get("target"))
 	if err != nil {
 		_ = c.Close(websocket.StatusInternalError, err.Error())
 		return
