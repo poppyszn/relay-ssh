@@ -17,6 +17,16 @@ func TestProfileValidateAcceptsAGoodProfile(t *testing.T) {
 	}
 }
 
+func TestProfileValidateAcceptsBlocksModes(t *testing.T) {
+	for _, mode := range []string{"", "on", "off"} {
+		p := valid()
+		p.Blocks = mode
+		if err := p.Validate(); err != nil {
+			t.Errorf("blocks %q: Validate() = %v, want nil", mode, err)
+		}
+	}
+}
+
 func TestProfileValidateRejectsBadFields(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -36,6 +46,7 @@ func TestProfileValidateRejectsBadFields(t *testing.T) {
 		{"port negative", func(p *Profile) { p.Port = -1 }},
 		{"port too large", func(p *Profile) { p.Port = 65536 }},
 		{"unknown auth", func(p *Profile) { p.Auth = "magic" }},
+		{"unknown blocks mode", func(p *Profile) { p.Blocks = "maybe" }},
 		{"empty auth", func(p *Profile) { p.Auth = "" }},
 		{"key auth without a key", func(p *Profile) { p.Auth = AuthKey; p.Key = "" }},
 		{"agent auth with a key", func(p *Profile) { p.Auth = AuthAgent; p.Key = "id_ed25519" }},

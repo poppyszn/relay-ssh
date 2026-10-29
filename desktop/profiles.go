@@ -31,6 +31,7 @@ type Profile struct {
 	Tags         []string    `json:"tags"`
 	Jump         string      `json:"jump"`
 	ForwardAgent bool        `json:"forwardAgent"`
+	Blocks       string      `json:"blocks"`
 	Tunnels      []TunnelDTO `json:"tunnels"`
 }
 
@@ -41,7 +42,7 @@ type ProfilesService struct{}
 func toProfile(c config.Profile) Profile {
 	p := Profile{
 		Name: c.Name, Host: c.Host, User: c.User, Port: c.Port, Auth: string(c.Auth),
-		Key: c.Key, Folder: c.Folder, Tags: c.Tags, Jump: c.Jump, ForwardAgent: c.ForwardAgent,
+		Key: c.Key, Folder: c.Folder, Tags: c.Tags, Jump: c.Jump, ForwardAgent: c.ForwardAgent, Blocks: c.Blocks,
 		Tunnels: []TunnelDTO{},
 	}
 	if p.Tags == nil {
@@ -56,7 +57,7 @@ func toProfile(c config.Profile) Profile {
 func fromProfile(p Profile) config.Profile {
 	c := config.Profile{
 		Name: p.Name, Host: p.Host, User: p.User, Port: p.Port, Auth: config.AuthType(p.Auth),
-		Key: p.Key, Folder: p.Folder, Tags: p.Tags, Jump: p.Jump, ForwardAgent: p.ForwardAgent,
+		Key: p.Key, Folder: p.Folder, Tags: p.Tags, Jump: p.Jump, ForwardAgent: p.ForwardAgent, Blocks: p.Blocks,
 	}
 	for _, t := range p.Tunnels {
 		c.Tunnels = append(c.Tunnels, config.Tunnel{Type: config.TunnelType(t.Type), Listen: t.Listen, Target: t.Target})

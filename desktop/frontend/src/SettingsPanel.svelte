@@ -49,6 +49,7 @@
       <div class="label">Behaviour</div>
       <label class="check"><input type="checkbox" bind:checked={settings.copyOnSelect} /><span>Copy on select<small>Selecting text copies it to the clipboard.</small></span></label>
       <label class="check"><input type="checkbox" bind:checked={settings.cursorBlink} /><span>Blinking cursor</span></label>
+      <label class="check"><input type="checkbox" bind:checked={settings.autoBlocks} /><span>Automatic command blocks over SSH<small>Types a short setup line into the remote bash or zsh after login. Each connection can override this. When off, you are offered it instead.</small></span></label>
     </section>
   </div>
 </div>
@@ -81,7 +82,7 @@
   .seg button:last-child { border-radius: 0 4px 4px 0; }
   .seg button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--strong); position: relative; z-index: 1; }
   .check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
-  .check input { width: 16px; height: 16px; margin: 2px 0 0; padding: 0; accent-color: var(--accent); }
+  .check input { flex: none; width: 16px; height: 16px; margin: 2px 0 0; padding: 0; accent-color: var(--accent); }
   .check span { display: grid; gap: 1px; }
   .check small { color: var(--muted); font-size: 11.5px; }
 </style>

@@ -60,7 +60,7 @@ that structurally impossible. Do not weaken it.
 | --- | --- |
 | Direct dependencies | 2 |
 | Lines per `.go` file | 400 |
-| Non-test Go lines, whole repo | 3000 |
+| Non-test Go lines, whole repo | 3010 |
 | `syscall.Exec` call sites | 1, in `internal/launch` |
 | TUI / SSH-protocol / PTY imports | 0 |
 
@@ -91,6 +91,12 @@ helper so deleting or moving a connection never makes its folder vanish) used
 it up: the CLI is now exactly at 3000. The folder operations themselves live in
 `desktop/`, outside this count, so the next CLI change needs a real saving or a
 reasoned bump.
+
+**3000 -> 3010, 2026-10-29.** One optional profile field, `blocks` (`"on"`, `"off"`
+or empty), the Relay desktop app's per-connection command-block mode, with its
+validation: 6 lines in `internal/config`. It belongs in the profile (it travels
+with backups and is repairable in an editor) and the CLI ignores it; the logic that
+uses it lives in `desktop/`. See spec section 9n.
 
 ## How to work
 

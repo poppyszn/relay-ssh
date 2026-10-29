@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -8,8 +9,10 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/coder/websocket"
 	"github.com/poppyszn/relay-ssh/internal/config"
@@ -107,6 +110,11 @@ func (t *TerminalService) handle(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	// A session that attaches to a login that is already open never authenticates, so
+	// ssh prints no marker for it: say so, so the page knows no prompt can follow.
+	if t := q.Get("target"); t != "" && t != "local" && masterAlive(argv) {
+		_ = c.Write(r.Context(), websocket.MessageText, []byte(`{"t":"mux"}`))
+	}
 	s, err := startSession(argv, env, uint16(max(cols, 20)), uint16(max(rows, 5)))
 	if err != nil {
 		_ = c.Close(websocket.StatusInternalError, err.Error())
@@ -145,5 +153,26 @@ func argvFor(target string) (argv, env []string, err error) {
 	// (files.go) reuse its authentication instead of asking again.
 	argv = []string{"ssh", "-F", p.GenConfig}
 	argv = append(argv, muxOptions(true)...)
+	// Once ssh has authenticated it runs this on this machine, before the remote shell
+	// starts. The page uses the marker to know the login is done (see loginMarker).
+	argv = append(argv, "-o", "PermitLocalCommand=yes", "-o", "LocalCommand="+loginMarker)
 	return append(argv, strings.TrimSpace(prof.Name)), nil, nil
+}
+
+// loginMarker is the LocalCommand that prints a private escape sequence (OSC 7771) into
+// the terminal. It only reaches the page, whose parser swallows it, and it is passed to
+// this ssh alone, never written to the generated config, so a jump host's child ssh
+// (whose stdout carries the tunnelled stream) cannot run it.
+const loginMarker = `printf '\033]7771;auth\007'`
+
+// masterAlive reports whether the connection in argv (an argv from argvFor) already has a
+// live shared login to attach to.
+func masterAlive(argv []string) bool {
+	if len(argv) < 2 {
+		return false
+	}
+	check := append(append([]string{}, argv[:len(argv)-1]...), "-O", "check", argv[len(argv)-1])
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	return exec.CommandContext(ctx, check[0], check[1:]...).Run() == nil
 }

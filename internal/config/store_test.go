@@ -26,7 +26,7 @@ func TestSaveThenLoadRoundTrips(t *testing.T) {
 		{
 			Name: "prod-web", Host: "10.0.0.5", User: "deploy", Port: 2222,
 			Auth: AuthKey, Key: "prod-web", Folder: "work/prod",
-			Tags: []string{"web", "prod"}, Jump: "bastion", ForwardAgent: true,
+			Tags: []string{"web", "prod"}, Jump: "bastion", ForwardAgent: true, Blocks: "on",
 			Tunnels: []Tunnel{{TunnelLocal, "5432", "db.internal:5432"}},
 		},
 		{Name: "bastion", Host: "b.example.com", User: "admin", Port: 22, Auth: AuthAgent},
@@ -53,6 +53,9 @@ func TestSaveThenLoadRoundTrips(t *testing.T) {
 	}
 	if p.Folder != "work/prod" || p.Jump != "bastion" || !p.ForwardAgent {
 		t.Errorf("folder/jump/forwardagent = %s/%s/%v", p.Folder, p.Jump, p.ForwardAgent)
+	}
+	if p.Blocks != "on" {
+		t.Errorf("blocks = %q, want on", p.Blocks)
 	}
 	if len(p.Tags) != 2 || p.Tags[0] != "web" {
 		t.Errorf("tags = %v", p.Tags)

@@ -104,6 +104,9 @@ func (p Profile) Validate() error {
 	if err := ValidateFolder(p.Folder); err != nil {
 		return fmt.Errorf("profile %q: %w", p.Name, err)
 	}
+	if p.Blocks != "" && p.Blocks != "on" && p.Blocks != "off" {
+		return fmt.Errorf("profile %q: blocks must be \"on\", \"off\" or empty, not %q", p.Name, p.Blocks)
+	}
 	for i, t := range p.Tunnels {
 		if err := t.Validate(); err != nil {
 			return fmt.Errorf("profile %q, tunnel %d: %w", p.Name, i+1, err)

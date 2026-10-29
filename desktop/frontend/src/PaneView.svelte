@@ -53,7 +53,7 @@
     {#if info?.connecting && info.target}
       <div class="cover" class:below-header={multi}><ConnectingOverlay target={info.target} {prof} since={info.since} oncancel={() => ws.cancelConnect(node.id)} /></div>
     {/if}
-    {#if info?.target && !info.connecting && !info.ended && !info.blocks}
+    {#if info?.target && !info.connecting && !info.ended && !info.blocks && !ws.autoBlocksFor(info.target)}
       {#key node.id}<BlocksHint id={node.id} />{/key}
     {/if}
     {#if sb.paneDrop?.id === node.id}

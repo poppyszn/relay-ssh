@@ -104,6 +104,7 @@ export interface Profile {
     "tags": string[] | null;
     "jump": string;
     "forwardAgent": boolean;
+    "blocks": string;
     "tunnels": TunnelDTO[] | null;
 }
 

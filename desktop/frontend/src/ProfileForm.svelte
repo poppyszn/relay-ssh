@@ -134,6 +134,14 @@
             <div><b>Forward SSH agent</b><span>Lets this host use your local keys. Only for hosts you trust.</span></div>
             <button type="button" role="switch" aria-checked={p.forwardAgent} aria-label="Forward SSH agent" class:on={p.forwardAgent} onclick={() => (p.forwardAgent = !p.forwardAgent)}><i></i></button>
           </div>
+          <div class="switch">
+            <div><b>Command blocks</b><span>Split this session's output into blocks. Needs bash or zsh on the host.</span></div>
+            <select bind:value={p.blocks} aria-label="Command blocks">
+              <option value="">App default</option>
+              <option value="on">Automatic</option>
+              <option value="off">Off</option>
+            </select>
+          </div>
         </section>
 
         <section class="last">
@@ -210,6 +218,7 @@
   .switch div { display: grid; gap: 1px; }
   .switch b { font-weight: 400; color: var(--strong); }
   .switch span { font-size: 11.5px; color: var(--muted); }
+  .switch select { flex: none; width: 128px; }
   .switch button { flex: none; width: 36px; height: 20px; border: 0; border-radius: 10px; background: var(--floatline); position: relative; padding: 0; }
   .switch button.on { background: var(--accent); }
   .switch i { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 7px; background: var(--switch-thumb); transition: left 0.12s; }
