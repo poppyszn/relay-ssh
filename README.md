@@ -35,7 +35,7 @@ companion that reads and writes the same data.
 - Connection tree with folders and subfolders, tags, search, jump hosts, agent forwarding and saved port
   forwards. Drag connections and folders to reorganise; every move asks for confirmation first.
 - Terminal with tabs, split panes, scrollback search, fonts and four themes (three dark, one light, or follow the system). With shell integration on,
-  each command becomes a block with its exit status and duration, started from the bottom of the pane, and a ⋯ menu
+  each command becomes a block with its directory, git branch, exit status and duration, started from the bottom of the pane, and a ⋯ menu
   on each block copies the command, its output, or both.
   Local zsh and bash are set up automatically; for a remote host you opt in explicitly.
 - **Tools:** health check with one-click fixes, passphrase-encrypted backup and restore, import from
@@ -147,7 +147,8 @@ forward_agent = true
 - [ ] CI for the desktop app, signed and notarized macOS releases, installers
 - [x] Per-block menu: copy command, output, or both
 - [x] Light theme (Daylight) and System, which follows the OS
-- [ ] Snippets, a Relay-drawn block header
+- [x] Block header: directory and git branch on every block
+- [ ] Snippets
 
 ## Contributing
 

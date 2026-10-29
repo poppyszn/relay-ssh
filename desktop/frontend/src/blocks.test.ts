@@ -80,6 +80,44 @@ describe("BlockTracker", () => {
     t.dispose();
   });
 
+  it("draws a header on the block's first row from the prompt marker's branch and directory", async () => {
+    const f = fake();
+    const t = new BlockTracker(f.term);
+    f.row.cursorY = 0; f.osc("A;main;~/code/relay"); f.osc("B");
+    f.type("ls\r");
+    f.row.cursorY = 3; f.osc("D;0"); f.osc("A;;~");
+    await f.flush();
+    const head = f.decos.find((d) => d.cls.includes("relay-head"))!;
+    expect(head).toMatchObject({ line: 0, height: 1 });
+    expect(head.cls).toContain("xterm-decoration");
+    expect(head.text).toContain("~/code/relay");
+    expect(head.text).toContain("main");
+    expect(f.decos.filter((d) => d.cls.includes("relay-head"))).toHaveLength(1);
+    // a directory that is only "~" and no branch: no branch part
+    f.row.cursorY = 3; f.osc("B"); f.type("pwd\r");
+    f.row.cursorY = 6; f.osc("D;0"); f.osc("A");
+    await f.flush();
+    const second = f.decos.filter((d) => d.cls.includes("relay-head"))[1];
+    expect(second.text).toBe("~");
+    t.dispose();
+  });
+
+  it("keeps a semicolon in the directory, draws no header without context, and renders it as text", async () => {
+    const f = fake();
+    const t = new BlockTracker(f.term);
+    f.row.cursorY = 0; f.osc("A;<img src=x>;~/a;b"); f.osc("B"); f.type("x\r");
+    f.row.cursorY = 2; f.osc("D;0"); f.osc("A"); // an old snippet: no branch or directory
+    f.osc("B"); f.type("y\r");
+    f.row.cursorY = 4; f.osc("D;0"); f.osc("A");
+    await f.flush();
+    const heads = f.decos.filter((d) => d.cls.includes("relay-head"));
+    expect(heads).toHaveLength(1);
+    expect(heads[0].text).toContain("~/a;b");
+    expect(heads[0].text).toContain("<img src=x>");
+    expect(f.elements.some((e) => e.querySelector("img"))).toBe(false);
+    t.dispose();
+  });
+
   it("the badge has a menu button that hands the block's command and output to the menu, once", async () => {
     const f = fake();
     f.lines.push("", "❯ ls", "a b", "", "");
