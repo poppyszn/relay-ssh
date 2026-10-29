@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/poppyszn/super-ssh-v2/internal/core"
-	"github.com/poppyszn/super-ssh-v2/internal/style"
+	"github.com/poppyszn/relay-ssh/internal/core"
+	"github.com/poppyszn/relay-ssh/internal/style"
 )
 
 const manualEntryOption = "Type a path manually..."

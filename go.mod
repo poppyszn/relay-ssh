@@ -1,4 +1,4 @@
-module github.com/poppyszn/super-ssh-v2
+module github.com/poppyszn/relay-ssh
 
 go 1.27.0
 

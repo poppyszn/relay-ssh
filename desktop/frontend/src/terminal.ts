@@ -5,7 +5,7 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import { BlockTracker } from "./blocks";
 import { settings } from "./settings.svelte";
 import "@xterm/xterm/css/xterm.css";
-import { TerminalService } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 // Ack to Go after this many bytes have been parsed by xterm. It must stay well
 // below Go's high watermark (1 MiB) or the pipe could stall waiting for an ack.

@@ -11,7 +11,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -28,7 +28,9 @@ export function Download(target: string, remote: string, local: string): $Cancel
  * List returns the entries of dir on the connection ("" means the login directory).
  */
 export function List(target: string, dir: string): $CancellablePromise<$models.Listing> {
-    return $Call.ByID(561149962, target, dir);
+    return $Call.ByID(561149962, target, dir).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 export function Mkdir(target: string, dir: string): $CancellablePromise<void> {
@@ -63,3 +65,6 @@ export function Rename(target: string, $from: string, to: string): $CancellableP
 export function Upload(target: string, local: string, remote: string): $CancellablePromise<void> {
     return $Call.ByID(3105064531, target, local, remote);
 }
+
+// Private type creation functions
+const $$createType0 = $models.Listing.createFrom;

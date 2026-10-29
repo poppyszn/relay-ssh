@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"filippo.io/age"
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/fsutil"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/fsutil"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 // ErrIncorrectPassphrase is returned by Restore when decryption or

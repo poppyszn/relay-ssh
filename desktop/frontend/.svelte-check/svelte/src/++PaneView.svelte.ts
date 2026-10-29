@@ -3,7 +3,7 @@
 import type { Node } from "./panes";
 import { isLeaf } from "./panes";
 import { ws } from "./workspace.svelte";
-import type { Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 import PaneView from "./PaneView.svelte";
 import SearchBar from "./SearchBar.svelte";
 

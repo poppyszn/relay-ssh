@@ -1,7 +1,7 @@
 ///<reference types="svelte" />
 ;
 import { tick } from "svelte";
-import type { Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 import { matches } from "./lib";
 ;
 

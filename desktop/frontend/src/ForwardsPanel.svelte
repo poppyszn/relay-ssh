@@ -1,6 +1,6 @@
 <script lang="ts">
   import ForwardDiagram from "./ForwardDiagram.svelte";
-  import { ForwardsService, ProfilesService, type ForwardInfo } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+  import { ForwardsService, ProfilesService, type ForwardInfo } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
   let { target, onclose, onopen, onchanged }: { target: string; onclose: () => void; onopen: () => void; onchanged: () => void } = $props();
 

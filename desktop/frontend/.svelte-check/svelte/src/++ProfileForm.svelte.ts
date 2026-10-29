@@ -1,6 +1,6 @@
 ///<reference types="svelte" />
 ;
-import { ProfilesService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import { ProfilesService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 ;
 
   // The form always edits real arrays, even though the generated type allows null.

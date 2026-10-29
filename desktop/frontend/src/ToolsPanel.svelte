@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+  import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
   type Tab = "health" | "backup" | "import" | "keys";
   let { initial = "health", onclose, onchanged, ongenerate }: { initial?: Tab; onclose: () => void; onchanged: () => void; ongenerate: () => void } = $props();

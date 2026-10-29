@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-11
 **Status:** Approved
-**Module:** `github.com/poppyszn/super-ssh-v2`
+**Module:** `github.com/poppyszn/relay-ssh`
 **Binary:** `sssh`
 
 ## Why v2 Exists

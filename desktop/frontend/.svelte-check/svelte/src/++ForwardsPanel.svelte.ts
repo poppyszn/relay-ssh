@@ -1,7 +1,7 @@
 ///<reference types="svelte" />
 ;
 import ForwardDiagram from "./ForwardDiagram.svelte";
-import { ForwardsService, ProfilesService, type ForwardInfo } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import { ForwardsService, ProfilesService, type ForwardInfo } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 ;type $$ComponentProps =  { target: string; onclose: () => void; onopen: () => void; onchanged: () => void };function $$render() {
 

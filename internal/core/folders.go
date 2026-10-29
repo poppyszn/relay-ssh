@@ -3,7 +3,7 @@ package core
 import (
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 // FolderWithin reports whether path is folder or lies beneath it.

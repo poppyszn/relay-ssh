@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 // ImportResult says which Host entries became profiles and which were skipped

@@ -1,4 +1,4 @@
-# super-ssh v2 — working agreement
+# relay-ssh (sssh and Relay) — working agreement
 
 Read this before changing anything. It encodes why v1 was abandoned.
 

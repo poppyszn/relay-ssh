@@ -1,15 +1,15 @@
 {
 	"fixed": {
-		"file_version": "0.1.0"
+		"file_version": "0.0.1"
 	},
 	"info": {
 		"0409": {
-			"ProductVersion": "0.1.0",
+			"ProductVersion": "0.0.1",
 			"CompanyName": "Precious Okpor",
 			"FileDescription": "SSH connection manager and terminal",
-			"LegalCopyright": "© 2026, My Company",
+			"LegalCopyright": "(c) 2026 Precious Okpor, MIT License",
 			"ProductName": "Relay",
-			"Comments": "This is a comment"
+			"Comments": "Open-source SSH connection manager built on OpenSSH"
 		}
 	}
 }

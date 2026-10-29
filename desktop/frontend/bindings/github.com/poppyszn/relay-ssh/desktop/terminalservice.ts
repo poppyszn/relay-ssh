@@ -9,7 +9,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -34,7 +34,9 @@ export function CustomChrome(): $CancellablePromise<boolean> {
  * Endpoint returns the socket URL and token. Bound to the frontend.
  */
 export function Endpoint(): $CancellablePromise<$models.Endpoint> {
-    return $Call.ByID(3604127172);
+    return $Call.ByID(3604127172).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 /**
@@ -50,3 +52,6 @@ export function IntegrationSnippet(): $CancellablePromise<string> {
 export function ReportBench(result: string): $CancellablePromise<void> {
     return $Call.ByID(643747799, result);
 }
+
+// Private type creation functions
+const $$createType0 = $models.Endpoint.createFrom;

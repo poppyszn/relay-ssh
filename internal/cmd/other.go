@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/core"
-	"github.com/poppyszn/super-ssh-v2/internal/launch"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
-	"github.com/poppyszn/super-ssh-v2/internal/style"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/core"
+	"github.com/poppyszn/relay-ssh/internal/launch"
+	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/style"
 )
 
 // Connect finds a profile and execs the SSH binary.

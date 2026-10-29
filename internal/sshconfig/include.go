@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/fsutil"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/fsutil"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 // The markers delimit the only part of ~/.ssh/config that sssh owns. Every

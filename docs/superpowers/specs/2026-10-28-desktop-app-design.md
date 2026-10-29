@@ -3,7 +3,7 @@
 **Date:** 2026-10-28
 **Status:** Draft. Decision D1 below needs the owner's explicit confirmation before any desktop code is written.
 **Owner:** Precious Okpor
-**Module:** `github.com/poppyszn/super-ssh-v2`
+**Module:** `github.com/poppyszn/relay-ssh`
 
 ## 0. How to use this document (read first)
 
@@ -37,7 +37,7 @@ The desktop app is called **Relay**. The CLI stays `sssh`. The owner has confirm
 
 - Display name in the app and window title: Relay.
 - Binary, package, app bundle, repo, and Homebrew names: `relay-ssh`.
-- Code directory stays `desktop/` (Section 6). Do not rename the existing module or the CLI.
+- Code directory stays `desktop/` (Section 6). The CLI keeps the name `sssh`. The Go module was renamed from `github.com/poppyszn/super-ssh-v2` to `github.com/poppyszn/relay-ssh` on 2026-10-29 to match the public repository.
 - In Phase 0, still check that `relay-ssh` is free on Homebrew (formula and cask), GitHub, and a usable domain, and record the result in a commit message. If it is also taken, stop and ask the owner.
 
 ## 3. D1: this reverses a documented decision (needs owner confirmation)
@@ -128,7 +128,7 @@ Proposed layout, to be evaluated and confirmed by Claude Code:
 The owner delegated D2 to D5 with the instruction to use the latest stable tech. D1 is treated as accepted on that basis; the owner can still veto it.
 
 - **D1:** accepted. The CLI keeps every invariant; the desktop app has its own (Section 5).
-- **D2:** `desktop/` with its own `go.mod`, tied by `go.work`. Go's `internal/` rule is path-based, so a module whose import path sits under `github.com/poppyszn/super-ssh-v2/` can import `internal/core`; confirm in Phase 1. Phase 0 extracted the UI-free logic into `internal/core` (profile resolve/remove, ssh_config import, backup/restore, doctor checks); `internal/cmd` is now a thin prompt/print layer over it.
+- **D2:** `desktop/` with its own `go.mod`, tied by `go.work`. Go's `internal/` rule is path-based, so a module whose import path sits under `github.com/poppyszn/relay-ssh/` can import `internal/core`; confirm in Phase 1. Phase 0 extracted the UI-free logic into `internal/core` (profile resolve/remove, ssh_config import, backup/restore, doctor checks); `internal/cmd` is now a thin prompt/print layer over it.
 - **D3:** shell out to `sftp`/`scp`, as preferred above.
 - **D4:** open until the Phase 1 spike measures Wails events against a loopback WebSocket.
 - **D5:** Wails **v3.0.0** (stable, released 2026-10-26). Frontend: Svelte 5, Vite 8, TypeScript, `@xterm/xterm` 6.0 with `@xterm/addon-webgl`, `-fit`, `-search`. Re-verify versions at the start of Phase 1.
@@ -164,7 +164,7 @@ Known gaps: only one terminal at a time (tabs are Phase 3); no import-from-`ssh_
 
 ## 9d. Phase 3 progress (2026-10-29)
 
-Design: the approved Claude Design canvas (flat structure with square tabs, edge-to-edge bar highlights, hairline borders; small radii only on controls; round status dots; Inter for UI, JetBrains Mono for the terminal, both bundled). Canvas: https://claude.ai/artifact/D1az9oH3pTN3a5zfY8jC2g (private to the owner).
+Design: the approved Claude Design canvas (flat structure with square tabs, edge-to-edge bar highlights, hairline borders; small radii only on controls; round status dots; Inter for UI, JetBrains Mono for the terminal, both bundled).
 
 Done (stage A/B): tab strip as the macOS title bar, flat sidebar, status bar, quick open with actions, redesigned connection form with a live preview from the real generator (`ProfilesService.Preview`) and a native key-file picker, tabs, split panes (drag to resize, per-pane headers when split), reconnect (button and Enter), native app menu with shortcuts (Cmd on macOS; Ctrl+Shift elsewhere so Ctrl+D and Ctrl+W still reach the shell). Verified under `wails3 dev` with `RELAY_BENCH=smoke`: tabs, splits, a command in every pane, dropped session detected, reconnect, close pane.
 

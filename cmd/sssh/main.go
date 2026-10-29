@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/poppyszn/super-ssh-v2/internal/cmd"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/cmd"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 // version is the tool version, overridden at release time with

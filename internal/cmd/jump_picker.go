@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"fmt"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/style"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/style"
 )
 
 const noJumpOption = "(no jump)"

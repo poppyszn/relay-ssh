@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/core"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
-	"github.com/poppyszn/super-ssh-v2/internal/style"
+	"github.com/poppyszn/relay-ssh/internal/core"
+	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/style"
 )
 
 // BackupCmd creates an age-encrypted gzip tarball of connections.toml and keys.

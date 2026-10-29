@@ -1,6 +1,6 @@
 ///<reference types="svelte" />
 ;
-import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 ;
 
   type Tab = "health" | "backup" | "import" | "keys";;

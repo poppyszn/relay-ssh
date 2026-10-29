@@ -14,7 +14,7 @@
 
 Every task's requirements implicitly include this section. Values are exact — do not substitute.
 
-- **Module path:** `github.com/poppyszn/super-ssh-v2`
+- **Module path:** `github.com/poppyszn/relay-ssh`
 - **Binary name:** `sssh`
 - **Go version:** `go 1.27.0` in `go.mod`
 - **Direct dependencies: exactly two.** `github.com/BurntSushi/toml v1.6.0` and `filippo.io/age v1.3.2`. Adding a third fails CI.
@@ -69,8 +69,8 @@ This task exists to make every later task's constraints machine-checked. The gua
 - [ ] **Step 1: Initialise the module and pin both dependencies**
 
 ```bash
-cd /Users/precious/Code/personal/super-ssh-v2
-go mod init github.com/poppyszn/super-ssh-v2
+cd /Users/precious/Code/personal/relay-ssh
+go mod init github.com/poppyszn/relay-ssh
 go get github.com/BurntSushi/toml@v1.6.0
 go get filippo.io/age@v1.3.2
 ```
@@ -1416,7 +1416,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/poppyszn/super-ssh-v2/internal/fsutil"
+	"github.com/poppyszn/relay-ssh/internal/fsutil"
 )
 
 // Load reads connections.toml.
@@ -1510,8 +1510,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 func fullStore() config.Store {
@@ -1713,9 +1713,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/fsutil"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/fsutil"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 // header carries no timestamp on purpose: identical input must produce
@@ -1834,7 +1834,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 func TestAddBlockToEmptyContent(t *testing.T) {
@@ -1995,8 +1995,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/fsutil"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/fsutil"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 // The markers delimit the only part of ~/.ssh/config that sssh owns. Every
@@ -2675,9 +2675,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
-	"github.com/poppyszn/super-ssh-v2/internal/sshconfig"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 )
 
 // app is the shared context every command needs. Streams are fields rather
@@ -2822,8 +2822,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 func testProfiles() []config.Profile {
@@ -2969,7 +2969,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 func cmdLs(a *app, args []string) error {
@@ -3118,7 +3118,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 const testKey = `-----BEGIN OPENSSH PRIVATE KEY-----
@@ -3354,8 +3354,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/keys"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/keys"
 )
 
 // cmdAdd has exactly two modes, and never a mixture.
@@ -3589,7 +3589,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 func TestCmdRmRemovesAProfile(t *testing.T) {
@@ -3755,7 +3755,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 func cmdRm(a *app, args []string) error {
@@ -4009,7 +4009,7 @@ Expected: FAIL — `prepareConnect` is undefined.
 package main
 
 import (
-	"github.com/poppyszn/super-ssh-v2/internal/launch"
+	"github.com/poppyszn/relay-ssh/internal/launch"
 )
 
 // prepareConnect resolves the profile, brings the generated config up to date,
@@ -4093,7 +4093,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 func profiles() []config.Profile {
@@ -4252,7 +4252,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 // ErrCancelled means the user backed out. Callers exit quietly: cancelling a
@@ -4371,7 +4371,7 @@ package main
 import (
 	"errors"
 
-	"github.com/poppyszn/super-ssh-v2/internal/pick"
+	"github.com/poppyszn/relay-ssh/internal/pick"
 )
 
 // cmdPickAndConnect is what a bare `sssh` runs.
@@ -4677,7 +4677,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/sshconfig"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 )
 
 // writeUserSSHConfig puts a hand-written config in place for import to read.
@@ -4817,10 +4817,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/importer"
-	"github.com/poppyszn/super-ssh-v2/internal/keys"
-	"github.com/poppyszn/super-ssh-v2/internal/sshconfig"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/importer"
+	"github.com/poppyszn/relay-ssh/internal/keys"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 )
 
 func cmdImport(a *app, args []string) error {
@@ -4981,7 +4981,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 const pass = "correct horse battery staple"
@@ -5248,7 +5248,7 @@ import (
 
 	"filippo.io/age"
 
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 const (
@@ -5420,7 +5420,7 @@ import (
 
 	"filippo.io/age"
 
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
 // Restore reproduces an archive into p.
@@ -5594,8 +5594,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/poppyszn/super-ssh-v2/internal/backup"
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/backup"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 func cmdBackup(a *app, args []string) error {
@@ -5743,9 +5743,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
-	"github.com/poppyszn/super-ssh-v2/internal/sshconfig"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 )
 
 func healthy(t *testing.T) (paths.Paths, config.Store) {
@@ -5914,9 +5914,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
-	"github.com/poppyszn/super-ssh-v2/internal/paths"
-	"github.com/poppyszn/super-ssh-v2/internal/sshconfig"
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 )
 
 type Status string
@@ -6080,7 +6080,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/poppyszn/super-ssh-v2/internal/doctor"
+	"github.com/poppyszn/relay-ssh/internal/doctor"
 )
 
 func cmdDoctor(a *app) error {
@@ -6193,7 +6193,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/launch"
+	"github.com/poppyszn/relay-ssh/internal/launch"
 )
 
 // prepareCopy validates the operands and returns the scp argv.
@@ -6256,7 +6256,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 func TestCmdEditUpdatesNamedFields(t *testing.T) {
@@ -6332,7 +6332,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/poppyszn/super-ssh-v2/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/config"
 )
 
 // cmdEdit has two forms.
@@ -6457,7 +6457,7 @@ without knowing sssh exists.
 ## Install
 
 ```bash
-go install github.com/poppyszn/super-ssh-v2/cmd/sssh@latest
+go install github.com/poppyszn/relay-ssh/cmd/sssh@latest
 ```
 
 `fzf` is recommended but optional — without it, `sssh` prints a numbered list.

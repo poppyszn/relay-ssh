@@ -1,4 +1,4 @@
-import { ProfilesService, type Profile } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
+import { ProfilesService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 import { canDrop, folderBase, folderParent, joinFolder } from "./lib";
 
 export type DragKind = "profile" | "folder";

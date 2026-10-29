@@ -1,0 +1,41 @@
+name: Bug report
+description: Something in Relay or sssh does not work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Do not include passwords, keys or private hostnames.**
+        For security problems use the private reporting link in SECURITY.md instead.
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      options: [Relay desktop app, sssh command line, Both / not sure]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. ...\n2. ...\n3. ..."
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      description: OS and version, how you ran Relay (wails3 dev or a build), and `ssh -V`.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output or screenshots
+      description: Console output, the Tools > Health result, or a screenshot. Remove anything sensitive.
