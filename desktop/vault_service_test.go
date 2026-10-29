@@ -14,7 +14,7 @@ import (
 	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
-// Section 6.1: No bound Wails method returns a secret.
+// No bound Wails method returns a secret.
 func TestVaultServiceNoBoundMethodReturnsSecret(t *testing.T) {
 	svc := VaultService{}
 	svcType := reflect.TypeOf(svc)
@@ -48,7 +48,7 @@ func TestVaultServiceNoBoundMethodReturnsSecret(t *testing.T) {
 	}
 }
 
-// Section 4.5: ProfilesService hooks keep secrets consistent with connections,
+// ProfilesService hooks keep secrets consistent with connections,
 // and locked vault never fails a profile save.
 func TestProfilesServiceKeepsSecretsConsistent(t *testing.T) {
 	home := t.TempDir()
@@ -159,7 +159,7 @@ func TestProfilesServiceKeepsSecretsConsistent(t *testing.T) {
 	}
 }
 
-// Section 6.2: No secret appears in logs, error strings, JSON sent to frontend,
+// No secret appears in logs, error strings, JSON sent to frontend,
 // connections.toml, or generated ssh config.
 func TestNoSecretLeakInConfigsOrLogs(t *testing.T) {
 	home := t.TempDir()

@@ -52,8 +52,8 @@ commands from the `desktop/` directory.
   total non-test lines, and where `syscall.Exec` may appear). The numbers are documented in
   `CLAUDE.md`. Raising one means updating `CLAUDE.md` first and explaining why in the commit; the
   desktop app has its own guardrails in `desktop/scripts/guardrails.sh`.
-- **Spec before code** for a new command or any change to the data model. The design notes live in
-  `docs/superpowers/specs/`; add or update the relevant section.
+- **Design before code** for a new command or any change to the data model: explain the reasoning in
+  the pull request description before building it.
 - **Use conventional commits** (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`), one logical
   change per commit.
 - **UI changes:** match the existing flat design (square structure, small radii on controls only, round

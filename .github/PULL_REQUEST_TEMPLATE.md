@@ -11,4 +11,4 @@
 
 ## Notes
 
-<!-- Anything reviewers should know: trade-offs, follow-ups, spec sections touched. -->
+<!-- Anything reviewers should know: trade-offs, follow-ups. -->

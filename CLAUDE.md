@@ -95,7 +95,7 @@ reasoned bump.
 or empty), the Relay desktop app's per-connection command-block mode, with its
 validation: 6 lines in `internal/config`. It belongs in the profile (it travels
 with backups and is repairable in an editor) and the CLI ignores it; the logic that
-uses it lives in `desktop/`. See spec section 9n.
+uses it lives in `desktop/`.
 
 **3010 -> 3050, 2026-10-29.** A security audit found that profile values were written into the
 generated ssh config unchecked, so a line break in a host, user, key or tunnel address (from a
@@ -105,15 +105,15 @@ characters in those fields (and spaces where they would split a value, and a hos
 `-`), and restore refuses a backup whose connections would not load instead of installing them,
 and caps how much of one archive entry it reads (`config.Parse` is `Load` without the file).
 About 40 lines in `internal/config` and `internal/core`, each covered by a test that fails
-without it. See spec section 9u.
+without it.
 
 ## How to work
 
 - **TDD.** Write the failing test, watch it fail, write the smallest code that
   passes, watch it pass, commit. A test you never saw fail proves nothing.
-- **Spec before code** for anything that adds a command or changes the data
-  model. Specs live in `docs/superpowers/specs/`, plans in
-  `docs/superpowers/plans/`.
+- **Design before code** for anything that adds a command or changes the data
+  model: write the reasoning down first (in the commit message, or the pull
+  request description) and, for a budget change, in the notes under Budgets.
 - **Hermetic tests.** Every filesystem test builds its own root with
   `t.TempDir()` and passes it to `paths.New`. Never touch the real `$HOME`.
   Never open a network connection. Never invoke `ssh`.
