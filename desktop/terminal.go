@@ -137,5 +137,9 @@ func argvFor(target string) (argv, env []string, err error) {
 	if err := core.Regenerate(p, store); err != nil {
 		return nil, nil, err
 	}
-	return []string{"ssh", "-F", p.GenConfig, strings.TrimSpace(prof.Name)}, nil, nil
+	// The terminal's connection is the multiplexing master, so file transfers
+	// (files.go) reuse its authentication instead of asking again.
+	argv = []string{"ssh", "-F", p.GenConfig}
+	argv = append(argv, muxOptions(true)...)
+	return append(argv, strings.TrimSpace(prof.Name)), nil, nil
 }

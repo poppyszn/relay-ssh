@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -70,5 +71,27 @@ func TestTerminalSocketRejectsBadOriginAndToken(t *testing.T) {
 	}
 	if _, err := dial(t, svc, "wails://localhost", "wrong"); err == nil {
 		t.Error("wrong token must be rejected")
+	}
+}
+
+// Profile sessions must start as the multiplexing master so the file browser can
+// attach to their authenticated connection, and the profile name stays last.
+func TestProfileSessionIsTheMultiplexMaster(t *testing.T) {
+	t.Setenv("SSSH_HOME", t.TempDir())
+	if err := (ProfilesService{}).Save("", Profile{Name: "web", Host: "h", User: "u", Port: 22, Auth: "agent"}); err != nil {
+		t.Fatal(err)
+	}
+	argv, _, err := argvFor("web")
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(argv, " ")
+	for _, want := range []string{"ControlMaster=auto", "ControlPath=", "ControlPersist=60s"} {
+		if runtime.GOOS != "windows" && !strings.Contains(joined, want) {
+			t.Errorf("argv %q missing %q", joined, want)
+		}
+	}
+	if argv[0] != "ssh" || argv[len(argv)-1] != "web" {
+		t.Errorf("argv = %v, want ssh ... web", argv)
 	}
 }
