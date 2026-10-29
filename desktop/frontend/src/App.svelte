@@ -512,6 +512,19 @@
       ws.session(victim)?.ws.close();
       await new Promise((r) => setTimeout(r, 400));
       out.endedDetected = ws.panes[victim]?.ended === true;
+      {
+        // the "session ended" banner sits near the top of its pane, and can be closed
+        ws.focus(victim); // its tab may not be the visible one
+        await tick();
+        await new Promise((r) => setTimeout(r, 200));
+        const banner = document.querySelector<HTMLElement>(".tabview.on .ended");
+        const paneBox = banner?.closest<HTMLElement>("[data-pane]")?.getBoundingClientRect();
+        const b = banner?.getBoundingClientRect();
+        const shown = { present: !!banner, inUpperHalf: !!(b && paneBox && b.top < paneBox.top + paneBox.height / 2) };
+        document.querySelector<HTMLElement>(".tabview.on .ended .dismiss")?.click();
+        await new Promise((r) => setTimeout(r, 200));
+        out.endedBanner = { ...shown, dismissed: !document.querySelector(".tabview.on .ended"), stillEnded: ws.panes[victim]?.ended === true };
+      }
       await ws.reconnect(victim);
       ws.session(victim)?.ws.send(enc.encode("echo again-$((6*7))\n"));
       for (let i = 0; i < 40 && !seen(victim, "again-42"); i++) await new Promise((r) => setTimeout(r, 100));

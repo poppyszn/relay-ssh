@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -91,6 +93,9 @@ func (ProfilesService) Save(oldName string, prof Profile) error {
 	if err := paths.EnsureDirs(p); err != nil {
 		return err
 	}
+	if msg := keyProblem(p, oldName, prof); msg != "" {
+		return errors.New(msg)
+	}
 	return core.SaveProfile(p, oldName, fromProfile(prof))
 }
 
@@ -142,8 +147,33 @@ func (ProfilesService) Preview(oldName string, prof Profile) PreviewResult {
 	s.Profiles = append(profiles, cand)
 	if err := s.Validate(); err != nil {
 		res.Problem = err.Error()
+	} else if msg := keyProblem(p, oldName, prof); msg != "" {
+		res.Problem = msg
 	}
 	return res
+}
+
+// keyProblem explains a key setting that ssh cannot use. A bare key name means a key adopted into
+// Relay's vault; if that file is not there ssh fails with "no such identity". Only a new profile or a
+// changed key is checked, so a connection already saved that way can still be edited.
+func keyProblem(p paths.Paths, oldName string, prof Profile) string {
+	key := prof.Key
+	if prof.Auth != "key" || key == "" || filepath.IsAbs(key) || strings.HasPrefix(key, "~") {
+		return ""
+	}
+	if s, err := config.Load(p.StoreFile); err == nil {
+		if old, ok := s.Find(oldName); ok && oldName != "" && old.Key == key {
+			return ""
+		}
+	}
+	if _, err := os.Stat(filepath.Join(p.KeysDir, filepath.Base(key))); err == nil {
+		return ""
+	}
+	hint := "Pick it from the Key list, or adopt it first in Tools → Keys."
+	if _, err := os.Stat(filepath.Join(filepath.Dir(p.SSHConfig), filepath.Base(key))); err == nil {
+		hint = fmt.Sprintf("It is in ~/.ssh: choose it from the Key list, enter ~/.ssh/%s, or adopt it in Tools → Keys.", filepath.Base(key))
+	}
+	return fmt.Sprintf("%q is not an adopted key. %s", key, hint)
 }
 
 // PickKeyFile opens the native file dialog on ~/.ssh and returns the chosen

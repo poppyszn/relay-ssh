@@ -8,7 +8,7 @@ import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/deskt
 
 export interface Tab { id: string; root: P.Node; focus: string }
 /** `connecting` is true from the start of a saved connection until ssh first writes anything (a prompt, a banner or an error). */
-export interface PaneInfo { target: string | null; ended: boolean; error: string; blocks: boolean; connecting: boolean; since: number }
+export interface PaneInfo { target: string | null; ended: boolean; error: string; blocks: boolean; connecting: boolean; since: number; /** The user closed the "session ended" banner. */ bannerHidden?: boolean }
 
 let seq = 0;
 const uid = (p: string) => `${p}${++seq}`;
@@ -146,6 +146,7 @@ class Workspace {
     if (!info) return;
     info.ended = false;
     info.error = "";
+    info.bannerHidden = false;
     info.blocks = false;
     // Local shells start at once; only a saved connection has a login to wait for.
     info.connecting = info.target !== null;

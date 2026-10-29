@@ -60,10 +60,11 @@
       <div class="dropzone {sb.paneDrop.edge}" class:below-header={multi} aria-hidden="true"><span>{sb.paneDrop.verb ? `${sb.paneDrop.verb} ${sb.paneDrop.edge}` : sb.drag?.kind === "pane" ? (sb.paneDrop.edge === "center" ? "Swap places" : `Move ${sb.paneDrop.edge}`) : sb.paneDrop.edge === "center" ? "Open in a new tab" : `Split ${sb.paneDrop.edge}`}</span></div>
     {/if}
     {#if ws.searchPane === node.id && ws.session(node.id)}<SearchBar session={ws.session(node.id)!} onclose={() => ws.closeSearch()} />{/if}
-    {#if info?.ended}
-      <div class="ended" role="alert">
+    {#if info?.ended && !info.bannerHidden}
+      <div class="ended" class:below-header={multi} role="alert">
         <div><strong>{info.error ? "Could not connect" : "Session ended"}</strong><span>{info.error || `Press Enter to reconnect to ${info.target ?? "local shell"}`}</span></div>
         <button class="btn primary" onclick={() => ws.reconnect(node.id)}>Reconnect</button>
+        <button class="dismiss" aria-label="Dismiss" title="Dismiss (press Enter in the terminal to reconnect)" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].bannerHidden = true; }}>&times;</button>
       </div>
     {/if}
   </section>
@@ -111,7 +112,11 @@
      padding of a parent. Block dividers bleed past it (theme.css). */
   .term :global(.pane-term) { position: absolute; inset: 0; background: var(--term); }
   .term :global(.pane-term .xterm) { padding: 14px 24px 18px; }
-  .ended { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 10px 14px 10px 16px; background: var(--active); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 10px 30px var(--shadow); white-space: nowrap; z-index: 3; }
+  /* Near the top of the pane, so it never covers the prompt or ssh's error text at the bottom. */
+  .ended { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 10px 8px 10px 16px; background: var(--active); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 10px 30px var(--shadow); white-space: nowrap; z-index: 3; }
+  .ended.below-header { top: 42px; }
+  .ended .dismiss { all: unset; width: 24px; height: 24px; display: grid; place-items: center; font-size: 16px; color: var(--dim); cursor: pointer; border-radius: 4px; }
+  .ended .dismiss:hover { color: var(--text); background: var(--line); }
   .ended div { display: grid; gap: 1px; }
   .ended span { font-size: 11.5px; color: var(--muted); }
 </style>
