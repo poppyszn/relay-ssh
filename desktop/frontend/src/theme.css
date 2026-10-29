@@ -53,3 +53,9 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: #2a3a52; border: 2px solid transparent; background-clip: content-box; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* Command blocks: xterm decorations drawn over the terminal (see blocks.ts). */
+.relay-block { pointer-events: none; border-top: 1px solid var(--line2); box-shadow: inset 2px 0 #3f7a58; }
+.relay-block.err { background: var(--err-bg); border-top-color: rgba(240, 123, 134, 0.55); border-bottom: 1px solid rgba(240, 123, 134, 0.55); box-shadow: inset 2px 0 var(--err); }
+.relay-badge { pointer-events: none; display: flex; align-items: center; justify-content: flex-end; padding-right: 14px; font: 500 11px var(--sans); color: var(--muted); }
+.relay-badge.err { color: var(--err-text); }

@@ -29,6 +29,7 @@
     { id: "new-tab", label: "New local tab", hint: mac ? "⌘T" : "Ctrl+Shift+T" },
     { id: "split-right", label: "Split pane right", hint: mac ? "⌘D" : "Ctrl+Shift+D" },
     { id: "split-down", label: "Split pane down", hint: mac ? "⇧⌘D" : "Ctrl+Alt+D" },
+    { id: "enable-blocks", label: "Enable command blocks in this session", hint: "" },
   ];
 
   async function refresh() {
@@ -59,6 +60,7 @@
       case "next-tab": return ws.cycle(1);
       case "prev-tab": return ws.cycle(-1);
       case "toggle-sidebar": return (sidebar = !sidebar);
+      case "enable-blocks": return ws.focusedPane && ws.enableBlocks(ws.focusedPane);
     }
   }
 
@@ -124,6 +126,17 @@
       const deadline = Date.now() + 8000;
       while (Date.now() < deadline && !panes.every((id, i) => seen(id, `smoke-${i}-42`))) await new Promise((r) => setTimeout(r, 100));
       out.found = panes.map((id, i) => seen(id, `smoke-${i}-42`));
+      // command blocks: the active tab's pane runs a good and a failing command
+      const live = panes[panes.length - 1];
+      // through xterm, like real typing, so the tracker sees Enter
+      const send = (cmd: string) => ws.session(live)?.term.input(cmd + "\r", true);
+      send("echo block-ok");
+      send("false");
+      for (let i = 0; i < 60 && !document.querySelector(".relay-block.err"); i++) await new Promise((r) => setTimeout(r, 100));
+      out.blocksActive = ws.panes[live]?.blocks === true;
+      out.okBlocks = document.querySelectorAll(".relay-block.ok").length;
+      out.errBlocks = document.querySelectorAll(".relay-block.err").length;
+      out.badges = [...document.querySelectorAll(".relay-badge")].map((b) => b.textContent);
       // ended pane -> reconnect
       const victim = panes[0];
       ws.session(victim)?.ws.close();

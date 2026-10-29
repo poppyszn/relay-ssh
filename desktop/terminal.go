@@ -85,7 +85,7 @@ func (t *TerminalService) handle(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	argv, err := argvFor(q.Get("target"))
+	argv, env, err := argvFor(q.Get("target"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -103,7 +103,7 @@ func (t *TerminalService) handle(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	s, err := startSession(argv, uint16(max(cols, 20)), uint16(max(rows, 5)))
+	s, err := startSession(argv, env, uint16(max(cols, 20)), uint16(max(rows, 5)))
 	if err != nil {
 		_ = c.Close(websocket.StatusInternalError, err.Error())
 		return
@@ -113,28 +113,29 @@ func (t *TerminalService) handle(w http.ResponseWriter, r *http.Request) {
 
 // argvFor maps a target to the process to run: "local" is the user's shell,
 // anything else is a profile addressed by its Host alias in the generated config.
-func argvFor(target string) ([]string, error) {
+func argvFor(target string) (argv, env []string, err error) {
 	if target == "" || target == "local" {
 		sh := os.Getenv("SHELL")
 		if sh == "" {
 			sh = "/bin/sh"
 		}
-		return []string{sh}, nil
+		argv, env = shellCommand(sh, integrationDir())
+		return argv, env, nil
 	}
 	p, err := paths.Default()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	s, err := config.Load(p.StoreFile)
+	store, err := config.Load(p.StoreFile)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	prof, ok := core.ResolveProfile(s, target)
+	prof, ok := core.ResolveProfile(store, target)
 	if !ok {
-		return nil, fmt.Errorf("profile %q not found", target)
+		return nil, nil, fmt.Errorf("profile %q not found", target)
 	}
-	if err := core.Regenerate(p, s); err != nil {
-		return nil, err
+	if err := core.Regenerate(p, store); err != nil {
+		return nil, nil, err
 	}
-	return []string{"ssh", "-F", p.GenConfig, strings.TrimSpace(prof.Name)}, nil
+	return []string{"ssh", "-F", p.GenConfig, strings.TrimSpace(prof.Name)}, nil, nil
 }
