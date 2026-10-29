@@ -19,6 +19,9 @@ import (
 var assets embed.FS
 
 func main() {
+	if os.Getenv("RELAY_BENCH") != "" {
+		keychainEnabled = false // test runs must never write to the real Keychain
+	}
 	var app *application.App
 	term, err := newTerminalService(func(res string) {
 		fmt.Println("RELAY_BENCH_RESULT " + res)

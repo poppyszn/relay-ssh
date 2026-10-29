@@ -19,9 +19,12 @@ import * as $models from "./models.js";
 /**
  * AdoptKey copies a private key into the vault so backups include it, and
  * points every profile that referenced the original path at the adopted copy.
+ * A key with a passphrase needs it: it is loaded into the ssh-agent (and the macOS Keychain) so ssh
+ * does not ask each time. Relay itself never stores the passphrase. If the passphrase is wrong,
+ * nothing is adopted.
  */
-export function AdoptKey(path: string): $CancellablePromise<void> {
-    return $Call.ByID(4131128423, path);
+export function AdoptKey(path: string, passphrase: string): $CancellablePromise<void> {
+    return $Call.ByID(4131128423, path, passphrase);
 }
 
 /**
@@ -61,6 +64,13 @@ export function ImportSSHConfig(): $CancellablePromise<$models.ImportReport> {
 }
 
 /**
+ * KeyNeedsPassphrase reports whether the private key at path is protected by a passphrase.
+ */
+export function KeyNeedsPassphrase(path: string): $CancellablePromise<boolean> {
+    return $Call.ByID(3750371710, path);
+}
+
+/**
  * Keys lists the keys Relay has adopted into the vault (covered by backups)
  * and the private keys found in ~/.ssh, with the profiles that use each.
  */
@@ -94,6 +104,14 @@ export function PickKeyToAdopt(): $CancellablePromise<string> {
  */
 export function PickRestorePath(): $CancellablePromise<string> {
     return $Call.ByID(850285592);
+}
+
+/**
+ * RememberPassphrase loads an adopted key into the ssh-agent (and, on macOS, has the Keychain
+ * remember its passphrase) so ssh stops asking for it. Needed again on a new machine after a restore.
+ */
+export function RememberPassphrase(name: string, passphrase: string): $CancellablePromise<void> {
+    return $Call.ByID(3932796737, name, passphrase);
 }
 
 /**

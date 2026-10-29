@@ -329,6 +329,46 @@
       await ToolsService.Backup(dest, "smoke-pass");
       await ToolsService.Restore(dest + ".age", "smoke-pass");
       out.tools = { healthRows, keyRows, profilesBefore: countBefore, profilesAfter: (await ProfilesService.List())?.length, needsPass: await ToolsService.NeedsPassphrase(dest + ".age") };
+      // keys with a passphrase: adopting asks for it, refuses a wrong one, and the adopted key then shows up in the form's picker
+      {
+        const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        const setVal = (el: HTMLInputElement, v: string) => { el.value = v; el.dispatchEvent(new Event("input", { bubbles: true })); };
+        const keyRow = (name: string) => [...document.querySelectorAll<HTMLElement>("[aria-label=Tools] .keys li")].find((li) => li.querySelector(".kname b")?.textContent === name);
+        toolsTab = "keys";
+        toolsOpen = true;
+        await tick();
+        for (let i = 0; i < 30 && !keyRow("id_locked"); i++) await wait(100);
+        const row0 = keyRow("id_locked");
+        const chips = [...(row0?.querySelectorAll(".chip") ?? [])].map((c) => c.textContent);
+        row0?.querySelector<HTMLElement>(".adopt")?.click();
+        await wait(500);
+        const asked = !!keyRow("id_locked")?.querySelector(".pass input[type=password]");
+        const submit = async (pass: string) => {
+          setVal(keyRow("id_locked")!.querySelector<HTMLInputElement>(".pass input")!, pass);
+          await tick();
+          keyRow("id_locked")!.querySelector<HTMLElement>(".pass button[type=submit]")?.click();
+          await wait(1500);
+        };
+        await submit("not-the-passphrase");
+        const wrong = { error: document.querySelector("[aria-label=Tools] .note.bad")?.textContent ?? null, stillAsking: !!keyRow("id_locked")?.querySelector(".pass"), adopted: keyRow("id_locked")?.textContent?.includes("in backups") };
+        await submit("smokepass");
+        const right = { adopted: keyRow("id_locked")?.textContent?.includes("in backups"), asking: !!keyRow("id_locked")?.querySelector(".pass") };
+        toolsOpen = false;
+        await tick();
+        newConnection("");
+        await tick();
+        await wait(500);
+        [...document.querySelectorAll<HTMLElement>('[role=radiogroup] button')].find((b) => b.textContent?.includes("Key file"))?.click();
+        await tick();
+        const sel = document.querySelector<HTMLSelectElement>('select[aria-label=Key]');
+        const options = [...(sel?.querySelectorAll("option") ?? [])].map((o) => o.textContent?.trim());
+        const groups = [...(sel?.querySelectorAll("optgroup") ?? [])].map((g) => g.label);
+        if (sel) { sel.value = "a:id_locked"; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+        await tick();
+        out.keysWithPassphrase = { chips, asked, wrong, right, picker: { options, groups }, picked: (document.querySelector<HTMLSelectElement>('select[aria-label=Key]'))?.value };
+        form = null;
+        await tick();
+      }
       // files: the real panel and service against a real sshd (only when a connection is given)
       if (box && dir) {
         filesTarget = box;

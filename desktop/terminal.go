@@ -156,6 +156,11 @@ func argvFor(target string) (argv, env []string, err error) {
 	// Once ssh has authenticated it runs this on this machine, before the remote shell
 	// starts. The page uses the marker to know the login is done (see loginMarker).
 	argv = append(argv, "-o", "PermitLocalCommand=yes", "-o", "LocalCommand="+loginMarker)
+	if keychainEnabled && prof.Auth == config.AuthKey && keyIsEncrypted(p, prof.Key) {
+		// macOS: ask the Keychain for the key's passphrase and keep the unlocked key in the agent. The
+		// generated config is read alone (-F), so the user's own ~/.ssh/config settings do not apply here.
+		argv = append(argv, "-o", "IgnoreUnknown=UseKeychain", "-o", "UseKeychain=yes", "-o", "AddKeysToAgent=yes")
+	}
 	return append(argv, strings.TrimSpace(prof.Name)), nil, nil
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -106,7 +107,7 @@ func TestKeysListAndAdopt(t *testing.T) {
 	if err != nil || len(ks) != 1 || ks[0].Adopted || len(ks[0].UsedBy) != 1 || ks[0].UsedBy[0] != "web" {
 		t.Fatalf("before adopt: %+v, %v", ks, err)
 	}
-	if err := tools.AdoptKey(key); err != nil {
+	if err := tools.AdoptKey(key, ""); err != nil {
 		t.Fatal(err)
 	}
 	ks, _ = tools.Keys()
@@ -115,5 +116,52 @@ func TestKeysListAndAdopt(t *testing.T) {
 	}
 	if got, _ := (ProfilesService{}).List(); got[0].Key != "id_ed25519" {
 		t.Errorf("profile should now use the adopted key by name, got %q", got[0].Key)
+	}
+}
+
+// Adopting a key that has a passphrase needs the passphrase: it is checked before anything is copied,
+// so a wrong one leaves no half-adopted key behind.
+func TestAdoptAskForTheKeysPassphrase(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("SSSH_HOME", home)
+	t.Setenv("SSH_AUTH_SOCK", startAgent(t))
+	keychainEnabled = false // never touch the real Keychain from a test
+	t.Cleanup(func() { keychainEnabled = runtime.GOOS == "darwin" })
+	ssh := filepath.Join(home, ".ssh")
+	_ = os.MkdirAll(ssh, 0o700)
+	locked := makeKey(t, ssh, "id_locked", "hunter2")
+	plain := makeKey(t, ssh, "id_plain", "")
+	tools := ToolsService{}
+
+	if !tools.KeyNeedsPassphrase(locked) || tools.KeyNeedsPassphrase(plain) {
+		t.Fatal("KeyNeedsPassphrase gave the wrong answer")
+	}
+	ks, _ := tools.Keys()
+	for _, k := range ks {
+		if k.Encrypted != (k.Name == "id_locked") {
+			t.Errorf("%s: Encrypted = %v", k.Name, k.Encrypted)
+		}
+	}
+	if err := tools.AdoptKey(locked, ""); err == nil {
+		t.Error("an encrypted key was adopted without its passphrase")
+	}
+	if err := tools.AdoptKey(locked, "wrong"); err == nil {
+		t.Error("an encrypted key was adopted with the wrong passphrase")
+	}
+	vault := filepath.Join(home, ".ssh", "sssh.d", "keys", "id_locked")
+	if _, err := os.Stat(vault); err == nil {
+		t.Error("a failed adoption left a copy of the key in the vault")
+	}
+	if err := tools.AdoptKey(locked, "hunter2"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(vault); err != nil {
+		t.Errorf("the adopted key is not in the vault: %v", err)
+	}
+	if got := agentKeys(t, os.Getenv("SSH_AUTH_SOCK")); !strings.Contains(got, "ED25519") {
+		t.Errorf("the adopted key was not loaded into the agent:\n%s", got)
+	}
+	if err := tools.AdoptKey(plain, ""); err != nil {
+		t.Errorf("a key without a passphrase needs none: %v", err)
 	}
 }

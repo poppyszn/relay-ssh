@@ -38,10 +38,12 @@ type ImportReport struct {
 }
 
 type KeyInfo struct {
-	Name    string   `json:"name"`
-	Path    string   `json:"path"`
-	Adopted bool     `json:"adopted"`
-	UsedBy  []string `json:"usedBy"`
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Adopted bool   `json:"adopted"`
+	// Encrypted means the key file is protected by a passphrase.
+	Encrypted bool     `json:"encrypted"`
+	UsedBy    []string `json:"usedBy"`
 }
 
 // setup resolves the paths and makes sure the directories exist, for methods
@@ -204,7 +206,9 @@ func (ToolsService) Keys() ([]KeyInfo, error) {
 	seen := map[string]bool{}
 	for _, name := range adopted {
 		seen[name] = true
-		out = append(out, KeyInfo{Name: name, Path: filepath.Join(p.KeysDir, name), Adopted: true, UsedBy: usedBy(name)})
+		vault := filepath.Join(p.KeysDir, name)
+		enc, _ := keyEncrypted(vault)
+		out = append(out, KeyInfo{Name: name, Path: vault, Adopted: true, Encrypted: enc, UsedBy: usedBy(name)})
 	}
 	for _, path := range core.FindKeyFiles(home) {
 		name := filepath.Base(path)
@@ -212,7 +216,8 @@ func (ToolsService) Keys() ([]KeyInfo, error) {
 			continue // already adopted under this name
 		}
 		tilde := "~/.ssh/" + name
-		out = append(out, KeyInfo{Name: name, Path: path, UsedBy: usedBy(path, tilde)})
+		enc, _ := keyEncrypted(path)
+		out = append(out, KeyInfo{Name: name, Path: path, Encrypted: enc, UsedBy: usedBy(path, tilde)})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].Adopted != out[j].Adopted {
@@ -223,9 +228,28 @@ func (ToolsService) Keys() ([]KeyInfo, error) {
 	return out, nil
 }
 
+// KeyNeedsPassphrase reports whether the private key at path is protected by a passphrase.
+func (ToolsService) KeyNeedsPassphrase(path string) bool {
+	enc, _ := keyEncrypted(path)
+	return enc
+}
+
+// RememberPassphrase loads an adopted key into the ssh-agent (and, on macOS, has the Keychain
+// remember its passphrase) so ssh stops asking for it. Needed again on a new machine after a restore.
+func (ToolsService) RememberPassphrase(name, passphrase string) error {
+	p, err := paths.Default()
+	if err != nil {
+		return err
+	}
+	return rememberPassphrase(filepath.Join(p.KeysDir, filepath.Base(name)), passphrase, keychainEnabled, "")
+}
+
 // AdoptKey copies a private key into the vault so backups include it, and
 // points every profile that referenced the original path at the adopted copy.
-func (ToolsService) AdoptKey(path string) error {
+// A key with a passphrase needs it: it is loaded into the ssh-agent (and the macOS Keychain) so ssh
+// does not ask each time. Relay itself never stores the passphrase. If the passphrase is wrong,
+// nothing is adopted.
+func (ToolsService) AdoptKey(path, passphrase string) error {
 	p, err := paths.Default()
 	if err != nil {
 		return err
@@ -234,8 +258,22 @@ func (ToolsService) AdoptKey(path string) error {
 		return err
 	}
 	name := filepath.Base(path)
+	encrypted, err := keyEncrypted(path)
+	if err != nil {
+		return err
+	}
+	if encrypted && passphrase == "" {
+		return errors.New("This key has a passphrase. Enter it so ssh does not have to ask for it each time.")
+	}
 	if _, err := keys.Adopt(p, path, name); err != nil {
 		return err
+	}
+	if encrypted {
+		vault := filepath.Join(p.KeysDir, name)
+		if err := rememberPassphrase(vault, passphrase, keychainEnabled, ""); err != nil {
+			os.Remove(vault) // nothing is adopted on a wrong passphrase
+			return err
+		}
 	}
 	s, err := config.Load(p.StoreFile)
 	if err != nil {

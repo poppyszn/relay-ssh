@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ProfilesService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { ProfilesService, ToolsService, type KeyInfo, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
   let { initial, oldName, profiles, folders, onsave, ondelete, oncancel }: {
     initial: Profile;
@@ -44,6 +44,25 @@
   function addTag() {
     for (const t of tagInput.split(",").map((s) => s.trim()).filter(Boolean)) if (!p.tags.includes(t)) p.tags.push(t);
     tagInput = "";
+  }
+  // The key list for the picker: keys adopted into the vault, and keys found in ~/.ssh.
+  let keyInfos = $state<KeyInfo[]>([]);
+  let otherKey = $state(false);
+  ToolsService.Keys().then((k) => (keyInfos = k ?? [])).catch(() => {});
+  const adoptedKeys = $derived(keyInfos.filter((k) => k.adopted));
+  const linkedKeys = $derived(keyInfos.filter((k) => !k.adopted));
+  const keyChoice = $derived.by(() => {
+    if (adoptedKeys.some((k) => k.name === p.key)) return `a:${p.key}`;
+    const linked = linkedKeys.find((k) => k.path === p.key || `~/.ssh/${k.name}` === p.key);
+    if (linked) return `l:${linked.path}`;
+    return otherKey || p.key ? "other" : "";
+  });
+  function pickKey(e: Event) {
+    const v = (e.currentTarget as HTMLSelectElement).value;
+    otherKey = v === "other";
+    if (v.startsWith("a:")) p.key = v.slice(2);
+    else if (v.startsWith("l:")) p.key = v.slice(2);
+    else if (v === "") p.key = "";
   }
   async function browse() {
     const f = await ProfilesService.PickKeyFile().catch(() => "");
@@ -107,7 +126,27 @@
             {/each}
           </div>
           {#if p.auth === "key"}
-            <div class="keyrow"><input class="mono" bind:value={p.key} required placeholder="id_ed25519 or ~/.ssh/id_ed25519" aria-label="Key file" /><button type="button" class="btn" onclick={browse}>Browse</button></div>
+            <div class="keyrow">
+              <select aria-label="Key" value={keyChoice} onchange={pickKey}>
+                <option value="" disabled>Choose a key…</option>
+                {#if adoptedKeys.length}
+                  <optgroup label="Adopted (in backups)">
+                    {#each adoptedKeys as k}<option value={`a:${k.name}`}>{k.name}{k.encrypted ? " (passphrase)" : ""}</option>{/each}
+                  </optgroup>
+                {/if}
+                {#if linkedKeys.length}
+                  <optgroup label="In ~/.ssh (not in backups)">
+                    {#each linkedKeys as k}<option value={`l:${k.path}`}>{k.name}{k.encrypted ? " (passphrase)" : ""}</option>{/each}
+                  </optgroup>
+                {/if}
+                <option value="other">Another file…</option>
+              </select>
+              {#if keyChoice === "other"}
+                <input class="mono" bind:value={p.key} required placeholder="~/.ssh/id_ed25519 or a full path" aria-label="Key file path" />
+                <button type="button" class="btn" onclick={browse}>Browse</button>
+              {/if}
+            </div>
+            {#if keyChoice.startsWith("l:") || keyChoice === "other"}<p class="note">This key stays where it is and is not in backups. Adopt it in Tools → Keys to copy it into Relay's vault.</p>{/if}
           {/if}
           <p class="note">{p.auth === "agent" ? "Uses keys loaded in your ssh-agent." : p.auth === "key" ? "Passphrases are asked by ssh and never stored." : "ssh asks for the password in the terminal. It is never stored."}</p>
         </section>
@@ -203,7 +242,8 @@
   .seg button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--strong); font-weight: 500; }
   .seg button.on svg { color: var(--accent-text); }
   .keyrow { display: flex; gap: 8px; }
-  .keyrow input { flex: 1; }
+  .keyrow select { flex: 1; min-width: 0; }
+  .keyrow input { flex: 1; min-width: 0; }
   .note { margin: 0; font-size: 12px; color: var(--muted); }
   .tags { height: 36px; display: flex; align-items: center; gap: 6px; padding: 0 8px; background: var(--field); border: 1px solid var(--fieldline); border-radius: 4px; overflow: hidden; }
   .tags:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
