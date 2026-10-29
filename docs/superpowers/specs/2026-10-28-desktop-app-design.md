@@ -270,6 +270,10 @@ Principle: Relay opens a terminal or a tunnel into something by running the real
 
 Deliberately not planned: broadcast input, an AWS credential store, cluster administration (create, delete, scale), a "production guard" that inspects typed commands. Tailscale import and runbooks are ideas for later.
 
+## 9t. Missing-key guard and the session-ended banner (2026-10-29)
+
+A connection whose key is a bare name means "a key adopted into the vault". Saving one whose file is not in `~/.ssh/sssh.d/keys/` made ssh fail with `no such identity ... No such file or directory` (a key typed by name that was never adopted). The form's live preview and Save now refuse it, with a message that says what to do (pick it from the Key list, enter `~/.ssh/<name>` when it is in `~/.ssh`, or adopt it in Tools > Keys); only a new profile or a changed key is checked, so a connection already stored that way can still be edited. The "session ended / could not connect" banner moved from the bottom of the pane to the top (below the header in split panes), so it no longer covers the prompt or ssh's own error text, and it has a close button; pressing Enter in the terminal still reconnects.
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.

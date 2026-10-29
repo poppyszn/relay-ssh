@@ -105,3 +105,47 @@ func TestProfileBlocksModeRoundTrips(t *testing.T) {
 		t.Errorf("blocks leaked into the generated ssh config:\n%s", cfg)
 	}
 }
+
+// A bare key name means "a key adopted into the vault". Saving one that is not there makes ssh fail with
+// "no such identity", so it is refused with a message that says what to do; an existing profile whose stored
+// key is already like that can still be edited.
+func TestSavingABareKeyNameRequiresAnAdoptedKey(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("SSSH_HOME", home)
+	svc := ProfilesService{}
+	_ = os.MkdirAll(home+"/.ssh", 0o700)
+	_ = os.WriteFile(home+"/.ssh/id_work", []byte("-----BEGIN OPENSSH PRIVATE KEY-----\nx\n"), 0o600)
+	base := Profile{Name: "box", Host: "h", User: "u", Port: 22, Auth: "key"}
+
+	missing := base
+	missing.Key = "id_work"
+	err := svc.Save("", missing)
+	if err == nil || !strings.Contains(err.Error(), "Tools") || !strings.Contains(err.Error(), "~/.ssh/id_work") {
+		t.Fatalf("a bare name with no adopted key: err = %v", err)
+	}
+	if got := svc.Preview("", missing).Problem; !strings.Contains(got, "not an adopted key") {
+		t.Errorf("Preview problem = %q", got)
+	}
+
+	for _, ok := range []string{"~/.ssh/id_work", home + "/.ssh/id_work"} {
+		p := base
+		p.Key = ok
+		if err := svc.Save("", p); err != nil {
+			t.Errorf("path %q should be accepted: %v", ok, err)
+		}
+		_ = svc.Delete("box")
+	}
+
+	_ = os.MkdirAll(home+"/.ssh/sssh.d/keys", 0o700)
+	_ = os.WriteFile(home+"/.ssh/sssh.d/keys/id_work", []byte("k"), 0o600)
+	if err := svc.Save("", missing); err != nil {
+		t.Errorf("an adopted key by name should be accepted: %v", err)
+	}
+	// once it is gone, unrelated edits to the saved connection still save
+	_ = os.Remove(home + "/.ssh/sssh.d/keys/id_work")
+	edit := missing
+	edit.Host = "other-host"
+	if err := svc.Save("box", edit); err != nil {
+		t.Errorf("editing another field of a stored profile was blocked: %v", err)
+	}
+}
