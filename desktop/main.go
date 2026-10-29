@@ -41,9 +41,10 @@ func main() {
 	}
 }
 
-// windowRadius is the corner radius, in points, of the frameless macOS window.
-// macOS draws its own very round corners on native windows; this is ours.
-const windowRadius = 10
+// windowRadius is the corner radius, in points, of the frameless macOS window: a
+// small one. macOS draws very round corners on native windows; this is ours.
+// Keep it equal to --window-radius in theme.css.
+const windowRadius = 6
 
 // customChrome reports whether Relay draws its own window frame and buttons
 // (macOS only). RELAY_NATIVE_FRAME=1 falls back to the native title bar.
@@ -67,7 +68,9 @@ func windowOptions() application.WebviewWindowOptions {
 		// corners show through, and the shadow follows the rounded shape.
 		opts.Frameless = true
 		opts.BackgroundType = application.BackgroundTypeTransparent
-		opts.Mac = application.MacWindow{CornerRadius: windowRadius}
+		// On macOS transparency comes from the backdrop, not BackgroundType; without it
+		// the window stays opaque and fills the rounded corners with a square background.
+		opts.Mac = application.MacWindow{CornerRadius: windowRadius, Backdrop: application.MacBackdropTransparent}
 	} else if runtime.GOOS == "darwin" {
 		opts.Mac = application.MacWindow{
 			TitleBar:                application.MacTitleBarHiddenInset,

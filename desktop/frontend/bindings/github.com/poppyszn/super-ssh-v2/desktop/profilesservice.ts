@@ -16,6 +16,13 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as $models from "./models.js";
 
 /**
+ * CreateFolder adds an empty folder, or subfolder when path contains slashes.
+ */
+export function CreateFolder(path: string): $CancellablePromise<void> {
+    return $Call.ByID(2182300031, path);
+}
+
+/**
  * Delete removes a profile by name.
  */
 export function Delete(name: string): $CancellablePromise<void> {
@@ -23,10 +30,32 @@ export function Delete(name: string): $CancellablePromise<void> {
 }
 
 /**
+ * DeleteFolder removes a folder and its empty subfolders. A folder that holds
+ * connections, directly or in a subfolder, is refused and they are named.
+ */
+export function DeleteFolder(path: string): $CancellablePromise<void> {
+    return $Call.ByID(3047769436, path);
+}
+
+/**
+ * Folders returns every folder, including empty ones and ancestors.
+ */
+export function Folders(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(3534440916);
+}
+
+/**
  * List returns every saved profile, sorted by name.
  */
 export function List(): $CancellablePromise<$models.Profile[] | null> {
     return $Call.ByID(1858099955);
+}
+
+/**
+ * MoveProfile puts a connection in a folder ("" for the top level).
+ */
+export function MoveProfile(name: string, folder: string): $CancellablePromise<void> {
+    return $Call.ByID(2194345455, name, folder);
 }
 
 /**
@@ -43,6 +72,14 @@ export function PickKeyFile(): $CancellablePromise<string> {
  */
 export function Preview(oldName: string, prof: $models.Profile): $CancellablePromise<$models.PreviewResult> {
     return $Call.ByID(2053742877, oldName, prof);
+}
+
+/**
+ * RenameFolder renames a folder or moves it elsewhere (a move is a rename to a
+ * new path). Every subfolder and connection beneath it follows.
+ */
+export function RenameFolder($from: string, to: string): $CancellablePromise<void> {
+    return $Call.ByID(2251253825, $from, to);
 }
 
 /**
