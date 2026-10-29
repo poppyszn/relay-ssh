@@ -11,6 +11,7 @@
   import PaneView from "./PaneView.svelte";
   import Palette from "./Palette.svelte";
   import ProfileForm from "./ProfileForm.svelte";
+  import Logo from "./Logo.svelte";
   import SettingsPanel from "./SettingsPanel.svelte";
   import ToolsPanel from "./ToolsPanel.svelte";
   import FilesPanel from "./FilesPanel.svelte";
@@ -428,7 +429,7 @@
             <PaneView node={t.root} tabId={t.id} multi={leaves(t.root).length > 1} {profiles} />
           </div>
         {:else}
-          <div class="welcome"><h1>Relay</h1><p>Open a connection from the list, or press <span class="kbd">{mac ? "⌘T" : "Ctrl+Shift+T"}</span> for a local shell.</p></div>
+          <div class="welcome"><Logo size={72} /><h1>Relay</h1><p>Open a connection from the list, or press <span class="kbd">{mac ? "⌘T" : "Ctrl+Shift+T"}</span> for a local shell.</p></div>
         {/each}
       </div>
     </main>
@@ -461,7 +462,8 @@
   .tabview { position: absolute; inset: 0; display: none; }
   .tabview.on { display: flex; }
   .welcome { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; color: var(--muted); }
-  .welcome h1 { color: var(--text); margin: 0 0 6px; font-weight: 600; }
+  .welcome h1 { color: var(--text); margin: 14px 0 6px; font-weight: 600; }
+  .welcome { justify-items: center; }
   .banner { margin: 0; padding: 8px 14px; display: flex; align-items: center; color: var(--err-text); background: var(--err-bg); border-bottom: 1px solid var(--err); }
   .banner button { all: unset; margin-left: auto; cursor: pointer; font-size: 16px; }
   .scrim { position: fixed; inset: 0; background: rgba(6, 10, 16, 0.66); display: flex; align-items: center; justify-content: center; z-index: 30; }

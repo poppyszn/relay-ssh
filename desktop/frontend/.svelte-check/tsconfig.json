@@ -33,6 +33,7 @@
     "../src/FilesPanel.svelte",
     "../src/ForwardDiagram.svelte",
     "../src/ForwardsPanel.svelte",
+    "../src/Logo.svelte",
     "../src/Palette.svelte",
     "../src/PaneView.svelte",
     "../src/ProfileForm.svelte",
