@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blankProfile, connectingHint, formatElapsed, groupByFolder, matches, parseTags } from "./lib";
+import { blankProfile, connectingHint, formatElapsed, groupByFolder, matches, paneEdge, parseTags, reorder, slotAt } from "./lib";
 
 const mk = (o: object) => ({ ...blankProfile(), host: "h", user: "u", ...o }) as ReturnType<typeof blankProfile>;
 
@@ -107,5 +107,45 @@ describe("connecting progress", () => {
   it("mentions the jump host when the route has one", () => {
     expect(connectingHint(9_000, true)).toMatch(/jump host/i);
     expect(connectingHint(2_000, true)).toBe("");
+  });
+});
+
+describe("tab reordering", () => {
+  it("moves an item to a slot (the gap before index n, so n is the end)", () => {
+    expect(reorder(["a", "b", "c", "d"], 0, 3)).toEqual(["b", "c", "a", "d"]);
+    expect(reorder(["a", "b", "c", "d"], 3, 1)).toEqual(["a", "d", "b", "c"]);
+    expect(reorder(["a", "b", "c"], 0, 3)).toEqual(["b", "c", "a"]);
+    expect(reorder(["a", "b", "c"], 2, 0)).toEqual(["c", "a", "b"]);
+  });
+
+  it("leaves the order alone when dropped where it already is", () => {
+    expect(reorder(["a", "b", "c"], 1, 1)).toEqual(["a", "b", "c"]);
+    expect(reorder(["a", "b", "c"], 1, 2)).toEqual(["a", "b", "c"]);
+  });
+
+  it("finds the slot under the pointer from the tab centres", () => {
+    const centres = [70, 210, 350];
+    expect(slotAt(centres, 10)).toBe(0);
+    expect(slotAt(centres, 100)).toBe(1);
+    expect(slotAt(centres, 300)).toBe(2);
+    expect(slotAt(centres, 900)).toBe(3);
+    expect(slotAt([], 50)).toBe(0);
+  });
+});
+
+describe("pane drop zones", () => {
+  const r = { left: 100, top: 50, width: 400, height: 300 };
+  it("splits toward the nearest edge", () => {
+    expect(paneEdge(r, 110, 200)).toBe("left");
+    expect(paneEdge(r, 490, 200)).toBe("right");
+    expect(paneEdge(r, 300, 55)).toBe("top");
+    expect(paneEdge(r, 300, 345)).toBe("bottom");
+  });
+  it("opens a new tab in the middle", () => {
+    expect(paneEdge(r, 300, 200)).toBe("center");
+  });
+  it("prefers the closer edge in a corner", () => {
+    expect(paneEdge(r, 105, 60)).toBe("left"); // 5/400 from the left, 10/300 from the top
+    expect(paneEdge(r, 130, 52)).toBe("top");
   });
 });

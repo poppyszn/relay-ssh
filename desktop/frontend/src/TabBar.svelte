@@ -4,9 +4,46 @@
   import WindowControls from "./WindowControls.svelte";
   import { Window } from "@wailsio/runtime";
   import { connSearch } from "./connsearch.svelte";
+  import { slotAt } from "./lib";
 
   let { custom, onsidebar, onsearch, onpalette, onsplit, onsettings, ontools, onfiles, onforwards }: { custom: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsplit: (dir: "row" | "col") => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void } = $props();
   const mac = navigator.userAgent.includes("Mac");
+
+  // Reordering tabs by dragging (pointer events, like the sidebar: native drag and drop is avoided).
+  let tabsEl: HTMLElement;
+  let drag = $state<{ id: string; slot: number; x: number } | null>(null);
+  let justDragged = false;
+
+  function press(e: PointerEvent, id: string) {
+    if (e.button !== 0) return;
+    const sx = e.clientX;
+    let active = false;
+    const tabs = () => [...tabsEl.querySelectorAll<HTMLElement>("[data-tab]")].map((t) => t.getBoundingClientRect());
+    const move = (ev: PointerEvent) => {
+      if (!active && Math.abs(ev.clientX - sx) < 6) return;
+      active = true;
+      const rects = tabs();
+      const slot = slotAt(rects.map((r) => r.left + r.width / 2), ev.clientX);
+      const edge = slot < rects.length ? rects[slot].left : (rects[rects.length - 1]?.right ?? 0);
+      drag = { id, slot, x: edge - tabsEl.getBoundingClientRect().left };
+    };
+    const end = (commit: boolean) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("keydown", key);
+      if (active) {
+        if (commit && drag) ws.moveTab(id, drag.slot);
+        justDragged = true;
+        setTimeout(() => (justDragged = false), 0);
+      }
+      drag = null;
+    };
+    const up = () => end(true);
+    const key = (ev: KeyboardEvent) => { if (ev.key === "Escape") end(false); };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("keydown", key);
+  }
 
   function status(t: (typeof ws.tabs)[number]) {
     const ids = leaves(t.root);
@@ -18,10 +55,10 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="strip drag" class:mac ondblclick={(e) => custom && e.target === e.currentTarget && Window.ToggleMaximise()}>
   {#if custom}<WindowControls />{/if}
-  <div class="tabs nodrag" role="tablist">
+  <div class="tabs nodrag" role="tablist" bind:this={tabsEl}>
     {#each ws.tabs as t (t.id)}
-      <div class="tab" class:active={t.id === ws.activeId} role="presentation">
-        <button class="main" role="tab" aria-selected={t.id === ws.activeId} onclick={() => ws.select(t.id)}>
+      <div class="tab" data-tab={t.id} class:active={t.id === ws.activeId} class:dragging={drag?.id === t.id} role="presentation">
+        <button class="main" role="tab" aria-selected={t.id === ws.activeId} onclick={() => !justDragged && ws.select(t.id)} onpointerdown={(e) => press(e, t.id)}>
           <span class="dot {status(t)}"></span>
           <span class="title">{ws.tabTitle(t)}</span>
           {#if leaves(t.root).length > 1}<span class="chip">{leaves(t.root).length}</span>{/if}
@@ -29,6 +66,7 @@
         <button class="x" aria-label="Close tab" onclick={() => ws.closeTab(t.id)}>&times;</button>
       </div>
     {/each}
+    {#if drag}<div class="slot" style="left: {drag.x}px"></div>{/if}
     <button class="plus" aria-label="New local tab" title="New local tab" onclick={() => ws.openTab(null)}>+</button>
   </div>
   <div class="search nodrag" role="search">
@@ -69,7 +107,9 @@
 <style>
   .strip { height: 40px; flex: none; display: flex; background: var(--strip); border-bottom: 1px solid var(--line); }
   .strip.mac { padding-left: 84px; }
-  .tabs { display: flex; min-width: 0; overflow: hidden; }
+  .tabs { position: relative; display: flex; min-width: 0; overflow: hidden; }
+  .tab.dragging { opacity: 0.45; }
+  .slot { position: absolute; top: 4px; bottom: 4px; width: 2px; margin-left: -1px; background: var(--accent); z-index: 2; pointer-events: none; }
   .tab { display: flex; align-items: center; height: 40px; min-width: 140px; max-width: 240px; border-right: 1px solid var(--line); color: var(--muted); }
   .tab.active { background: var(--bg); color: var(--text); box-shadow: inset 0 2px var(--accent); margin-bottom: -1px; height: 41px; }
   .tab:not(.active):hover { background: var(--hover); }
