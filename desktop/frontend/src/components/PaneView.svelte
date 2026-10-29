@@ -8,6 +8,7 @@
   import SearchBar from "./SearchBar.svelte";
   import ConnectingOverlay from "./ConnectingOverlay.svelte";
   import BlocksHint from "./BlocksHint.svelte";
+  import Icon from "./Icon.svelte";
 
   let { node, tabId, multi, profiles }: { node: Node; tabId: string; multi: boolean; profiles: Profile[] } = $props();
 
@@ -47,7 +48,7 @@
         {#if info?.filled}<span class="filled-note">password filled</span>{/if}
         {#if info?.connecting}<span class="wait">connecting…</span>{/if}
         {#if info?.ended}<span class="gone">disconnected</span>{/if}
-        <button class="close" data-nodrag aria-label="Close pane" onclick={() => ws.closePane(node.id)}>&times;</button>
+        <button type="button" class="icon-btn dense close" data-nodrag aria-label="Close pane" onclick={() => ws.closePane(node.id)}><Icon name="x" size={14} /></button>
       </header>
     {/if}
     <div class="term" use:attach={node.id}></div>
@@ -60,7 +61,7 @@
     {#if info?.fillHint}
       <div class="fill-hint" role="status">
         <span>{info.fillHint}</span>
-        <button class="hint-dismiss" aria-label="Dismiss hint" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].fillHint = ""; }}>&times;</button>
+        <button type="button" class="icon-btn dense" aria-label="Dismiss hint" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].fillHint = ""; }}><Icon name="x" size={14} /></button>
       </div>
     {/if}
     {#if sb.paneDrop?.id === node.id}
@@ -70,8 +71,8 @@
     {#if info?.ended && !info.bannerHidden}
       <div class="ended" class:below-header={multi} role="alert">
         <div><strong>{info.error ? "Could not connect" : "Session ended"}</strong><span>{info.error || `Press Enter to reconnect to ${info.target ?? "local shell"}`}</span></div>
-        <button class="btn primary" onclick={() => ws.reconnect(node.id)}>Reconnect</button>
-        <button class="dismiss" aria-label="Dismiss" title="Dismiss (press Enter in the terminal to reconnect)" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].bannerHidden = true; }}>&times;</button>
+        <button type="button" class="btn sm primary" onclick={() => ws.reconnect(node.id)}>Reconnect</button>
+        <button type="button" class="icon-btn dense" aria-label="Dismiss" title="Dismiss (press Enter in the terminal to reconnect)" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].bannerHidden = true; }}><Icon name="x" size={14} /></button>
       </div>
     {/if}
   </section>
@@ -94,7 +95,7 @@
   .handle:hover { background: var(--accent); }
   .leaf { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; background: var(--term); }
   .leaf.focused { box-shadow: inset 0 0 0 1px var(--accent-edge); }
-  header { cursor: grab; height: 28px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 0 0 14px; background: var(--bar); border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
+  header { cursor: grab; height: 28px; flex: none; display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s1) 0 var(--s3); background: var(--bar); border-bottom: 1px solid var(--line); font-size: var(--t-sm); color: var(--muted); }
   header strong { color: var(--text); font-weight: 500; }
   .dot { width: 7px; height: 7px; }
   .gone { color: var(--err-text); }
@@ -109,25 +110,20 @@
   .dropzone.bottom { top: 50%; }
   .dropzone.bottom.below-header { top: calc(50% + 14px); }
   .dropzone.center { inset: 18%; border-style: dashed; }
-  .dropzone span { padding: 4px 10px; background: var(--float); color: var(--accent-text); border: 1px solid var(--floatline); font-size: 12px; font-weight: 600; }
+  .dropzone span { padding: var(--s1) var(--s3); background: var(--float); color: var(--accent-text); border: 1px solid var(--floatline); border-radius: var(--r-sm); font-size: var(--t-sm); font-weight: 600; }
   .cover { position: absolute; inset: 0; z-index: 2; }
   .cover.below-header { top: 28px; }
-  .close { all: unset; margin-left: auto; width: 28px; height: 100%; display: grid; place-items: center; font-size: 15px; cursor: pointer; opacity: 0.6; }
-  .close:hover { opacity: 1; }
+  .close { margin-left: auto; }
   .term { flex: 1; min-height: 0; min-width: 0; position: relative; overflow: hidden; }
   /* Padding goes on the xterm element itself: FitAddon subtracts that, but not the
      padding of a parent. Block dividers bleed past it (theme.css). */
   .term :global(.pane-term) { position: absolute; inset: 0; background: var(--term); }
   .term :global(.pane-term .xterm) { padding: 14px 24px 18px; }
   /* Near the top of the pane, so it never covers the prompt or ssh's error text at the bottom. */
-  .ended { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 10px 8px 10px 16px; background: var(--active); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 10px 30px var(--shadow); white-space: nowrap; z-index: 3; }
+  .ended { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s2) var(--s3) var(--s4); background: var(--active); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-pop); white-space: nowrap; z-index: 3; }
   .ended.below-header { top: 42px; }
-  .ended .dismiss { all: unset; width: 24px; height: 24px; display: grid; place-items: center; font-size: 16px; color: var(--dim); cursor: pointer; border-radius: 4px; }
-  .ended .dismiss:hover { color: var(--text); background: var(--line); }
   .ended div { display: grid; gap: 1px; }
-  .ended span { font-size: 11.5px; color: var(--muted); }
-  .filled-note { font-size: 11px; color: var(--ok); margin-left: 4px; }
-  .fill-hint { position: absolute; top: 36px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: 8px; background: var(--bar); border: 1px solid var(--accent); color: var(--text); padding: 6px 12px; border-radius: 6px; font-size: 12px; box-shadow: 0 4px 16px var(--shadow); }
-  .hint-dismiss { all: unset; cursor: pointer; font-size: 14px; color: var(--muted); padding: 0 2px; }
-  .hint-dismiss:hover { color: var(--text); }
+  .ended span { font-size: var(--t-sm); color: var(--muted); }
+  .filled-note { font-size: var(--t-xs); color: var(--ok); margin-left: 4px; }
+  .fill-hint { position: absolute; top: 36px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; align-items: center; gap: var(--s2); background: var(--active); border: 1px solid var(--floatline); color: var(--text); padding: var(--s2) var(--s2) var(--s2) var(--s3); border-radius: var(--r-md); font-size: var(--t-sm); box-shadow: var(--e-pop); }
 </style>

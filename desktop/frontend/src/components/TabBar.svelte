@@ -6,8 +6,9 @@
   import { connSearch } from "../state/connsearch.svelte";
   import { slotAt, paneEdge } from "../lib/lib";
   import { sb } from "../state/foldertree.svelte";
+  import Icon from "./Icon.svelte";
 
-  let { custom, onsidebar, onsearch, onpalette, onsplit, onsettings, ontools, onfiles, onforwards, onsnippets }: { custom: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsplit: (dir: "row" | "col") => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void; onsnippets: () => void } = $props();
+  let { custom, connected, onsidebar, onsearch, onpalette, onsplit, onsettings, ontools, onfiles, onforwards, onsnippets }: { custom: boolean; /** The focused pane is a saved connection, so Files and Forwards have something to act on. */ connected: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsplit: (dir: "row" | "col") => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void; onsnippets: () => void } = $props();
   const mac = navigator.userAgent.includes("Mac");
 
   // Reordering tabs by dragging (pointer events, like the sidebar: native drag and drop is avoided).
@@ -71,79 +72,62 @@
   <div class="tabs nodrag" role="tablist" bind:this={tabsEl}>
     {#each ws.tabs as t (t.id)}
       <div class="tab" data-tab={t.id} class:active={t.id === ws.activeId} class:dragging={drag?.id === t.id} class:drop={sb.tabDrop === t.id && !leaves(t.root).includes(sb.drag?.id ?? "")} role="presentation">
-        <button class="main" role="tab" aria-selected={t.id === ws.activeId} onclick={() => !justDragged && ws.select(t.id)} onpointerdown={(e) => press(e, t.id)}>
+        <button type="button" class="main" role="tab" aria-selected={t.id === ws.activeId} onclick={() => !justDragged && ws.select(t.id)} onpointerdown={(e) => press(e, t.id)}>
           <span class="dot {status(t)}"></span>
           <span class="title">{ws.tabTitle(t)}</span>
           {#if leaves(t.root).length > 1}<span class="chip">{leaves(t.root).length}</span>{/if}
         </button>
-        <button class="x" aria-label="Close tab" onclick={() => ws.closeTab(t.id)}>&times;</button>
+        <button type="button" class="icon-btn dense x" aria-label="Close tab" onclick={() => ws.closeTab(t.id)}><Icon name="x" size={14} /></button>
       </div>
     {/each}
     {#if drag && drag.slot >= 0}<div class="slot" style="left: {drag.x}px"></div>{/if}
-    <button class="plus" data-newtab class:drop={sb.tabDrop === "new"} aria-label="New local tab" title="New local tab" onclick={() => ws.openTab(null)}>+</button>
+    <button type="button" class="icon-btn plus" data-newtab class:drop={sb.tabDrop === "new"} aria-label="New local tab" title="New local tab" onclick={() => ws.openTab(null)}><Icon name="plus" /></button>
   </div>
   <div class="search nodrag" role="search">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+    <Icon name="search" size={14} />
     <input bind:value={connSearch.query} placeholder="Search connections" aria-label="Search connections" oninput={onsearch}
            onkeydown={(e) => { if (e.key === "Escape") { connSearch.query = ""; e.stopPropagation(); } }} />
     {#if connSearch.query}
-      <button class="clear" aria-label="Clear search" onclick={() => (connSearch.query = "")}>&times;</button>
+      <button type="button" class="icon-btn dense" aria-label="Clear search" onclick={() => (connSearch.query = "")}><Icon name="x" size={14} /></button>
     {:else}
-      <button class="kbd" onclick={onpalette} title="Quick open">{mac ? "⌘K" : "Ctrl+K"}</button>
+      <button type="button" class="kbd" onclick={onpalette} title="Quick open">{mac ? "⌘K" : "Ctrl+K"}</button>
     {/if}
   </div>
   <div class="tools nodrag">
-    <button aria-label="Toggle connections" title="Toggle connections" onclick={onsidebar}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></svg>
-    </button>
-    <button aria-label="Split right" title={mac ? "Split pane right (⌘D)" : "Split pane right (Ctrl+Shift+D)"} onclick={() => onsplit("row")}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M12 4v16" /></svg>
-    </button>
-    <button aria-label="Split down" title={mac ? "Split pane down (⇧⌘D)" : "Split pane down (Ctrl+Alt+D)"} onclick={() => onsplit("col")}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 12h18" /></svg>
-    </button>
-    <button aria-label="Files" title="Browse files on this connection" onclick={onfiles}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
-    </button>
-    <button aria-label="Port forwards" title="Port forwards on this connection" onclick={onforwards}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4" /></svg>
-    </button>
-    <button aria-label="Snippets" title={mac ? "Snippets (⇧⌘S)" : "Snippets (Ctrl+Shift+S)"} onclick={onsnippets}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4H5v16h3M16 4h3v16h-3M9 9l2 2-2 2M13 13h3" /></svg>
-    </button>
-    <button aria-label="Tools" title="Tools: health, backup, import, keys" onclick={ontools}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3 17.8V21h3.2l6.3-6.3a4 4 0 0 0 5.2-5.4l-2.6 2.6-2.4-.6-.6-2.4z" /></svg>
-    </button>
-    <button aria-label="Settings" title="Settings" onclick={onsettings}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" /></svg>
-    </button>
+    <button type="button" class="icon-btn" aria-label="Toggle connections" title="Toggle connections" onclick={onsidebar}><Icon name="sidebar" /></button>
+    <button type="button" class="icon-btn" aria-label="Split right" title={mac ? "Split pane right (⌘D)" : "Split pane right (Ctrl+Shift+D)"} onclick={() => onsplit("row")}><Icon name="split-right" /></button>
+    <button type="button" class="icon-btn" aria-label="Split down" title={mac ? "Split pane down (⇧⌘D)" : "Split pane down (Ctrl+Alt+D)"} onclick={() => onsplit("col")}><Icon name="split-down" /></button>
+    <span class="rule" aria-hidden="true"></span>
+    <button type="button" class="icon-btn" aria-label="Files" title={connected ? "Browse files on this connection" : "Open a saved connection to browse its files"} disabled={!connected} onclick={onfiles}><Icon name="files" /></button>
+    <button type="button" class="icon-btn" aria-label="Port forwards" title={connected ? "Port forwards on this connection" : "Open a saved connection to manage its port forwards"} disabled={!connected} onclick={onforwards}><Icon name="forwards" /></button>
+    <button type="button" class="icon-btn" aria-label="Snippets" title={mac ? "Snippets (⇧⌘S)" : "Snippets (Ctrl+Shift+S)"} onclick={onsnippets}><Icon name="snippets" /></button>
+    <span class="rule" aria-hidden="true"></span>
+    <button type="button" class="icon-btn" aria-label="Tools" title="Tools: health, backup, import, keys" onclick={ontools}><Icon name="tools" /></button>
+    <button type="button" class="icon-btn" aria-label="Settings" title="Settings" onclick={onsettings}><Icon name="settings" /></button>
   </div>
 </div>
 
 <style>
-  .strip { height: 40px; flex: none; display: flex; background: var(--strip); border-bottom: 1px solid var(--line); }
+  .strip { height: 40px; flex: none; display: flex; align-items: center; background: var(--strip); border-bottom: 1px solid var(--line); }
   .strip.mac { padding-left: 84px; }
-  .tabs { position: relative; display: flex; min-width: 0; overflow: hidden; }
+  .tabs { position: relative; align-self: stretch; display: flex; align-items: center; min-width: 0; overflow: hidden; padding-left: var(--s1); }
+  .tab { position: relative; display: flex; align-items: center; align-self: stretch; flex: 0 1 200px; min-width: 56px; max-width: 240px; padding-right: var(--s1); border-radius: var(--r-sm) var(--r-sm) 0 0; color: var(--muted); transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
+  .tab:not(.active):hover { background: var(--hover); color: var(--text); }
+  .tab.active { background: var(--bg); color: var(--strong); margin-bottom: -1px; }
+  .tab.active::before { content: ""; position: absolute; inset: 0 var(--s2) auto var(--s2); height: 2px; border-radius: 0 0 2px 2px; background: var(--accent); }
   .tab.dragging { opacity: 0.45; }
   .tab.drop, .plus.drop { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
-  .slot { position: absolute; top: 4px; bottom: 4px; width: 2px; margin-left: -1px; background: var(--accent); z-index: 2; pointer-events: none; }
-  .tab { display: flex; align-items: center; height: 40px; flex: 0 1 200px; min-width: 56px; max-width: 240px; border-right: 1px solid var(--line); color: var(--muted); }
-  .tab.active { background: var(--bg); color: var(--text); box-shadow: inset 0 2px var(--accent); margin-bottom: -1px; height: 41px; }
-  .tab:not(.active):hover { background: var(--hover); }
-  .main { all: unset; flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0 0 0 16px; height: 100%; cursor: pointer; font-weight: 500; }
+  .slot { position: absolute; top: var(--s1); bottom: var(--s1); width: 2px; margin-left: -1px; background: var(--accent); z-index: 2; pointer-events: none; }
+  .main { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; gap: var(--s2); padding: 0 0 0 var(--s3); background: none; border: 0; color: inherit; font-weight: 500; text-align: left; }
   .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .x { all: unset; width: 28px; height: 100%; display: grid; place-items: center; font-size: 16px; cursor: pointer; opacity: 0.6; }
-  .x:hover { opacity: 1; color: var(--text); }
-  .plus { all: unset; width: 40px; height: 40px; display: grid; place-items: center; font-size: 18px; color: var(--muted); cursor: pointer; border-right: 1px solid var(--line); }
-  .plus:hover { color: var(--text); background: var(--hover); }
-  .search { margin: 6px 12px 6px auto; flex: none; width: 220px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; background: var(--field); border: 1px solid var(--line); border-radius: 4px; color: var(--muted); }
+  .x { opacity: 0; }
+  .tab:hover .x, .tab.active .x, .x:focus-visible { opacity: 1; }
+  .plus { margin-left: var(--s1); }
+  .search { margin: 0 var(--s3) 0 auto; flex: none; width: 220px; height: var(--h-sm); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s1) 0 var(--s3); background: var(--field); border: 1px solid var(--line); border-radius: var(--r-sm); color: var(--muted); }
   .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
-  .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; padding: 0; box-shadow: none; }
+  .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; padding: 0; box-shadow: none; font-size: var(--t-sm); }
   .search input:focus { box-shadow: none; }
-  .search .kbd, .search .clear { all: unset; cursor: pointer; font-size: 11px; color: var(--dim); padding: 0 4px; }
-  .search .clear { font-size: 15px; }
-  .search .clear:hover { color: var(--text); }
-  .tools { display: flex; }
-  .tools button { all: unset; width: 40px; height: 40px; display: grid; place-items: center; color: var(--muted); border-left: 1px solid var(--line); cursor: pointer; }
-  .tools button:hover { color: var(--text); background: var(--hover); }
+  .search .kbd { background: none; cursor: pointer; margin-right: var(--s1); }
+  .tools { display: flex; align-items: center; gap: 2px; padding-right: var(--s3); }
+  .rule { width: 1px; height: 16px; margin: 0 var(--s2); background: var(--line2); }
 </style>
