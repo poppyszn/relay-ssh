@@ -19,8 +19,8 @@ const zlogin = `[ -f "${RELAY_ORIG_ZDOTDIR:-$HOME}/.zlogin" ] && source "${RELAY
 `
 const zshrc = `# Relay shell integration. Sources the real .zshrc first.
 [ -f "${RELAY_ORIG_ZDOTDIR:-$HOME}/.zshrc" ] && source "${RELAY_ORIG_ZDOTDIR:-$HOME}/.zshrc"
-__relay_precmd() { local e=$?; print -n $'\e]133;D;'"$e"$'\a\e]133;A\a'; }
-__relay_ps1() { [[ "$PS1" == *$'\e]133;B\a'* ]] || PS1="${PS1}%{"$'\e]133;B\a'"%}"; }
+__relay_precmd() { local e=$?; print -n $'\e]133;D;'"$e"$'\a\n\e]133;A\a'; }
+__relay_ps1() { [[ "$PS1" == *$'\e]133;B\a'* ]] || PS1=$'\n'"${PS1}%{"$'\e]133;B\a'"%}"; }
 precmd_functions=(__relay_precmd $precmd_functions __relay_ps1)
 if [ -n "$RELAY_ORIG_ZDOTDIR" ]; then ZDOTDIR="$RELAY_ORIG_ZDOTDIR"; else unset ZDOTDIR; fi
 unset RELAY_ORIG_ZDOTDIR
@@ -34,16 +34,16 @@ for f in "$HOME/.bash_profile" "$HOME/.bash_login" "$HOME/.profile"; do
 done
 [ -z "$__relay_found" ] && [ -r "$HOME/.bashrc" ] && . "$HOME/.bashrc"
 unset __relay_found
-__relay_prompt() { local e=$?; printf '\033]133;D;%s\007\033]133;A\007' "$e"; }
+__relay_prompt() { local e=$?; printf '\033]133;D;%s\007\n\033]133;A\007' "$e"; }
 case "$PROMPT_COMMAND" in *__relay_prompt*) ;; *) PROMPT_COMMAND="__relay_prompt${PROMPT_COMMAND:+;$PROMPT_COMMAND}";; esac
-PS1="${PS1}\[\033]133;B\007\]"
+PS1="\n${PS1}\[\033]133;B\007\]"
 `
 
 // remoteSnippet turns the same hooks on in an interactive bash or zsh on a
 // remote host. Relay never types it on its own: the user asks for it, and it
 // appears in the terminal as an ordinary command. The leading space keeps it
 // out of history where HISTCONTROL=ignorespace is set.
-const remoteSnippet = ` if [ -n "$ZSH_VERSION" ]; then __r(){ local e=$?; printf '\033]133;D;%s\007\033]133;A\007' "$e"; }; __rp(){ case $PS1 in *133\;B*) ;; *) PS1="$PS1%{"$'\033]133;B\007'"%}";; esac; }; precmd_functions=(__r $precmd_functions __rp); elif [ -n "$BASH_VERSION" ]; then __r(){ local e=$?; printf '\033]133;D;%s\007\033]133;A\007' "$e"; }; PROMPT_COMMAND="__r${PROMPT_COMMAND:+;$PROMPT_COMMAND}"; PS1="$PS1\[\033]133;B\007\]"; else echo "relay: command blocks need bash or zsh"; fi; clear
+const remoteSnippet = ` if [ -n "$ZSH_VERSION" ]; then __r(){ local e=$?; printf '\033]133;D;%s\007\n\033]133;A\007' "$e"; }; __rp(){ case $PS1 in *133\;B*) ;; *) PS1=$'\n'"$PS1%{"$'\033]133;B\007'"%}";; esac; }; precmd_functions=(__r $precmd_functions __rp); elif [ -n "$BASH_VERSION" ]; then __r(){ local e=$?; printf '\033]133;D;%s\007\n\033]133;A\007' "$e"; }; PROMPT_COMMAND="__r${PROMPT_COMMAND:+;$PROMPT_COMMAND}"; PS1="\n$PS1\[\033]133;B\007\]"; else echo "relay: command blocks need bash or zsh"; fi; clear
 `
 
 // IntegrationSnippet returns the one-liner for remote shells. Bound to the frontend.

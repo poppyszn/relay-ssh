@@ -73,8 +73,11 @@
   .gone { color: var(--err-text); }
   .close { all: unset; margin-left: auto; width: 28px; height: 100%; display: grid; place-items: center; font-size: 15px; cursor: pointer; opacity: 0.6; }
   .close:hover { opacity: 1; }
-  .term { flex: 1; min-height: 0; min-width: 0; position: relative; padding: 6px 0 0 14px; }
-  .term :global(.pane-term) { position: absolute; inset: 6px 0 0 14px; }
+  .term { flex: 1; min-height: 0; min-width: 0; position: relative; overflow: hidden; }
+  /* Padding goes on the xterm element itself: FitAddon subtracts that, but not the
+     padding of a parent. Block dividers bleed past it (theme.css). */
+  .term :global(.pane-term) { position: absolute; inset: 0; background: var(--term); }
+  .term :global(.pane-term .xterm) { padding: 14px 24px 18px; }
   .ended { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 10px 14px 10px 16px; background: #1f2b3b; border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); white-space: nowrap; z-index: 3; }
   .ended div { display: grid; gap: 1px; }
   .ended span { font-size: 11.5px; color: var(--muted); }

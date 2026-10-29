@@ -26,6 +26,8 @@ export class BlockTracker {
   private t0 = 0;
   /** Enter presses that arrived before their prompt was drawn (type-ahead). */
   private ahead: number[] = [];
+  /** A finished command waiting for the next prompt, so its block can include the padding row after it. */
+  private done?: { start: IMarker; cmd: IMarker; code: number; ms: number };
   private active = false;
   private subs: IDisposable[] = [];
 
@@ -53,6 +55,7 @@ export class BlockTracker {
       this.onFirst?.();
     }
     if (kind === "A") {
+      this.draw();
       this.reset();
       this.start = this.term.registerMarker(0);
     } else if (kind === "B") {
@@ -76,20 +79,30 @@ export class BlockTracker {
   private finish(code: number) {
     const { start, cmd, ran, t0, term } = this;
     this.reset();
+    this.done = undefined;
     // Nothing run, no prompt seen yet, or a full-screen program: no block.
     if (!start || !cmd || !ran || term.buffer.active.type === "alternate") return;
-    const buf = term.buffer.active;
-    const height = Math.max(1, buf.baseY + buf.cursorY - start.line);
-    const failed = code !== 0;
-    const label = (failed ? `exit ${code} · ` : "") + formatDuration(Date.now() - t0);
+    this.done = { start, cmd, code, ms: Date.now() - t0 };
+  }
 
-    term.registerDecoration({ marker: start, x: 0, width: term.cols, height, layer: "top" })?.onRender((el) => {
+  /** Draws the pending block, ending where the next prompt begins. */
+  private draw() {
+    const d = this.done;
+    this.done = undefined;
+    if (!d) return;
+    const { term } = this;
+    const buf = term.buffer.active;
+    const height = Math.max(1, buf.baseY + buf.cursorY - d.start.line);
+    const failed = d.code !== 0;
+    const label = (failed ? `exit ${d.code} · ` : "") + formatDuration(d.ms);
+
+    term.registerDecoration({ marker: d.start, x: 0, width: term.cols, height, layer: "top" })?.onRender((el) => {
       // classList, never className: xterm's own positioning class lives on this element,
       // and onRender fires on every redraw.
       el.classList.add("relay-block", failed ? "err" : "ok");
     });
     // x: 1, not 0: xterm applies the right anchor only for a non-zero offset.
-    term.registerDecoration({ marker: cmd, anchor: "right", x: 1, width: 24, height: 1, layer: "top" })?.onRender((el) => {
+    term.registerDecoration({ marker: d.cmd, anchor: "right", x: 1, width: 24, height: 1, layer: "top" })?.onRender((el) => {
       el.classList.add("relay-badge", failed ? "err" : "ok");
       el.textContent = label;
     });

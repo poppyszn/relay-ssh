@@ -67,6 +67,15 @@ func TestShellIntegrationEmitsPromptMarkers(t *testing.T) {
 				t.Fatal(err)
 			}
 			got := readUntil(t, s, "\x1b]133;D;0\a", "\x1b]133;D;1\a")
+			// A blank row after the command (before the next prompt marker) and a
+			// leading blank row in the prompt give each block vertical padding.
+			if !strings.Contains(got, "\x1b]133;D;0\a\r\n\x1b]133;A\a") {
+				t.Errorf("%s: no blank row between the finish marker and the next prompt:\n%q", shell, got)
+			}
+			// Everything between A and the end of the prompt (B) must include a newline.
+			if i, j := strings.Index(got, "\x1b]133;A\a"), strings.Index(got, "\x1b]133;B\a"); i < 0 || j < i || !strings.Contains(got[i:j], "\n") {
+				t.Errorf("%s: prompt does not start with a blank row:\n%q", shell, got)
+			}
 			for _, m := range []string{"\x1b]133;A\a", "\x1b]133;B\a", "\x1b]133;D;0\a", "\x1b]133;D;1\a"} {
 				if !strings.Contains(got, m) {
 					t.Errorf("%s output missing %q:\n%q", shell, m, got)
