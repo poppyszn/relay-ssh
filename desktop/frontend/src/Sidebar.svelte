@@ -6,8 +6,9 @@
   import ConnRow from "./ConnRow.svelte";
   import AddMenu from "./AddMenu.svelte";
   import Card from "./Card.svelte";
+  import { connSearch } from "./connsearch.svelte";
 
-  let { profiles, folders, open, current, onconnect, onnew, onedit, onpalette, ontools, onchanged }: {
+  let { profiles, folders, open, current, onconnect, onnew, onedit, ontools, onchanged }: {
     profiles: Profile[];
     folders: string[];
     /** Connections that have an open tab. */
@@ -18,15 +19,13 @@
     /** Starts a new connection, in the given folder. */
     onnew: (folder: string) => void;
     onedit: (p: Profile) => void;
-    onpalette: () => void;
     ontools: (tab: "import" | "keys") => void;
     onchanged: () => void;
   } = $props();
 
-  let query = $state("");
   let addOpen = $state(false);
-  const searching = $derived(query.trim() !== "");
-  const tree = $derived(buildTree(profiles, folders, query));
+  const searching = $derived(connSearch.query.trim() !== "");
+  const tree = $derived(buildTree(profiles, folders, connSearch.query));
   const live = $derived(profiles.filter((p) => open.has(p.name)));
   const focus = (el: HTMLElement) => el.focus();
 
@@ -53,14 +52,6 @@
     {/if}
   </div>
 
-  <div class="searchrow">
-    <div class="search">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
-      <input bind:value={query} placeholder="Search" aria-label="Search connections" />
-      <button class="kbd" onclick={onpalette} title="Quick open">⌘K</button>
-    </div>
-  </div>
-
   {#if sb.error}<p class="err" role="alert">{sb.error}<button aria-label="Dismiss" onclick={() => (sb.error = "")}>&times;</button></p>{/if}
 
   <nav aria-label="Connections" data-scroll>
@@ -71,9 +62,14 @@
       {/each}
     {/if}
 
-    {#if tree.roots.length || sb.creatingIn === ""}
-      <div class="bar"><span class="label">Folders</span><span class="label">{folders.length}</span></div>
+    {#if tree.unfiled.length}
+      <div data-drop="">
+        {#each tree.unfiled as p (p.name)}
+          <ConnRow profile={p} depth={0} live={open.has(p.name)} current={current === p.name} {onconnect} {onedit} />
+        {/each}
+      </div>
     {/if}
+
     {#if sb.creatingIn === ""}
       <div class="new"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
         <input class="edit" placeholder="Folder name" bind:value={sb.newName} use:focus onblur={() => sb.commitCreate()}
@@ -82,15 +78,7 @@
     {#each tree.roots as n (n.path)}
       <Branch node={n} depth={0} {searching} {open} {current} {onconnect} {onedit} />
     {/each}
-
-    {#if tree.unfiled.length}
-      {#if tree.roots.length}<div class="bar"><span class="label">Unfiled</span><span class="label">{tree.unfiled.length}</span></div>{/if}
-      <div data-drop="">
-        {#each tree.unfiled as p (p.name)}
-          <ConnRow profile={p} depth={0} live={open.has(p.name)} current={current === p.name} {onconnect} {onedit} />
-        {/each}
-      </div>
-    {:else if !tree.roots.length}
+    {#if !tree.unfiled.length && !tree.roots.length && sb.creatingIn !== ""}
       <p class="empty">{profiles.length === 0 ? "No connections yet. Use Add to create one." : "No matches."}</p>
     {/if}
 
@@ -130,12 +118,6 @@
   .n { font-size: 11px; font-weight: 400; color: var(--dim); }
   .add { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px 0 9px; border: 0; border-radius: 4px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 12px; }
   .add:hover { background: var(--accent-hover); }
-  .searchrow { padding: 0 12px 10px; }
-  .search { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px 0 10px; background: var(--field); border: 1px solid var(--line); border-radius: 4px; color: var(--muted); }
-  .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
-  .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; padding: 0; box-shadow: none; }
-  .search input:focus { box-shadow: none; }
-  .search .kbd { background: none; cursor: pointer; }
   .err { margin: 0 12px 8px; padding: 7px 10px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--err-text); background: var(--err-bg); border: 1px solid var(--err); }
   .err button { all: unset; margin-left: auto; cursor: pointer; font-size: 15px; }
   nav { flex: 1; overflow: auto; position: relative; }

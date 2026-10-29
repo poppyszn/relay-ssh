@@ -3,8 +3,9 @@
   import { leaves } from "./panes";
   import WindowControls from "./WindowControls.svelte";
   import { Window } from "@wailsio/runtime";
+  import { connSearch } from "./connsearch.svelte";
 
-  let { custom, onsidebar, onsettings, ontools, onfiles, onforwards }: { custom: boolean; onsidebar: () => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void } = $props();
+  let { custom, onsidebar, onsearch, onpalette, onsettings, ontools, onfiles, onforwards }: { custom: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void } = $props();
   const mac = navigator.userAgent.includes("Mac");
 
   function status(t: (typeof ws.tabs)[number]) {
@@ -29,6 +30,16 @@
       </div>
     {/each}
     <button class="plus" aria-label="New local tab" title="New local tab" onclick={() => ws.openTab(null)}>+</button>
+  </div>
+  <div class="search nodrag" role="search">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+    <input bind:value={connSearch.query} placeholder="Search connections" aria-label="Search connections" oninput={onsearch}
+           onkeydown={(e) => { if (e.key === "Escape") { connSearch.query = ""; e.stopPropagation(); } }} />
+    {#if connSearch.query}
+      <button class="clear" aria-label="Clear search" onclick={() => (connSearch.query = "")}>&times;</button>
+    {:else}
+      <button class="kbd" onclick={onpalette} title="Quick open">{mac ? "⌘K" : "Ctrl+K"}</button>
+    {/if}
   </div>
   <div class="tools nodrag">
     <button aria-label="Toggle connections" title="Toggle connections" onclick={onsidebar}>
@@ -62,7 +73,14 @@
   .x:hover { opacity: 1; color: var(--text); }
   .plus { all: unset; width: 40px; height: 40px; display: grid; place-items: center; font-size: 18px; color: var(--muted); cursor: pointer; border-right: 1px solid var(--line); }
   .plus:hover { color: var(--text); background: var(--hover); }
-  .tools { margin-left: auto; display: flex; }
+  .search { margin: 6px 12px 6px auto; flex: none; width: 220px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; background: var(--field); border: 1px solid var(--line); border-radius: 4px; color: var(--muted); }
+  .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+  .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; padding: 0; box-shadow: none; }
+  .search input:focus { box-shadow: none; }
+  .search .kbd, .search .clear { all: unset; cursor: pointer; font-size: 11px; color: var(--dim); padding: 0 4px; }
+  .search .clear { font-size: 15px; }
+  .search .clear:hover { color: var(--text); }
+  .tools { display: flex; }
   .tools button { all: unset; width: 40px; height: 40px; display: grid; place-items: center; color: var(--muted); border-left: 1px solid var(--line); cursor: pointer; }
   .tools button:hover { color: var(--text); background: var(--hover); }
 </style>
