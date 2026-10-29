@@ -162,3 +162,48 @@ export function nextSession(ids: string[], focused: string): string | undefined 
   const i = ids.indexOf(focused);
   return ids.length === 0 ? undefined : ids[(i + 1) % ids.length];
 }
+
+export type PasswordPrompt =
+  | { kind: "account"; user: string; host: string }
+  | { kind: "generic" }
+  | null;
+
+/**
+ * Parses an OpenSSH password prompt line from terminal output.
+ * Strictly matches account prompts ("alice@10.0.0.5's password: ") and generic
+ * prompts ("Password: " / "(alice@host) Password: "), and rejects passphrases,
+ * 2FA, sudo, permission errors, and normal output.
+ */
+export function parsePasswordPrompt(line: string): PasswordPrompt {
+  const trimmed = line.trim();
+  if (!trimmed) return null;
+
+  // Reject common non-account or non-ssh prompts explicitly
+  if (
+    trimmed.startsWith("[sudo]") ||
+    trimmed.startsWith("sudo:") ||
+    trimmed.includes("passphrase") ||
+    trimmed.includes("Verification code") ||
+    trimmed.includes("continue connecting") ||
+    trimmed.includes("Permission denied")
+  ) {
+    return null;
+  }
+
+  // 1. Account prompt: user@host's password:
+  const accountMatch = trimmed.match(
+    /^([a-zA-Z0-9_.-]+)@(\[[a-fA-F0-9:.]+\]|[a-zA-Z0-9_.-]+)(?::\d+)?'s password:\s*$/i
+  );
+  if (accountMatch) {
+    const user = accountMatch[1];
+    const host = accountMatch[2].replace(/^\[|\]$/g, "");
+    return { kind: "account", user, host };
+  }
+
+  // 2. Generic prompt: "Password: " or "(user@host) Password: "
+  if (/^(?:\([^)]+\)\s+)?password:\s*$/i.test(trimmed)) {
+    return { kind: "generic" };
+  }
+
+  return null;
+}
