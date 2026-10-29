@@ -5,7 +5,7 @@
   import { Window } from "@wailsio/runtime";
   import { connSearch } from "./connsearch.svelte";
 
-  let { custom, onsidebar, onsearch, onpalette, onsettings, ontools, onfiles, onforwards }: { custom: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void } = $props();
+  let { custom, onsidebar, onsearch, onpalette, onsplit, onsettings, ontools, onfiles, onforwards }: { custom: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsplit: (dir: "row" | "col") => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void } = $props();
   const mac = navigator.userAgent.includes("Mac");
 
   function status(t: (typeof ws.tabs)[number]) {
@@ -44,6 +44,12 @@
   <div class="tools nodrag">
     <button aria-label="Toggle connections" title="Toggle connections" onclick={onsidebar}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></svg>
+    </button>
+    <button aria-label="Split right" title={mac ? "Split pane right (⌘D)" : "Split pane right (Ctrl+Shift+D)"} onclick={() => onsplit("row")}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M12 4v16" /></svg>
+    </button>
+    <button aria-label="Split down" title={mac ? "Split pane down (⇧⌘D)" : "Split pane down (Ctrl+Alt+D)"} onclick={() => onsplit("col")}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 12h18" /></svg>
     </button>
     <button aria-label="Files" title="Browse files on this connection" onclick={onfiles}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
