@@ -4,13 +4,14 @@ import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from 
 ;
 
   type Tab = "health" | "backup" | "import" | "keys";;
-;type $$ComponentProps =  { onclose: () => void; onchanged: () => void; ongenerate: () => void };function $$render() {
+;type $$ComponentProps =  { initial?: Tab; onclose: () => void; onchanged: () => void; ongenerate: () => void };function $$render() {
 
   
 
-  let { onclose, onchanged, ongenerate }:/*Ωignore_startΩ*/$$ComponentProps/*Ωignore_endΩ*/ = $props();
+  let { initial = "health", onclose, onchanged, ongenerate }:/*Ωignore_startΩ*/$$ComponentProps/*Ωignore_endΩ*/ = $props();
 
-  let tab = $state<Tab>("health");
+  // svelte-ignore state_referenced_locally
+  let tab = $state<Tab>(initial);
   const tabs: { id: Tab; label: string }[] = [
     { id: "health", label: "Health" },
     { id: "backup", label: "Backup & restore" },

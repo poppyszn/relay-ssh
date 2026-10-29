@@ -98,6 +98,7 @@ func buildMenu(app *application.App) *application.Menu {
 
 	shell := menu.AddSubmenu("Shell")
 	shell.Add("New Tab").SetAccelerator(acc("Cmd+T", "Ctrl+Shift+T")).OnClick(send("new-tab"))
+	shell.Add("New Folder").SetAccelerator(acc("Cmd+Shift+N", "Ctrl+Alt+N")).OnClick(send("new-folder"))
 	shell.Add("New Connection…").SetAccelerator(acc("Cmd+N", "Ctrl+Shift+N")).OnClick(send("new-connection"))
 	shell.Add("Find…").SetAccelerator(acc("Cmd+F", "Ctrl+Shift+F")).OnClick(send("find"))
 	shell.Add("Browse Files…").SetAccelerator(acc("Cmd+Shift+O", "Ctrl+Shift+O")).OnClick(send("files"))

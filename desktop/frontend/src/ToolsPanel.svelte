@@ -1,10 +1,11 @@
 <script lang="ts">
   import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 
-  let { onclose, onchanged, ongenerate }: { onclose: () => void; onchanged: () => void; ongenerate: () => void } = $props();
-
   type Tab = "health" | "backup" | "import" | "keys";
-  let tab = $state<Tab>("health");
+  let { initial = "health", onclose, onchanged, ongenerate }: { initial?: Tab; onclose: () => void; onchanged: () => void; ongenerate: () => void } = $props();
+
+  // svelte-ignore state_referenced_locally
+  let tab = $state<Tab>(initial);
   const tabs: { id: Tab; label: string }[] = [
     { id: "health", label: "Health" },
     { id: "backup", label: "Backup & restore" },
