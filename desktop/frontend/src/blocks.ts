@@ -1,8 +1,11 @@
 import type { IDecoration, IDisposable, IMarker, Terminal } from "@xterm/xterm";
+import { blockText, rowAt } from "./blocktext";
 
 // The slice of xterm's Terminal the tracker uses, so it can be tested with a fake.
-export type TermLike = Pick<Terminal, "cols" | "registerMarker" | "onData"> & {
-  buffer: { active: Pick<Terminal["buffer"]["active"], "baseY" | "cursorY" | "type"> };
+export type TermLike = Pick<Terminal, "cols" | "rows" | "registerMarker" | "onData"> & {
+  /** The terminal's DOM element; absent in tests, where hover tracking is skipped. */
+  element?: HTMLElement;
+  buffer: { active: Pick<Terminal["buffer"]["active"], "baseY" | "cursorX" | "cursorY" | "viewportY" | "type" | "length" | "getLine"> };
   parser: { registerOscHandler(id: number, cb: (data: string) => boolean): IDisposable };
   registerDecoration(o: Parameters<Terminal["registerDecoration"]>[0]): IDecoration | undefined;
 };
@@ -12,6 +15,27 @@ export function formatDuration(ms: number): string {
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
   return `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`;
 }
+
+/** What the block menu can copy from one block. */
+export interface BlockRef {
+  failed: boolean;
+  command(): string;
+  output(): string;
+  /** The command, then its output. */
+  all(): string;
+}
+
+interface Block {
+  start: IMarker;
+  cmd: IMarker;
+  /** Marks where the next prompt begins, i.e. the end of this block. */
+  end: IMarker;
+  cmdCol: number;
+  failed: boolean;
+  badge?: HTMLElement;
+}
+
+const DOTS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>';
 
 /**
  * Turns the shell's OSC 133 prompt markers into per-command blocks drawn as
@@ -27,11 +51,14 @@ export class BlockTracker {
   /** Enter presses that arrived before their prompt was drawn (type-ahead). */
   private ahead: number[] = [];
   /** A finished command waiting for the next prompt, so its block can include the padding row after it. */
-  private done?: { start: IMarker; cmd: IMarker; code: number; ms: number };
+  private done?: { start: IMarker; cmd: IMarker; cmdCol: number; code: number; ms: number };
+  private cmdCol = 0;
   private active = false;
   private subs: IDisposable[] = [];
+  private blocks: Block[] = [];
+  private hot?: Block;
 
-  constructor(private term: TermLike, private onFirst?: () => void) {
+  constructor(private term: TermLike, private onFirst?: () => void, private onMenu?: (ref: BlockRef, anchor: DOMRect) => void) {
     this.subs.push(
       term.parser.registerOscHandler(133, (data) => this.osc(data)),
       term.onData((d) => {
@@ -46,6 +73,43 @@ export class BlockTracker {
         }
       }),
     );
+    this.trackHover();
+  }
+
+  /** Marks the block under the pointer so its menu button shows. */
+  private trackHover() {
+    const el = this.term.element;
+    if (!el) return;
+    const move = (e: MouseEvent) => {
+      const screen = el.querySelector<HTMLElement>(".xterm-screen");
+      if (!screen) return;
+      const r = screen.getBoundingClientRect();
+      const row = rowAt(e.clientY, r.top, r.height / this.term.rows, this.term.buffer.active.viewportY);
+      this.setHot(this.blocks.find((b) => b.start.line >= 0 && b.start.line <= row && row < b.end.line));
+    };
+    const leave = () => this.setHot(undefined);
+    el.addEventListener("mousemove", move);
+    el.addEventListener("mouseleave", leave);
+    this.subs.push({ dispose: () => { el.removeEventListener("mousemove", move); el.removeEventListener("mouseleave", leave); } });
+  }
+
+  private setHot(b?: Block) {
+    if (b === this.hot) return;
+    this.hot?.badge?.classList.remove("hot");
+    this.hot = b;
+    b?.badge?.classList.add("hot");
+  }
+
+  private ref(b: Block): BlockRef {
+    const text = () => (b.start.isDisposed || b.cmd.isDisposed || b.end.isDisposed
+      ? { command: "", output: "" }
+      : blockText(this.term.buffer.active, { cmdLine: b.cmd.line, cmdCol: b.cmdCol, endLine: b.end.line }));
+    return {
+      failed: b.failed,
+      command: () => text().command,
+      output: () => text().output,
+      all: () => { const t = text(); return t.output ? `${t.command}\n${t.output}` : t.command; },
+    };
   }
 
   private osc(data: string): boolean {
@@ -60,6 +124,7 @@ export class BlockTracker {
       this.start = this.term.registerMarker(0);
     } else if (kind === "B") {
       this.cmd = this.term.registerMarker(0);
+      this.cmdCol = this.term.buffer.active.cursorX;
       const t = this.ahead.shift();
       if (t !== undefined) {
         this.ran = true;
@@ -82,7 +147,7 @@ export class BlockTracker {
     this.done = undefined;
     // Nothing run, no prompt seen yet, or a full-screen program: no block.
     if (!start || !cmd || !ran || term.buffer.active.type === "alternate") return;
-    this.done = { start, cmd, code, ms: Date.now() - t0 };
+    this.done = { start, cmd, cmdCol: this.cmdCol, code, ms: Date.now() - t0 };
   }
 
   /** Draws the pending block, ending where the next prompt begins. */
@@ -101,10 +166,38 @@ export class BlockTracker {
       // and onRender fires on every redraw.
       el.classList.add("relay-block", failed ? "err" : "ok");
     });
+    const end = term.registerMarker(0);
+    const block: Block | undefined = end ? { start: d.start, cmd: d.cmd, end, cmdCol: d.cmdCol, failed } : undefined;
+    if (block) {
+      this.blocks.push(block);
+      end.onDispose(() => (this.blocks = this.blocks.filter((x) => x !== block)));
+    }
     // x: 1, not 0: xterm applies the right anchor only for a non-zero offset.
     term.registerDecoration({ marker: d.cmd, anchor: "right", x: 1, width: 24, height: 1, layer: "top" })?.onRender((el) => {
       el.classList.add("relay-badge", failed ? "err" : "ok");
-      el.textContent = label;
+      // Built once; onRender fires on every redraw and must not wipe the button.
+      let text = el.querySelector<HTMLElement>(".badge-text");
+      if (!text) {
+        text = document.createElement("span");
+        text.className = "badge-text";
+        el.append(text);
+        if (block) {
+          const btn = document.createElement("button");
+          btn.className = "block-menu";
+          btn.type = "button";
+          btn.setAttribute("aria-label", "Block options");
+          btn.innerHTML = DOTS;
+          // keep the terminal from starting a text selection under the button
+          btn.addEventListener("mousedown", (e) => e.stopPropagation());
+          btn.addEventListener("click", (e) => { e.stopPropagation(); this.onMenu?.(this.ref(block), btn.getBoundingClientRect()); });
+          el.append(btn);
+        }
+      }
+      text.textContent = label;
+      if (block) {
+        block.badge = el;
+        el.classList.toggle("hot", block === this.hot);
+      }
     });
   }
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
-  import { Events } from "@wailsio/runtime";
+  import { Clipboard, Events } from "@wailsio/runtime";
   import { runBench } from "./bench";
   import { blankProfile } from "./lib";
   import { ws } from "./workspace.svelte";
@@ -12,6 +12,8 @@
   import Palette from "./Palette.svelte";
   import ProfileForm from "./ProfileForm.svelte";
   import Logo from "./Logo.svelte";
+  import BlockMenu from "./BlockMenu.svelte";
+  import { copyText } from "./clipboard";
   import SettingsPanel from "./SettingsPanel.svelte";
   import ToolsPanel from "./ToolsPanel.svelte";
   import FilesPanel from "./FilesPanel.svelte";
@@ -35,6 +37,14 @@
   let confirmDelete = $state<Profile | null>(null);
   let benchHost = $state<HTMLElement>();
   let customChrome = $state(false);
+  let toast = $state("");
+  let toastTimer: ReturnType<typeof setTimeout> | undefined;
+  async function copied(what: string, text: string) {
+    const ok = await copyText(text);
+    toast = ok ? `Copied ${what}` : "Could not copy to the clipboard";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (toast = ""), 1800);
+  }
 
   const open = $derived(new Set(ws.tabs.flatMap((t) => leaves(t.root).map((id) => ws.panes[id]?.target ?? "")).filter(Boolean)));
   const actions = [
@@ -395,6 +405,34 @@
         for (const f of ["smoke-a/smoke-b", "smoke-a", "smoke-b"]) await ProfilesService.DeleteFolder(f).catch(() => {});
         await refresh();
       }
+      // block menu: hover a block, open its menu, copy three ways, and read the real clipboard back
+      {
+        const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        const termEl = ws.session(live)?.term.element;
+        const okBlock = document.querySelector<HTMLElement>(".tabview.on .relay-block.ok");
+        const menu: Record<string, unknown> = {};
+        if (termEl && okBlock) {
+          const r = okBlock.getBoundingClientRect();
+          termEl.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: r.left + 80, clientY: r.top + 8 }));
+          await wait(100);
+          menu.hotBadges = document.querySelectorAll(".tabview.on .relay-badge.hot").length;
+          const copies: Record<string, string> = {};
+          for (const label of ["Copy command", "Copy output", "Copy command and output"]) {
+            const hot = document.querySelector<HTMLElement>(".tabview.on .relay-badge.hot .block-menu");
+            hot?.click();
+            await wait(150);
+            const item = [...document.querySelectorAll<HTMLButtonElement>('[aria-label="Block actions"] [role=menuitem]')].find((b) => b.textContent?.includes(label) && !b.textContent.includes(label + " and"));
+            const exact = label === "Copy command and output" ? [...document.querySelectorAll<HTMLButtonElement>('[aria-label="Block actions"] [role=menuitem]')].find((b) => b.textContent?.includes("and output")) : item;
+            exact?.click();
+            await wait(200);
+            copies[label] = await Clipboard.Text();
+          }
+          menu.copies = copies;
+          menu.toast = document.querySelector(".toast")?.textContent?.trim() ?? null;
+          menu.menuClosed = !document.querySelector('[aria-label="Block actions"]');
+        }
+        out.blockMenu = menu;
+      }
       // ended pane -> reconnect
       const victim = panes[0];
       ws.session(victim)?.ws.close();
@@ -440,6 +478,8 @@
 {#if forwardsTarget}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/if}
 {#if filesTarget}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/if}
 {#if toolsOpen}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/if}
+{#if ws.blockMenu}<BlockMenu block={ws.blockMenu.block} rect={ws.blockMenu.rect} oncopy={copied} onclose={() => (ws.blockMenu = null)} />{/if}
+{#if toast}<div class="toast" role="status"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10" /></svg>{toast}</div>{/if}
 {#if settingsOpen}<SettingsPanel onclose={() => (settingsOpen = false)} />{/if}
 {#if palette}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/if}
 {#if form}
@@ -470,5 +510,7 @@
   .confirm { width: min(420px, 92vw); background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; padding: 18px 20px; }
   .confirm p { margin: 0 0 16px; }
   .buttons { display: flex; justify-content: flex-end; gap: 8px; }
+  .toast { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 8px; padding: 9px 16px; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); font-size: 12.5px; color: var(--text); }
+  .toast svg { color: var(--ok); }
   .danger-fill { background: var(--err); border-color: var(--err); color: #1a0508; }
 </style>

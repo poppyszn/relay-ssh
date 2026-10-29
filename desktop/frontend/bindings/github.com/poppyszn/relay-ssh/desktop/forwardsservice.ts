@@ -10,7 +10,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -36,10 +36,5 @@ export function Cancel(target: string, kind: string, listen: string, dest: strin
  * the saved connection's own tunnels plus any added here.
  */
 export function Status(target: string): $CancellablePromise<$models.ForwardStatus> {
-    return $Call.ByID(3198048829, target).then(($result: any) => {
-        return $$createType0($result);
-    });
+    return $Call.ByID(3198048829, target);
 }
-
-// Private type creation functions
-const $$createType0 = $models.ForwardStatus.createFrom;

@@ -35,7 +35,8 @@ companion that reads and writes the same data.
 - Connection tree with folders and subfolders, tags, search, jump hosts, agent forwarding and saved port
   forwards. Drag connections and folders to reorganise; every move asks for confirmation first.
 - Terminal with tabs, split panes, scrollback search, themes and fonts. With shell integration on,
-  each command becomes a block with its exit status and duration, started from the bottom of the pane.
+  each command becomes a block with its exit status and duration, started from the bottom of the pane, and a ⋯ menu
+  on each block copies the command, its output, or both.
   Local zsh and bash are set up automatically; for a remote host you opt in explicitly.
 - **Tools:** health check with one-click fixes, passphrase-encrypted backup and restore, import from
   `~/.ssh/config`, and key management.
@@ -144,7 +145,8 @@ forward_agent = true
 - [x] Desktop: tools (health, backup, import, keys), file browser, port forwards
 - [ ] Windows (ConPTY, no connection sharing) and Linux builds
 - [ ] CI for the desktop app, signed and notarized macOS releases, installers
-- [ ] Per-block actions (copy command or output), light theme, snippets
+- [x] Per-block menu: copy command, output, or both
+- [ ] Light theme, snippets, a Relay-drawn block header
 
 ## Contributing
 

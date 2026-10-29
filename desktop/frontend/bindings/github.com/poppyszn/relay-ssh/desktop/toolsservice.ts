@@ -10,7 +10,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -43,37 +43,29 @@ export function DefaultBackupName(): $CancellablePromise<string> {
  * FixHealth applies the deterministic fixes, then re-checks.
  */
 export function FixHealth(): $CancellablePromise<$models.FixReport> {
-    return $Call.ByID(382554651).then(($result: any) => {
-        return $$createType0($result);
-    });
+    return $Call.ByID(382554651);
 }
 
 /**
  * Health runs every doctor check without changing anything.
  */
-export function Health(): $CancellablePromise<$models.HealthCheck[]> {
-    return $Call.ByID(2509742084).then(($result: any) => {
-        return $$createType2($result);
-    });
+export function Health(): $CancellablePromise<$models.HealthCheck[] | null> {
+    return $Call.ByID(2509742084);
 }
 
 /**
  * ImportSSHConfig turns the Host entries of ~/.ssh/config into profiles.
  */
 export function ImportSSHConfig(): $CancellablePromise<$models.ImportReport> {
-    return $Call.ByID(3899018953).then(($result: any) => {
-        return $$createType3($result);
-    });
+    return $Call.ByID(3899018953);
 }
 
 /**
  * Keys lists the keys Relay has adopted into the vault (covered by backups)
  * and the private keys found in ~/.ssh, with the profiles that use each.
  */
-export function Keys(): $CancellablePromise<$models.KeyInfo[]> {
-    return $Call.ByID(335953658).then(($result: any) => {
-        return $$createType5($result);
-    });
+export function Keys(): $CancellablePromise<$models.KeyInfo[] | null> {
+    return $Call.ByID(335953658);
 }
 
 /**
@@ -110,11 +102,3 @@ export function PickRestorePath(): $CancellablePromise<string> {
 export function Restore(path: string, passphrase: string): $CancellablePromise<void> {
     return $Call.ByID(2164495108, path, passphrase);
 }
-
-// Private type creation functions
-const $$createType0 = $models.FixReport.createFrom;
-const $$createType1 = $models.HealthCheck.createFrom;
-const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = $models.ImportReport.createFrom;
-const $$createType4 = $models.KeyInfo.createFrom;
-const $$createType5 = $Create.Array($$createType4);

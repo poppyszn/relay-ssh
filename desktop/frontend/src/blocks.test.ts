@@ -1,17 +1,32 @@
+// @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
 import { BlockTracker, formatDuration, type TermLike } from "./blocks";
 
-// A fake terminal: tracks the cursor row, hands out markers at it, and records decorations.
+// A fake terminal: tracks the cursor row, hands out markers at it, serves buffer rows, and
+// records decorations. Decoration elements are real DOM elements (happy-dom), as in xterm.
 function fake() {
   let osc: (d: string) => boolean = () => false;
   let onData: (d: string) => void = () => {};
-  const row = { baseY: 0, cursorY: 0 };
+  const row = { baseY: 0, cursorY: 0, cursorX: 0 };
+  const lines: string[] = [];
+  const elements: HTMLElement[] = [];
   const decos: { line: number; height: number; anchor?: string; cls: string; text: string }[] = [];
   const term: TermLike = {
     cols: 80,
-    buffer: { active: { get baseY() { return row.baseY; }, get cursorY() { return row.cursorY; }, type: "normal" } },
+    rows: 24,
+    buffer: {
+      active: {
+        get baseY() { return row.baseY; },
+        get cursorX() { return row.cursorX; },
+        get cursorY() { return row.cursorY; },
+        viewportY: 0,
+        get length() { return lines.length; },
+        getLine: (y: number) => (lines[y] === undefined ? undefined : { isWrapped: false, translateToString: (trim = false, start = 0) => (trim ? lines[y].slice(start).trimEnd() : lines[y].slice(start)) }) as never,
+        type: "normal",
+      },
+    },
     parser: { registerOscHandler: (_id, cb) => { osc = cb; return { dispose() {} }; } },
-    registerMarker: () => ({ line: row.baseY + row.cursorY, dispose() {}, onDispose() { return { dispose() {} }; } }) as never,
+    registerMarker: () => ({ line: row.baseY + row.cursorY, isDisposed: false, dispose() {}, onDispose() { return { dispose() {} }; } }) as never,
     registerDecoration: (o) => {
       const d = { line: (o.marker as { line: number }).line, height: o.height ?? 1, anchor: o.anchor, cls: "", text: "" };
       decos.push(d);
@@ -20,16 +35,13 @@ function fake() {
         dispose() {},
         onRender(cb: (el: HTMLElement) => void) {
           queueMicrotask(() => {
-            const classes = new Set(["xterm-decoration"]);
-            const el = {
-              get className() { return [...classes].join(" "); },
-              textContent: "",
-              classList: { add: (...c: string[]) => c.forEach((x) => classes.add(x)) },
-            } as unknown as HTMLElement;
+            const el = document.createElement("div");
+            el.className = "xterm-decoration"; // xterm's own class, which must survive
+            elements.push(el);
             cb(el);
-            cb(el); // redraws call onRender again; classes must not pile up
+            cb(el); // redraws call onRender again; classes and children must not pile up
             d.cls = el.className;
-            d.text = el.textContent ?? "";
+            d.text = el.querySelector(".badge-text")?.textContent ?? el.textContent ?? "";
           });
           return { dispose() {} };
         },
@@ -38,7 +50,7 @@ function fake() {
     onData: (cb) => { onData = cb; return { dispose() {} }; },
   };
   return {
-    term, decos, row,
+    term, decos, row, lines, elements,
     osc: (d: string) => osc(d),
     type: (s: string) => onData(s),
     flush: () => new Promise((r) => setTimeout(r, 0)),
@@ -66,6 +78,24 @@ describe("BlockTracker", () => {
     expect(badge.anchor).toBe("right");
     expect(badge.text).not.toContain("exit");
     t.dispose();
+  });
+
+  it("the badge has a menu button that hands the block's command and output to the menu, once", async () => {
+    const f = fake();
+    f.lines.push("", "❯ ls", "a b", "", "");
+    const onMenu = vi.fn();
+    new BlockTracker(f.term, undefined, onMenu);
+    f.row.cursorY = 0; f.osc("A");
+    f.row.cursorY = 1; f.row.cursorX = 2; f.osc("B"); f.type("ls\r"); // the prompt "❯ " is 2 columns wide
+    f.row.cursorY = 4; f.osc("D;0"); f.osc("A");
+    await f.flush();
+    const badge = f.elements.find((e) => e.classList.contains("relay-badge"))!;
+    expect(badge.querySelectorAll("button")).toHaveLength(1); // not duplicated by the second render
+    badge.querySelector("button")!.click();
+    const ref = onMenu.mock.calls[0][0];
+    expect(ref.command()).toBe("ls");
+    expect(ref.output()).toBe("a b");
+    expect(ref.all()).toBe("ls\na b");
   });
 
   it("marks failures and shows the exit code", async () => {
