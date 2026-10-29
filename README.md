@@ -43,7 +43,8 @@ companion that reads and writes the same data.
   automatically per connection or for all of them, once the login has finished).
 - **Snippets:** saved commands (`~/.config/sssh/snippets.toml`) that you insert into, or run in, any terminal.
 - **Tools:** health check with one-click fixes, passphrase-encrypted backup and restore, import from
-  `~/.ssh/config`, and key management.
+  `~/.ssh/config`, and key management (adopt a key into the vault; for a key with a passphrase, Relay asks once and
+  hands it to the macOS Keychain and ssh-agent so ssh stops asking; Relay never stores it).
 - **Files:** browse, upload and download over `sftp`, reusing the login of the connection's terminal tab.
 - **Port forwards:** add, stop and save local, remote and SOCKS forwards on a live connection, with a
   diagram of how each one works.

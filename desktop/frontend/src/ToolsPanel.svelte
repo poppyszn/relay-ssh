@@ -86,10 +86,37 @@
   let keyList = $state<KeyInfo[]>([]);
   let keyError = $state("");
   async function loadKeys() { try { keyList = (await ToolsService.Keys()) ?? []; } catch (e) { keyError = msg(e); } }
+  const mac = navigator.userAgent.includes("Mac");
+  /** The key whose passphrase is being asked for, and whether it is being adopted or just remembered. */
+  let ask = $state<{ path: string; name: string; mode: "adopt" | "remember" } | null>(null);
+  let keyPass = $state("");
   async function adopt(path: string) {
     keyError = "";
-    try { await ToolsService.AdoptKey(path); onchanged(); await loadKeys(); } catch (e) { keyError = msg(e); }
+    try {
+      if (await ToolsService.KeyNeedsPassphrase(path)) {
+        ask = { path, name: path.split("/").pop() ?? path, mode: "adopt" };
+        keyPass = "";
+        return;
+      }
+      await ToolsService.AdoptKey(path, "");
+      onchanged();
+      await loadKeys();
+    } catch (e) { keyError = msg(e); }
   }
+  async function submitPass() {
+    if (!ask) return;
+    keyError = "";
+    busy = true;
+    try {
+      if (ask.mode === "adopt") await ToolsService.AdoptKey(ask.path, keyPass);
+      else await ToolsService.RememberPassphrase(ask.name, keyPass);
+      keyPass = "";
+      ask = null;
+      onchanged();
+      await loadKeys();
+    } catch (e) { keyError = msg(e); } finally { busy = false; }
+  }
+  function cancelPass() { ask = null; keyPass = ""; keyError = ""; }
   async function adoptOther() {
     try { const p = await ToolsService.PickKeyToAdopt(); if (p) await adopt(p); } catch (e) { keyError = msg(e); }
   }
@@ -140,15 +167,22 @@
             {#each skipped as s}<p class="note bad">Skipped {s}</p>{/each}
           {/if}
         {:else}
-          <div class="head"><div><h3>Keys</h3><p>Adopted keys are copied into Relay's vault and included in backups. Other keys stay where they are and are not backed up.</p></div>
+          <div class="head"><div><h3>Keys</h3><p>Adopted keys are copied into Relay's vault and included in backups. Other keys stay where they are and are not backed up. For a key with a passphrase, adopting also asks for it once so ssh does not ask every time.</p></div>
             <div class="actions"><button class="btn" onclick={adoptOther}>Adopt a key…</button><button class="btn" onclick={ongenerate}>Generate…</button></div></div>
           {#if keyError}<p class="note bad">{keyError}</p>{/if}
           <ul class="keys">
             {#each keyList as k}
-              <li><div class="kname"><b class="mono">{k.name}</b>{#if k.adopted}<span class="chip ok">in backups</span>{:else}<span class="chip">not backed up</span>{/if}</div>
+              <li><div class="kname"><b class="mono">{k.name}</b>{#if k.adopted}<span class="chip ok">in backups</span>{:else}<span class="chip">not backed up</span>{/if}{#if k.encrypted}<span class="chip">passphrase</span>{:else}<span class="chip warn" title="Anyone who can read this file can use the key. Add a passphrase with: ssh-keygen -p -f {k.path}">no passphrase</span>{/if}</div>
                 <div class="kmeta mono">{k.path}</div>
                 <div class="kuse">{k.usedBy?.length ? "Used by " + k.usedBy.join(", ") : "Not used by any connection"}</div>
-                {#if !k.adopted}<button class="btn adopt" onclick={() => adopt(k.path)}>Adopt</button>{/if}</li>
+                {#if ask && ask.path === k.path}
+                  <form class="pass" onsubmit={(e) => { e.preventDefault(); submitPass(); }}>
+                    <label>Passphrase for {k.name}<input type="password" bind:value={keyPass} autocomplete="off" /></label>
+                    <div class="actions"><button type="submit" class="btn primary" disabled={busy || !keyPass}>{ask.mode === "adopt" ? "Adopt and remember" : "Remember"}</button><button type="button" class="btn" onclick={cancelPass}>Cancel</button></div>
+                    <p class="hint">{mac ? "ssh-add stores it in your macOS Keychain and loads the key into the ssh-agent, so ssh stops asking. Relay does not keep it." : "The key is loaded into your ssh-agent for this login session, so ssh stops asking. Relay does not keep the passphrase."}</p>
+                  </form>
+                {:else if !k.adopted}<button class="btn adopt" onclick={() => adopt(k.path)}>Adopt</button>
+                {:else if k.encrypted}<button class="btn adopt" title="Load this key into the ssh-agent{mac ? ' and the Keychain' : ''} so ssh stops asking for its passphrase" onclick={() => { ask = { path: k.path, name: k.name, mode: "remember" }; keyPass = ""; keyError = ""; }}>Remember passphrase</button>{/if}</li>
             {:else}<li class="empty">No private keys found in ~/.ssh.</li>{/each}
           </ul>
         {/if}
@@ -190,6 +224,10 @@
   .kmeta { font-size: 11.5px; color: var(--muted); }
   .kuse { font-size: 12px; color: var(--text2); }
   .chip.ok { color: var(--ok); }
+  .chip.warn { color: var(--warn); }
+  .pass { display: grid; gap: 8px; margin-top: 8px; padding-top: 10px; border-top: 1px dashed var(--line2); }
+  .pass label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); max-width: 320px; }
+  .pass .hint { margin: 0; font-size: 11.5px; color: var(--muted); }
   .adopt { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); padding: 5px 12px; }
   .empty { color: var(--muted); padding: 16px; }
   .note { padding: 9px 12px; border: 1px solid var(--line2); margin: 10px 0 0; }

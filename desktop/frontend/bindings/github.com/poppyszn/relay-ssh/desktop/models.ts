@@ -73,6 +73,11 @@ export interface KeyInfo {
     "name": string;
     "path": string;
     "adopted": boolean;
+
+    /**
+     * Encrypted means the key file is protected by a passphrase.
+     */
+    "encrypted": boolean;
     "usedBy": string[] | null;
 }
 
