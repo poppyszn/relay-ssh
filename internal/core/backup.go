@@ -17,6 +17,9 @@ import (
 	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
+// restoreEntryLimit caps how much of one archive entry Restore will read (a variable so tests can lower it).
+var restoreEntryLimit int64 = 64 << 20
+
 // ErrIncorrectPassphrase is returned by Restore when decryption or
 // decompression fails, which in practice means a wrong passphrase.
 var ErrIncorrectPassphrase = errors.New("incorrect passphrase (or the file is corrupted)")
@@ -141,9 +144,13 @@ func Restore(p paths.Paths, r io.Reader, passphrase string, encrypted bool) erro
 		}
 
 		if header.Name == "connections.toml" {
-			data, err := io.ReadAll(tr)
+			data, err := readEntry(tr)
 			if err != nil {
 				return err
+			}
+			// The archive is untrusted until proven otherwise: never install connections that would not load.
+			if _, err := config.Parse(data); err != nil {
+				return fmt.Errorf("the backup's connections are not valid: %w", err)
 			}
 			if err := fsutil.WriteFile(p.StoreFile, data, 0o600); err != nil {
 				return fmt.Errorf("restoring connections.toml: %w", err)
@@ -153,7 +160,7 @@ func Restore(p paths.Paths, r io.Reader, passphrase string, encrypted bool) erro
 				return err
 			}
 			keyPath := filepath.Join(p.KeysDir, filepath.Base(header.Name))
-			data, err := io.ReadAll(tr)
+			data, err := readEntry(tr)
 			if err != nil {
 				return err
 			}
@@ -167,4 +174,13 @@ func Restore(p paths.Paths, r io.Reader, passphrase string, encrypted bool) erro
 		return Regenerate(p, s)
 	}
 	return nil
+}
+
+// readEntry reads one archive entry, refusing one that expands past restoreEntryLimit.
+func readEntry(r io.Reader) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(r, restoreEntryLimit+1))
+	if err == nil && int64(len(data)) > restoreEntryLimit {
+		err = fmt.Errorf("an entry in the backup is larger than %d MB: refusing to read it", restoreEntryLimit>>20)
+	}
+	return data, err
 }

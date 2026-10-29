@@ -60,7 +60,7 @@ that structurally impossible. Do not weaken it.
 | --- | --- |
 | Direct dependencies | 2 |
 | Lines per `.go` file | 400 |
-| Non-test Go lines, whole repo | 3010 |
+| Non-test Go lines, whole repo | 3050 |
 | `syscall.Exec` call sites | 1, in `internal/launch` |
 | TUI / SSH-protocol / PTY imports | 0 |
 
@@ -97,6 +97,16 @@ or empty), the Relay desktop app's per-connection command-block mode, with its
 validation: 6 lines in `internal/config`. It belongs in the profile (it travels
 with backups and is repairable in an editor) and the CLI ignores it; the logic that
 uses it lives in `desktop/`. See spec section 9n.
+
+**3010 -> 3050, 2026-10-29.** A security audit found that profile values were written into the
+generated ssh config unchecked, so a line break in a host, user, key or tunnel address (from a
+crafted `connections.toml`, a restored backup or imported data) could add directives such as
+`ProxyCommand` and run a command on connect. Validation now rejects line breaks and other control
+characters in those fields (and spaces where they would split a value, and a host starting with
+`-`), and restore refuses a backup whose connections would not load instead of installing them,
+and caps how much of one archive entry it reads (`config.Parse` is `Load` without the file).
+About 40 lines in `internal/config` and `internal/core`, each covered by a test that fails
+without it. See spec section 9u.
 
 ## How to work
 

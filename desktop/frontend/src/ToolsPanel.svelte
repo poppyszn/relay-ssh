@@ -153,6 +153,7 @@
           <p>Replaces your current connections and adopted keys with the contents of a backup.</p>
           <div class="actions"><button class="btn" onclick={chooseRestore}>Choose backup…</button><span class="path mono">{restorePath || "No file chosen"}</span></div>
           {#if restorePath}
+            {#if !needsPass}<p class="note bad">This backup is not encrypted, so nothing proves it is yours. Only restore a file you made or trust: it replaces your connections and keys. Connections that could not be written safely into your ssh config are refused.</p>{/if}
             {#if needsPass}<div class="fields one"><label>Passphrase<input type="password" bind:value={restorePass} autocomplete="off" /></label></div>{/if}
             <div class="actions"><button class="btn" class:danger-fill={confirmRestore} onclick={restore}>{confirmRestore ? "Click again to replace current data" : "Restore"}</button></div>
           {/if}

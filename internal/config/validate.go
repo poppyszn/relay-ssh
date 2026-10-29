@@ -1,8 +1,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 // reservedNames are the subcommands. A profile may not take one of these,
@@ -74,6 +76,17 @@ func ValidateFolder(folder string) error {
 	return nil
 }
 
+// checkValue rejects a value that could add a line or an option once it is written into the
+// generated ssh config (a line break or other control character; with spaces=false also a space).
+func checkValue(field, v string, spaces bool) error {
+	for _, r := range v {
+		if unicode.IsControl(r) || (!spaces && unicode.IsSpace(r)) {
+			return fmt.Errorf("%s must not contain whitespace or control characters", field)
+		}
+	}
+	return nil
+}
+
 // Validate checks a single profile in isolation. Cross-profile rules -- unique
 // names, jump targets resolving, jump chains terminating -- live on Store.
 func (p Profile) Validate() error {
@@ -85,6 +98,12 @@ func (p Profile) Validate() error {
 	}
 	if p.User == "" {
 		return fmt.Errorf("profile %q: user is required", p.Name)
+	}
+	if err := errors.Join(checkValue("host", p.Host, false), checkValue("user", p.User, false), checkValue("key", p.Key, true)); err != nil {
+		return fmt.Errorf("profile %q: %w", p.Name, err)
+	}
+	if strings.HasPrefix(p.Host, "-") {
+		return fmt.Errorf("profile %q: host must not start with '-'", p.Name)
 	}
 	if err := ValidatePort(p.Port); err != nil {
 		return fmt.Errorf("profile %q: %w", p.Name, err)
@@ -117,6 +136,9 @@ func (p Profile) Validate() error {
 
 // Validate checks one forwarding rule.
 func (t Tunnel) Validate() error {
+	if err := errors.Join(checkValue("listen", t.Listen, false), checkValue("target", t.Target, false)); err != nil {
+		return err
+	}
 	switch t.Type {
 	case TunnelLocal, TunnelRemote:
 		if t.Listen == "" {

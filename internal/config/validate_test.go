@@ -41,6 +41,17 @@ func TestProfileValidateRejectsBadFields(t *testing.T) {
 		{"reserved name ls", func(p *Profile) { p.Name = "ls" }},
 		{"reserved name backup", func(p *Profile) { p.Name = "backup" }},
 		{"empty host", func(p *Profile) { p.Host = "" }},
+		// Each value is written into the generated ssh config, so one that could add a line or an
+		// option (a line break, a space, a leading dash) would let a crafted connections.toml add
+		// directives such as ProxyCommand.
+		{"host with a newline", func(p *Profile) { p.Host = "h\n    ProxyCommand touch /tmp/x" }},
+		{"host with a space", func(p *Profile) { p.Host = "h -oProxyCommand=x" }},
+		{"host with a tab", func(p *Profile) { p.Host = "h\tx" }},
+		{"host starting with a dash", func(p *Profile) { p.Host = "-oProxyCommand=x" }},
+		{"user with a newline", func(p *Profile) { p.User = "u\n    LocalCommand id" }},
+		{"user with a space", func(p *Profile) { p.User = "u x" }},
+		{"key with a newline", func(p *Profile) { p.Auth = AuthKey; p.Key = "k\n    ProxyCommand x" }},
+		{"key with a control character", func(p *Profile) { p.Auth = AuthKey; p.Key = "k\x1b[0m" }},
 		{"empty user", func(p *Profile) { p.User = "" }},
 		{"port zero", func(p *Profile) { p.Port = 0 }},
 		{"port negative", func(p *Profile) { p.Port = -1 }},
@@ -141,6 +152,10 @@ func TestTunnelValidate(t *testing.T) {
 		{"dynamic with target", Tunnel{TunnelDynamic, "1080", "db:5432"}, true},
 		{"no listen", Tunnel{TunnelLocal, "", "db:5432"}, true},
 		{"unknown type", Tunnel{"sideways", "1", "a:1"}, true},
+		{"listen with a newline", Tunnel{TunnelLocal, "8080\n    ProxyCommand y", "a:1"}, true},
+		{"target with a newline", Tunnel{TunnelRemote, "8080", "a:1\n    ProxyCommand y"}, true},
+		{"target with a space", Tunnel{TunnelLocal, "8080", "a:1 b:2"}, true},
+		{"ipv6 listen is fine", Tunnel{TunnelLocal, "[::1]:8080", "db:5432"}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -234,5 +249,20 @@ func TestStoreFindAndNames(t *testing.T) {
 	names := s.Names()
 	if len(names) != 2 || names[0] != "alpha" || names[1] != "beta" {
 		t.Errorf("Names() = %v, want [alpha beta]", names)
+	}
+}
+
+func TestProfileValidateAcceptsOrdinaryValues(t *testing.T) {
+	for name, mutate := range map[string]func(*Profile){
+		"ipv6 host":           func(p *Profile) { p.Host = "fe80::1" },
+		"dotted host":         func(p *Profile) { p.Host = "web-1.prod.example.com" },
+		"user with an at":     func(p *Profile) { p.User = "deploy@corp" },
+		"key path with space": func(p *Profile) { p.Auth = AuthKey; p.Key = "/Users/Jane Doe/.ssh/id_ed25519" },
+	} {
+		p := valid()
+		mutate(&p)
+		if err := p.Validate(); err != nil {
+			t.Errorf("%s: Validate() = %v, want nil", name, err)
+		}
 	}
 }
