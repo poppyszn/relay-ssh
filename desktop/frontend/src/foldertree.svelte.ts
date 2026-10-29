@@ -1,5 +1,5 @@
 import { ProfilesService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
-import { canDrop, folderBase, folderParent, joinFolder } from "./lib";
+import { canDrop, folderBase, folderParent, joinFolder, paneEdge, type PaneEdge } from "./lib";
 
 export type DragKind = "profile" | "folder";
 export interface Pending { kind: DragKind; id: string; to: string; text: string; sub: string }
@@ -28,6 +28,10 @@ class SidebarState {
   confirmDelete = $state("");
   drag = $state<{ kind: DragKind; id: string; label: string; x: number; y: number } | null>(null);
   dropTarget = $state<string | null>(null);
+  /** The terminal pane a dragged connection is over, and which part of it. */
+  paneDrop = $state<{ id: string; edge: PaneEdge } | null>(null);
+  /** Called when a connection is dropped on a pane (set by the app). */
+  onPaneDrop: (connection: string, paneId: string, edge: PaneEdge) => void = () => {};
   dropOk = $state(true);
   dropReason = $state("");
   pending = $state<Pending | null>(null);
@@ -134,6 +138,14 @@ class SidebarState {
       if (y > r.top && y < r.top + 36) scroller.scrollTop -= 12;
       else if (y < r.bottom && y > r.bottom - 36) scroller.scrollTop += 12;
     }
+    // A connection dropped on a terminal opens in it (split or new tab), instead of moving between folders.
+    const pane = this.drag.kind === "profile" ? document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-pane]") : null;
+    if (pane) {
+      this.paneDrop = { id: pane.dataset.pane ?? "", edge: paneEdge(pane.getBoundingClientRect(), x, y) };
+      this.dropTarget = null;
+      return;
+    }
+    this.paneDrop = null;
     const el = document.elementFromPoint(x, y)?.closest<HTMLElement>("[data-drop]");
     if (!el) {
       this.dropTarget = null;
@@ -149,9 +161,11 @@ class SidebarState {
     const d = this.drag;
     const target = this.dropTarget;
     const ok = this.dropOk;
+    const pane = this.paneDrop;
     this.cancelDrag();
     this.justDragged = true;
     setTimeout(() => (this.justDragged = false), 0);
+    if (d && pane) return this.onPaneDrop(d.id, pane.id, pane.edge);
     if (!d || target === null || !ok) return;
     const where = target || "the top level";
     const from = d.kind === "profile" ? this.data.profiles.find((p) => p.name === d.id)?.folder : folderParent(d.id);
@@ -166,6 +180,7 @@ class SidebarState {
   cancelDrag() {
     this.drag = null;
     this.dropTarget = null;
+    this.paneDrop = null;
     document.body.classList.remove("dragging");
   }
   async confirmPending() {

@@ -1,6 +1,7 @@
 import { tick } from "svelte";
 import { openSession, type Session } from "./terminal";
 import * as P from "./panes";
+import { reorder } from "./lib";
 import type { BlockRef } from "./blocks";
 import { TerminalService } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
@@ -65,6 +66,25 @@ class Workspace {
     tab.root = P.splitLeaf(tab.root, tab.focus, id, dir, uid("s"));
     tab.focus = id;
     await this.start(id);
+  }
+
+  /** Splits pane `paneId` toward an edge; the new pane connects to `target` and sits on that side. */
+  async splitAt(paneId: string, edge: "left" | "right" | "top" | "bottom", target: string | null) {
+    const tab = this.tabs.find((t) => P.leaves(t.root).includes(paneId));
+    if (!tab) return;
+    const id = uid("p");
+    this.panes[id] = { target, ended: false, error: "", blocks: false, connecting: false, since: 0 };
+    tab.root = P.splitLeaf(tab.root, paneId, id, edge === "left" || edge === "right" ? "row" : "col", uid("s"), edge === "left" || edge === "top");
+    tab.focus = id;
+    this.activeId = tab.id;
+    await this.start(id);
+  }
+
+  /** Moves a tab into the gap before position `slot`. */
+  moveTab(tabId: string, slot: number) {
+    const from = this.tabs.findIndex((t) => t.id === tabId);
+    if (from < 0) return;
+    this.tabs = reorder(this.tabs, from, slot);
   }
 
   /** Opens the session once the pane element is attached and has a size. */

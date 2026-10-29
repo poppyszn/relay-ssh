@@ -9,10 +9,10 @@ export function leaves(n: Node): string[] {
   return isLeaf(n) ? [n.id] : [...leaves(n.a), ...leaves(n.b)];
 }
 
-/** Replaces leaf `id` with a split holding it and a new leaf `newId`. */
-export function splitLeaf(n: Node, id: string, newId: string, dir: "row" | "col", sid: string): Node {
-  if (isLeaf(n)) return n.id === id ? { sid, dir, ratio: 0.5, a: n, b: { id: newId } } : n;
-  return { ...n, a: splitLeaf(n.a, id, newId, dir, sid), b: splitLeaf(n.b, id, newId, dir, sid) };
+/** Replaces leaf `id` with a split holding it and a new leaf `newId`, which goes second unless `before`. */
+export function splitLeaf(n: Node, id: string, newId: string, dir: "row" | "col", sid: string, before = false): Node {
+  if (isLeaf(n)) return n.id !== id ? n : { sid, dir, ratio: 0.5, ...(before ? { a: { id: newId }, b: n } : { a: n, b: { id: newId } }) };
+  return { ...n, a: splitLeaf(n.a, id, newId, dir, sid, before), b: splitLeaf(n.b, id, newId, dir, sid, before) };
 }
 
 /** Removes leaf `id`; its parent collapses into the sibling. Null if it was the last pane. */

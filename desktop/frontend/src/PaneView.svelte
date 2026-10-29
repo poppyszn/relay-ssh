@@ -2,6 +2,7 @@
   import type { Node } from "./panes";
   import { isLeaf } from "./panes";
   import { ws } from "./workspace.svelte";
+  import { sb } from "./foldertree.svelte";
   import type { Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
   import PaneView from "./PaneView.svelte";
   import SearchBar from "./SearchBar.svelte";
@@ -32,7 +33,7 @@
 {#if isLeaf(node)}
   {@const info = ws.panes[node.id]}
   {@const prof = profiles.find((p) => p.name === info?.target)}
-  <section class="leaf" class:focused={multi && tab?.focus === node.id} onpointerdowncapture={() => ws.focus(node.id)}>
+  <section class="leaf" data-pane={node.id} class:focused={multi && tab?.focus === node.id} onpointerdowncapture={() => ws.focus(node.id)}>
     {#if multi}
       <header>
         <span class="dot" class:ok={info && !info.ended && !info.connecting} class:warn={info?.connecting} class:err={info?.ended}></span>
@@ -46,6 +47,9 @@
     <div class="term" use:attach={node.id}></div>
     {#if info?.connecting && info.target}
       <div class="cover" class:below-header={multi}><ConnectingOverlay target={info.target} {prof} since={info.since} oncancel={() => ws.cancelConnect(node.id)} /></div>
+    {/if}
+    {#if sb.paneDrop?.id === node.id}
+      <div class="dropzone {sb.paneDrop.edge}" class:below-header={multi} aria-hidden="true"><span>{sb.paneDrop.edge === "center" ? "Open in a new tab" : `Split ${sb.paneDrop.edge}`}</span></div>
     {/if}
     {#if ws.searchPane === node.id && ws.session(node.id)}<SearchBar session={ws.session(node.id)!} onclose={() => ws.closeSearch()} />{/if}
     {#if info?.ended}
@@ -80,6 +84,16 @@
   .gone { color: var(--err-text); }
   .wait { color: var(--warn); }
   /* Over the terminal (not the pane header). */
+  .dropzone { position: absolute; z-index: 4; pointer-events: none; display: grid; place-items: center; background: var(--accent-soft); border: 2px solid var(--accent); inset: 0; }
+  .dropzone.below-header { top: 28px; }
+  .dropzone.left { right: 50%; }
+  .dropzone.right { left: 50%; }
+  .dropzone.top { bottom: 50%; }
+  .dropzone.top.below-header { bottom: calc(50% - 14px); }
+  .dropzone.bottom { top: 50%; }
+  .dropzone.bottom.below-header { top: calc(50% + 14px); }
+  .dropzone.center { inset: 18%; border-style: dashed; }
+  .dropzone span { padding: 4px 10px; background: var(--float); color: var(--accent-text); border: 1px solid var(--floatline); font-size: 12px; font-weight: 600; }
   .cover { position: absolute; inset: 0; z-index: 2; }
   .cover.below-header { top: 28px; }
   .close { all: unset; margin-left: auto; width: 28px; height: 100%; display: grid; place-items: center; font-size: 15px; cursor: pointer; opacity: 0.6; }

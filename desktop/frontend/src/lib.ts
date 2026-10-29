@@ -107,3 +107,27 @@ export function connectingHint(ms: number, viaJump: boolean): string {
     ? "Still no answer. The jump host or the server may be unreachable, offline or behind a firewall."
     : "Still no answer. The host may be unreachable, offline or behind a firewall.";
 }
+
+/** Moves the item at `from` into the gap before index `slot` (so `arr.length` is the end). */
+export function reorder<T>(arr: T[], from: number, slot: number): T[] {
+  const out = arr.slice();
+  const [item] = out.splice(from, 1);
+  out.splice(slot > from ? slot - 1 : slot, 0, item);
+  return out;
+}
+
+/** The gap a pointer at `x` is over, given the horizontal centre of each tab. */
+export function slotAt(centres: number[], x: number): number {
+  return centres.filter((c) => c < x).length;
+}
+
+export type PaneEdge = "left" | "right" | "top" | "bottom" | "center";
+
+/** Where a drop inside a pane lands: toward the nearest edge, or the middle. */
+export function paneEdge(r: { left: number; top: number; width: number; height: number }, x: number, y: number): PaneEdge {
+  const dx = (x - r.left) / r.width;
+  const dy = (y - r.top) / r.height;
+  if (dx >= 0.3 && dx <= 0.7 && dy >= 0.3 && dy <= 0.7) return "center";
+  const d = { left: dx, right: 1 - dx, top: dy, bottom: 1 - dy };
+  return (Object.keys(d) as (keyof typeof d)[]).reduce((best, k) => (d[k] < d[best] ? k : best), "left");
+}

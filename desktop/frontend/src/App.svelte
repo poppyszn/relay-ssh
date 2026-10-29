@@ -166,6 +166,7 @@
 
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
+    sb.onPaneDrop = (name, paneId, edge) => { banner = ""; return edge === "center" ? ws.openTab(name) : ws.splitAt(paneId, edge, name); };
     (async () => {
       customChrome = await TerminalService.CustomChrome();
       document.documentElement.classList.toggle("custom-chrome", customChrome);
@@ -471,6 +472,51 @@
       document.querySelector<HTMLElement>('[aria-label="Split down"]')?.click();
       await new Promise((r) => setTimeout(r, 800));
       out.splitButtons = leafCount() - leavesBefore;
+      // dragging: tabs reorder, and a connection dropped on a pane edge splits it (middle: a new tab)
+      if (box) {
+        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        sidebar = true;
+        await tick();
+        const press = (el: Element, x: number, y: number) => el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: x, clientY: y, pointerId: 1 }));
+        const dragTo = async (x: number, y: number) => { window.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y })); await tick(); };
+        const release = async (x: number, y: number) => { window.dispatchEvent(new PointerEvent("pointerup", { clientX: x, clientY: y })); await tick(); await sleep(300); };
+        await ws.openTab(null);
+        const order = () => ws.tabs.map((t) => t.id);
+        const before = order();
+        const first = document.querySelector<HTMLElement>('[data-tab] .main')!.getBoundingClientRect();
+        const lastTab = [...document.querySelectorAll<HTMLElement>("[data-tab]")].at(-1)!.getBoundingClientRect();
+        press(document.querySelector('[data-tab] .main')!, first.left + 40, first.top + 10);
+        await dragTo(first.left + 60, first.top + 10);
+        await dragTo(lastTab.right - 4, first.top + 10);
+        const slotShown = !!document.querySelector(".tabs .slot");
+        await release(lastTab.right - 4, first.top + 10);
+        const after = order();
+        out.tabDrag = { before, after, movedFirstToEnd: after.at(-1) === before[0] && after.length === before.length, slotShown, indicatorGone: !document.querySelector(".tabs .slot") };
+        const rowBtn = [...document.querySelectorAll<HTMLElement>(".row .name")].find((n) => n.textContent === box)?.closest(".row")?.querySelector<HTMLElement>(".main");
+        const paneEl = document.querySelector<HTMLElement>(".tabview.on [data-pane]");
+        if (rowBtn && paneEl) {
+          const rr = rowBtn.getBoundingClientRect();
+          const pr = paneEl.getBoundingClientRect();
+          const leafCount = () => ws.tabs.flatMap((t) => leaves(t.root)).length;
+          const dropOn = async (x: number, y: number) => {
+            press(rowBtn, rr.left + 40, rr.top + 10);
+            await dragTo(rr.left + 60, rr.top + 30);
+            await dragTo(x, y);
+            const hint = document.querySelector(".dropzone")?.textContent ?? null;
+            await release(x, y);
+            return hint;
+          };
+          const tab = ws.active!;
+          const n0 = leafCount();
+          const hintL = await dropOn(pr.left + 20, pr.top + pr.height / 2);
+          const lv = leaves(ws.active!.root);
+          const left = { hint: hintL, added: leafCount() - n0, firstIsBox: ws.panes[lv[0]]?.target === box, sameTab: ws.active === tab };
+          const tabs0 = ws.tabs.length;
+          const pr2 = document.querySelector<HTMLElement>(".tabview.on [data-pane]")!.getBoundingClientRect();
+          const hintC = await dropOn(pr2.left + pr2.width / 2, pr2.top + pr2.height / 2);
+          out.paneDrop = { left, center: { hint: hintC, newTab: ws.tabs.length - tabs0, target: ws.panes[ws.focusedPane]?.target } };
+        }
+      }
       // connecting: a saved connection shows a loading screen until ssh first writes, and can be cancelled
       if (box) {
         const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

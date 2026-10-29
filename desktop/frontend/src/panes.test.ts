@@ -37,3 +37,11 @@ describe("pane tree", () => {
     expect((setRatio(t, "s1", 0.4) as { ratio: number }).ratio).toBe(0.4);
   });
 });
+
+describe("splitLeaf before", () => {
+  it("puts the new pane first when asked", () => {
+    const t = splitLeaf({ id: "a" }, "a", "b", "row", "s1", true);
+    expect(leaves(t)).toEqual(["b", "a"]);
+    expect(leaves(splitLeaf({ id: "a" }, "a", "b", "row", "s1"))).toEqual(["a", "b"]);
+  });
+});
