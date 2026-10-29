@@ -17,8 +17,8 @@ describe.each(Object.entries(THEMES))("%s", (_id, t) => {
   });
 
   it("dim labels, accent text, and status text stay legible", () => {
-    for (const s of ["bg", "term", "rail", "float"]) {
-      expect(contrast(v.dim, v[s]), `dim on ${s}`).toBeGreaterThanOrEqual(3);
+    for (const s of ["bg", "term", "rail", "bar", "float", "field"]) {
+      expect(contrast(v.dim, v[s]), `dim on ${s}`).toBeGreaterThanOrEqual(4.5);
       expect(contrast(v["accent-text"], v[s]), `accent-text on ${s}`).toBeGreaterThanOrEqual(4.5);
       expect(contrast(v["err-text"], v[s]), `err-text on ${s}`).toBeGreaterThanOrEqual(4.5);
       expect(contrast(v.ok, v[s]), `ok on ${s}`).toBeGreaterThanOrEqual(3);
