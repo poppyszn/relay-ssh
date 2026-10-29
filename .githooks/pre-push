@@ -1,8 +1,9 @@
 #!/bin/sh
 # Pre-push: run the desktop app's checks before anything leaves this machine.
 #
-# Only on macOS: the app is built and tested there, and GitHub's runners do not
-# run the desktop checks yet. Elsewhere the hook does nothing.
+# Only on macOS, where the app is built and tested. GitHub runs the same checks
+# (.github/workflows/desktop.yml); this catches a failure before it is pushed.
+# Elsewhere the hook does nothing.
 #
 # Skip once:      git push --no-verify        (or RELAY_SKIP_HOOKS=1 git push)
 # Install:        make hooks                  (sets core.hooksPath for this clone)
