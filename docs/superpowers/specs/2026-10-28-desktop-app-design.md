@@ -199,6 +199,10 @@ Port forwards (done): a Port forwards dialog (tab bar, Shell menu, palette) for 
 
 Phase 4 is complete except for Windows, where OpenSSH has no connection sharing (file transfers and live forwards would need their own login).
 
+## 9g. Data model change: explicit folders (2026-10-29)
+
+`connections.toml` gains an optional top-level `folders = ["archive/old", ...]` listing folders that exist even when empty, so the sidebar can create a folder or subfolder before anything is in it. Folders holding connections exist without being listed, and every ancestor of a folder exists ("a/b" implies "a"). Files without the key load unchanged; the list is sorted and de-duplicated on save; each entry is validated (non-empty, no leading or trailing slash, no empty segment). A folder emptied by moving, editing or deleting its last connection is kept (added to the list), because folders are user-managed. Operations (desktop `ProfilesService`, outside the CLI line budget): create folder, rename or move folder (everything beneath follows; refuses moving into itself or onto an existing folder), delete folder (refuses one holding connections and names them; removes empty subfolders), move connection. The CLI is unaffected: `ls --tree` still reads each connection's `folder`.
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.

@@ -64,8 +64,14 @@ type Profile struct {
 }
 
 // Store is the whole of connections.toml.
+//
+// Folders lists folders that exist even when no connection is in them, so an
+// empty folder or subfolder can be created ahead of time. A folder that holds
+// connections exists without being listed; Folders only needs to name the empty
+// ones. Files written before this field existed simply omit it.
 type Store struct {
 	Version  int       `toml:"version"`
+	Folders  []string  `toml:"folders,omitempty"`
 	Profiles []Profile `toml:"profile"`
 }
 

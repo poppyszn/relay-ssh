@@ -61,11 +61,15 @@ func ValidatePort(port int) error {
 	return nil
 }
 
-// ValidateFolder checks a folder path segment has no leading or trailing
-// slash. Exported for the same field-by-field reason as ValidateName.
+// ValidateFolder checks a folder path has no leading or trailing slash and no
+// empty segment ("a//b"). The empty string means "no folder" and is allowed.
+// Exported for the same field-by-field reason as ValidateName.
 func ValidateFolder(folder string) error {
 	if strings.HasPrefix(folder, "/") || strings.HasSuffix(folder, "/") {
 		return fmt.Errorf("folder %q must not begin or end with '/'", folder)
+	}
+	if strings.Contains(folder, "//") {
+		return fmt.Errorf("folder %q must not contain an empty segment", folder)
 	}
 	return nil
 }
@@ -135,6 +139,14 @@ func (t Tunnel) Validate() error {
 func (s Store) Validate() error {
 	if s.Version != Version {
 		return fmt.Errorf("unsupported store version %d (this sssh understands version %d)", s.Version, Version)
+	}
+	for _, f := range s.Folders {
+		if f == "" {
+			return fmt.Errorf("a folder in the folders list is empty")
+		}
+		if err := ValidateFolder(f); err != nil {
+			return err
+		}
 	}
 	seen := make(map[string]bool, len(s.Profiles))
 	for _, p := range s.Profiles {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"slices"
 	"sort"
 
 	"github.com/BurntSushi/toml"
@@ -49,6 +50,7 @@ func Save(path string, s Store) error {
 	copy(sorted, s.Profiles)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
 	s.Profiles = sorted
+	s.Folders = tidyFolders(s.Folders)
 
 	if err := s.Validate(); err != nil {
 		return err
@@ -61,4 +63,15 @@ func Save(path string, s Store) error {
 		return fmt.Errorf("saving %s: %w", path, err)
 	}
 	return nil
+}
+
+// tidyFolders sorts and deduplicates the explicit folder list so the file's diff
+// stays stable.
+func tidyFolders(in []string) []string {
+	if len(in) == 0 {
+		return nil
+	}
+	out := slices.Clone(in)
+	slices.Sort(out)
+	return slices.Compact(out)
 }
