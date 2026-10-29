@@ -56,7 +56,7 @@
 </div>
 
 <style>
-  .menu { position: absolute; right: 12px; top: 46px; width: 300px; z-index: 30; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 18px 50px var(--shadow); overflow: hidden; outline: none; }
+  .menu { position: absolute; left: 12px; right: 12px; top: 46px; z-index: 30; background: var(--float); border: 1px solid var(--floatline); border-radius: 8px; box-shadow: 0 18px 50px var(--shadow); overflow: hidden; outline: none; }
   .head { padding: 10px 14px 6px; }
   .sep { height: 1px; background: var(--line2); margin: 6px 0; }
   .item { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; gap: 12px; padding: 9px 14px; cursor: pointer; }

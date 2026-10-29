@@ -498,10 +498,10 @@
 <svelte:window onkeydown={keydown} />
 
 <div class="app">
-  <TabBar custom={customChrome} onsidebar={() => (sidebar = !sidebar)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} />
+  <TabBar custom={customChrome} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} />
   <div class="body">
     {#if sidebar}
-      <Sidebar {profiles} {folders} {open} current={ws.panes[ws.focusedPane]?.target ?? ""} onconnect={(p) => connect(p)} onnew={newConnection} onedit={edit} onpalette={() => (palette = true)} ontools={(t) => { toolsTab = t; toolsOpen = true; }} onchanged={refresh} />
+      <Sidebar {profiles} {folders} {open} current={ws.panes[ws.focusedPane]?.target ?? ""} onconnect={(p) => connect(p)} onnew={newConnection} onedit={edit} ontools={(t) => { toolsTab = t; toolsOpen = true; }} onchanged={refresh} />
     {/if}
     <main>
       {#if banner}<p class="banner" role="alert">{banner}<button aria-label="Dismiss" onclick={() => (banner = "")}>&times;</button></p>{/if}

@@ -217,6 +217,10 @@ Opening a saved connection used to show a blank terminal marked "Connected" the 
 
 Found while testing this in the real window: the sidebar's "Open now" list rendered rows at depth -1 and `Array(-1)` throws, so the moment any connection was opened the sidebar failed and the UI stopped updating. Fixed (depth is clamped), with a component test; the smoke run now records uncaught JavaScript errors and drives a slow (unroutable) connection through connecting, hint and cancel. Component tests need Svelte's browser build, so tests have their own `vitest.config.ts`.
 
+## 9k. Sidebar and top bar changes (2026-10-29)
+
+The connection filter moved from the sidebar into the top bar (a field left of the tools; its ⌘K badge still opens quick open, Escape or the × clears it, and typing reveals the sidebar if it was hidden). The sidebar no longer has "Folders" and "Unfiled" section bars: connections that are in no folder sit at the top of the list, outside any folder, with the folder tree below them ("Open now" stays above both). The Add menu was positioned with a fixed 300px width in a 268px sidebar and so was cut off on the left; it now fills the sidebar width.
+
 ## 10. Working agreement (carried over from the CLI)
 
 TDD (watch the test fail first), hermetic tests using `t.TempDir()` with no real `$HOME` and no network, atomic writes, conventional commits per task, spec before code for any new command or data model change, and `make check` before claiming anything is done. Do not report work as complete on the strength of having written it.
