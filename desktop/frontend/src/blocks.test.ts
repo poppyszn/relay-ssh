@@ -20,8 +20,14 @@ function fake() {
         dispose() {},
         onRender(cb: (el: HTMLElement) => void) {
           queueMicrotask(() => {
-            const el = { className: "xterm-decoration", textContent: "" } as unknown as HTMLElement;
+            const classes = new Set(["xterm-decoration"]);
+            const el = {
+              get className() { return [...classes].join(" "); },
+              textContent: "",
+              classList: { add: (...c: string[]) => c.forEach((x) => classes.add(x)) },
+            } as unknown as HTMLElement;
             cb(el);
+            cb(el); // redraws call onRender again; classes must not pile up
             d.cls = el.className;
             d.text = el.textContent ?? "";
           });
@@ -55,6 +61,7 @@ describe("BlockTracker", () => {
     expect(block.cls).toContain("ok");
     // xterm's own class carries the absolute positioning; losing it hides the overlay
     expect(block.cls).toContain("xterm-decoration");
+    expect(block.cls.split(" ").filter((c) => c === "relay-block")).toHaveLength(1);
     const badge = f.decos.find((d) => d.cls.includes("relay-badge"))!;
     expect(badge.anchor).toBe("right");
     expect(badge.text).not.toContain("exit");
