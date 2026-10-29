@@ -1,12 +1,14 @@
 ///<reference types="svelte" />
 ;
+import ForwardDiagram from "./ForwardDiagram.svelte";
 import { ForwardsService, ProfilesService, type ForwardInfo } from "../bindings/github.com/poppyszn/super-ssh-v2/desktop";
 
-;type $$ComponentProps =  { target: string; onclose: () => void; onopen: () => void };function $$render() {
+;type $$ComponentProps =  { target: string; onclose: () => void; onopen: () => void; onchanged: () => void };function $$render() {
 
   
+  
 
-  let { target, onclose, onopen }:/*Ωignore_startΩ*/$$ComponentProps/*Ωignore_endΩ*/ = $props();
+  let { target, onclose, onopen, onchanged }:/*Ωignore_startΩ*/$$ComponentProps/*Ωignore_endΩ*/ = $props();
 
   let connected = $state(false);
   let message = $state("");
@@ -19,13 +21,11 @@ import { ForwardsService, ProfilesService, type ForwardInfo } from "../bindings/
   let kind = $state<"local" | "remote" | "dynamic">("local");
   let listen = $state("");
   let dest = $state("");
+  // Clicking a row shows that forward in the diagram; typing in the form takes over again.
+  let viewing = $state<ForwardInfo | null>(null);
+  const shown = $derived(viewing ?? { type: kind, listen, target: dest });
 
   const label = { local: "Local", remote: "Remote", dynamic: "SOCKS" } as const;
-  const help = $derived(
-    kind === "local" ? `Opens port ${listen || "N"} on this Mac and sends it to the target, as seen from ${target}.`
-    : kind === "remote" ? `Opens port ${listen || "N"} on ${target} and sends it back to the target, as seen from this Mac.`
-    : `Opens a SOCKS proxy on port ${listen || "N"} on this Mac that routes through ${target}.`,
-  );
   const msg = (e: unknown) => (e as Error)?.message ?? String(e);
 
   async function refresh() {
@@ -47,6 +47,7 @@ import { ForwardsService, ProfilesService, type ForwardInfo } from "../bindings/
     if (!p) throw new Error("Connection not found.");
     p.tunnels = [...(p.tunnels ?? []), { type: f.type, listen: f.listen, target: f.target }];
     await ProfilesService.Save(target, p);
+    onchanged();
   }, "Saved to the connection. It will start automatically next time.");
 
   $effect(() => {
@@ -76,7 +77,7 @@ async () => {
         if(forwards.length){
            { svelteHTML.createElement("div", { "class":`row head`,}); { svelteHTML.createElement("span", {});  } { svelteHTML.createElement("span", {});  } { svelteHTML.createElement("span", {});  } { svelteHTML.createElement("span", {});  } { svelteHTML.createElement("span", {}); } }
              for(let f of __sveltets_2_ensureArray(forwards)){f.type + f.listen + f.target;
-             { svelteHTML.createElement("div", { "class":`row`,});
+             { svelteHTML.createElement("div", {          "class":`row pick`,"role":`row`,"tabindex":0,"onclick":() => (viewing = f),"onkeydown":(e) => e.key === "Enter" && (viewing = f),});viewing === f;
                { svelteHTML.createElement("span", {}); { svelteHTML.createElement("span", { "class":`chip`,});label[f.type as keyof typeof label]; } }
                { svelteHTML.createElement("span", { "class":`mono`,}); { svelteHTML.createElement("span", {  "class":`dot`,});f.listening; } f.listen; }
                { svelteHTML.createElement("span", { "class":`mono`,});f.type === "dynamic" ? "SOCKS proxy" : f.target; }
@@ -93,14 +94,14 @@ async () => {
        }
 
        { svelteHTML.createElement("form", {   "class":`add`,"onsubmit":(e) => { e.preventDefault(); add(); },});
+         { const $$_margaiDdrawroF3C = __sveltets_2_ensureComponent(ForwardDiagram); new $$_margaiDdrawroF3C({ target: __sveltets_2_any(), props: {        "kind":shown.type as "local" | "remote" | "dynamic","listen":shown.listen,"dest":shown.target,"server":target,}});}
          { svelteHTML.createElement("div", { "class":`label`,});   }
          { svelteHTML.createElement("div", { "class":`fields`,});
-           { svelteHTML.createElement("select", {   "bind:value":kind,"aria-label":`Type`,});/*Ωignore_startΩ*/() => kind = __sveltets_2_any(null);/*Ωignore_endΩ*/ { svelteHTML.createElement("option", { "value":`local`,});  } { svelteHTML.createElement("option", { "value":`remote`,});  } { svelteHTML.createElement("option", { "value":`dynamic`,});  } }
-            { svelteHTML.createElement("input", {        "class":`mono`,"bind:value":listen,"placeholder":kind === "remote" ? "remote port" : "local port","aria-label":`Listen port`,"required":true,});/*Ωignore_startΩ*/() => listen = __sveltets_2_any(null);/*Ωignore_endΩ*/}
-          if(kind !== "dynamic"){  { svelteHTML.createElement("input", {        "class":`mono`,"bind:value":dest,"placeholder":`host:port`,"aria-label":`Target`,"required":true,});/*Ωignore_startΩ*/() => dest = __sveltets_2_any(null);/*Ωignore_endΩ*/}}else{ { svelteHTML.createElement("span", { "class":`na`,});   }}
+           { svelteHTML.createElement("select", {     "bind:value":kind,"aria-label":`Type`,"onchange":() => (viewing = null),});/*Ωignore_startΩ*/() => kind = __sveltets_2_any(null);/*Ωignore_endΩ*/ { svelteHTML.createElement("option", { "value":`local`,});  } { svelteHTML.createElement("option", { "value":`remote`,});  } { svelteHTML.createElement("option", { "value":`dynamic`,});  } }
+            { svelteHTML.createElement("input", {          "class":`mono`,"bind:value":listen,"oninput":() => (viewing = null),"placeholder":kind === "remote" ? "remote port" : "local port","aria-label":`Listen port`,"required":true,});/*Ωignore_startΩ*/() => listen = __sveltets_2_any(null);/*Ωignore_endΩ*/}
+          if(kind !== "dynamic"){  { svelteHTML.createElement("input", {          "class":`mono`,"bind:value":dest,"oninput":() => (viewing = null),"placeholder":`host:port`,"aria-label":`Target`,"required":true,});/*Ωignore_startΩ*/() => dest = __sveltets_2_any(null);/*Ωignore_endΩ*/}}else{ { svelteHTML.createElement("span", { "class":`na`,});   }}
            { svelteHTML.createElement("button", {   "class":`btn primary`,"disabled":busy,});  }
          }
-         { svelteHTML.createElement("p", { "class":`help`,});help; }
        }
     }
     if(error){ { svelteHTML.createElement("p", {   "class":`msg bad`,"role":`alert`,});error; }}

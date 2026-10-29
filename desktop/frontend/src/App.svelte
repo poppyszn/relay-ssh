@@ -30,6 +30,7 @@
   let form = $state<{ initial: Profile; oldName: string } | null>(null);
   let confirmDelete = $state<Profile | null>(null);
   let benchHost = $state<HTMLElement>();
+  let customChrome = $state(false);
 
   const folders = $derived([...new Set(profiles.map((p) => p.folder).filter(Boolean))].sort());
   const open = $derived(new Set(ws.tabs.flatMap((t) => leaves(t.root).map((id) => ws.panes[id]?.target ?? "")).filter(Boolean)));
@@ -97,6 +98,13 @@
     filesTarget = t;
   }
 
+  // Always edit the stored profile, not a cached copy: forwards saved from their own
+  // panel, a restore or an import may have changed it since the list was loaded.
+  async function edit(p: Profile) {
+    await refresh();
+    form = { initial: profiles.find((x) => x.name === p.name) ?? p, oldName: p.name };
+  }
+
   // Forwards are managed on a saved connection's live login.
   function openForwards() {
     const t = ws.panes[ws.focusedPane]?.target;
@@ -139,6 +147,7 @@
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     (async () => {
+      customChrome = await TerminalService.CustomChrome();
       // RELAY_BENCH is "run", "idle", "smoke", or "smoke|<connection>|<remote dir>" to also test files
       const [mode, box, dir, sshdPort, localPort] = (await TerminalService.BenchMode()).split("|");
       if (mode === "smoke") return smoke(box, dir, sshdPort, localPort);
@@ -293,6 +302,28 @@
         forwardsTarget = "";
         out.forwards = { connectedBefore: before.connected, connectedState: !!document.querySelector(".state"), listening: after.forwards?.[0]?.listening, uiRows: rows, afterCancel: gone.forwards?.length };
       }
+      // edit form shows a forward saved elsewhere (regression: it used a stale cached profile)
+      if (profiles.length) {
+        const target0 = profiles[0];
+        const fresh = (await ProfilesService.List())!.find((x) => x.name === target0.name)!;
+        await ProfilesService.Save(target0.name, { ...fresh, tunnels: [...(fresh.tunnels ?? []), { type: "local", listen: "7777", target: "localhost:7" }] });
+        await edit(target0); // the sidebar list was NOT refreshed by the save above
+        await tick();
+        out.editShowsSavedForward = [...document.querySelectorAll(".tun input")].some((i) => (i as HTMLInputElement).value === "7777");
+        form = null;
+        await ProfilesService.Save(target0.name, fresh); // restore
+        await refresh();
+      }
+      // window chrome: frameless means no native title bar, and our buttons sit centred in the strip
+      const strip = document.querySelector<HTMLElement>(".strip")?.getBoundingClientRect();
+      const btns = [...document.querySelectorAll<HTMLElement>(".controls button")].map((b) => b.getBoundingClientRect());
+      out.chrome = {
+        custom: customChrome,
+        titleBarHeight: outerHeight - innerHeight,
+        buttons: btns.length,
+        offCentre: strip && btns.length ? Math.max(...btns.map((r) => Math.abs(r.top + r.height / 2 - (strip.top + strip.height / 2)))) : null,
+        inset: btns[0] && strip ? Math.round(btns[0].left - strip.left) : null,
+      };
       // ended pane -> reconnect
       const victim = panes[0];
       ws.session(victim)?.ws.close();
@@ -314,10 +345,10 @@
 <svelte:window onkeydown={keydown} />
 
 <div class="app">
-  <TabBar onsidebar={() => (sidebar = !sidebar)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => (toolsOpen = !toolsOpen)} onfiles={openFiles} onforwards={openForwards} />
+  <TabBar custom={customChrome} onsidebar={() => (sidebar = !sidebar)} onsettings={() => (settingsOpen = !settingsOpen)} ontools={() => (toolsOpen = !toolsOpen)} onfiles={openFiles} onforwards={openForwards} />
   <div class="body">
     {#if sidebar}
-      <Sidebar {profiles} active={open} onconnect={(p) => connect(p)} onnew={() => run("new-connection")} onedit={(p) => (form = { initial: p, oldName: p.name })} onpalette={() => (palette = true)} />
+      <Sidebar {profiles} active={open} onconnect={(p) => connect(p)} onnew={() => run("new-connection")} onedit={edit} onpalette={() => (palette = true)} />
     {/if}
     <main>
       {#if banner}<p class="banner" role="alert">{banner}<button aria-label="Dismiss" onclick={() => (banner = "")}>&times;</button></p>{/if}
@@ -335,7 +366,7 @@
   <StatusBar {profiles} themeName={settings.themeDef.name} />
 </div>
 
-{#if forwardsTarget}<ForwardsPanel target={forwardsTarget} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/if}
+{#if forwardsTarget}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/if}
 {#if filesTarget}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/if}
 {#if toolsOpen}<ToolsPanel onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/if}
 {#if settingsOpen}<SettingsPanel onclose={() => (settingsOpen = false)} />{/if}

@@ -23,6 +23,14 @@ export function BenchMode(): $CancellablePromise<string> {
 }
 
 /**
+ * CustomChrome reports whether the frontend should draw the window buttons
+ * itself (the window is frameless). Bound to the frontend.
+ */
+export function CustomChrome(): $CancellablePromise<boolean> {
+    return $Call.ByID(3566602996);
+}
+
+/**
  * Endpoint returns the socket URL and token. Bound to the frontend.
  */
 export function Endpoint(): $CancellablePromise<$models.Endpoint> {

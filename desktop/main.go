@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"log"
+	"os"
 	"runtime"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -34,23 +35,46 @@ func main() {
 		Mac:         application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
 	})
 	app.Menu.Set(buildMenu(app))
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	app.Window.NewWithOptions(windowOptions())
+	if err := app.Run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// windowRadius is the corner radius, in points, of the frameless macOS window.
+// macOS draws its own very round corners on native windows; this is ours.
+const windowRadius = 10
+
+// customChrome reports whether Relay draws its own window frame and buttons
+// (macOS only). RELAY_NATIVE_FRAME=1 falls back to the native title bar.
+func customChrome() bool {
+	return runtime.GOOS == "darwin" && os.Getenv("RELAY_NATIVE_FRAME") == ""
+}
+
+func windowOptions() application.WebviewWindowOptions {
+	opts := application.WebviewWindowOptions{
 		Title:            "Relay",
 		Width:            1280,
 		Height:           800,
 		MinWidth:         720,
 		MinHeight:        420,
 		BackgroundColour: application.NewRGB(15, 22, 32),
-		Mac: application.MacWindow{
-			// The tab strip is the title bar: traffic lights float over it.
+		URL:              "/",
+	}
+	if customChrome() {
+		// Borderless with our own corners: the tab strip is the title bar and
+		// draws the window buttons. A transparent window lets the rounded
+		// corners show through, and the shadow follows the rounded shape.
+		opts.Frameless = true
+		opts.BackgroundType = application.BackgroundTypeTransparent
+		opts.Mac = application.MacWindow{CornerRadius: windowRadius}
+	} else if runtime.GOOS == "darwin" {
+		opts.Mac = application.MacWindow{
 			TitleBar:                application.MacTitleBarHiddenInset,
 			InvisibleTitleBarHeight: 40,
-		},
-		URL: "/",
-	})
-	if err := app.Run(); err != nil {
-		log.Fatal(err)
+		}
 	}
+	return opts
 }
 
 // buildMenu returns the application menu. Shell items emit a "menu" event the

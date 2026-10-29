@@ -73,6 +73,10 @@ func newTerminalService(onResult func(string)) (*TerminalService, error) {
 // Endpoint returns the socket URL and token. Bound to the frontend.
 func (t *TerminalService) Endpoint() Endpoint { return t.endpoint }
 
+// CustomChrome reports whether the frontend should draw the window buttons
+// itself (the window is frameless). Bound to the frontend.
+func (t *TerminalService) CustomChrome() bool { return customChrome() }
+
 // BenchMode returns the RELAY_BENCH value ("" when not benchmarking). Bound to the frontend.
 func (t *TerminalService) BenchMode() string { return os.Getenv("RELAY_BENCH") }
 
