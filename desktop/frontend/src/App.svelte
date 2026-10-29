@@ -134,8 +134,10 @@
       send("false");
       for (let i = 0; i < 60 && !document.querySelector(".relay-block.err"); i++) await new Promise((r) => setTimeout(r, 100));
       out.blocksActive = ws.panes[live]?.blocks === true;
-      out.okBlocks = document.querySelectorAll(".relay-block.ok").length;
-      out.errBlocks = document.querySelectorAll(".relay-block.err").length;
+      // visible means positioned over the terminal, not merely present in the DOM
+      const overlaid = (sel: string) => [...document.querySelectorAll<HTMLElement>(sel)].filter((e) => getComputedStyle(e).position === "absolute").length;
+      out.okBlocks = overlaid(".relay-block.ok");
+      out.errBlocks = overlaid(".relay-block.err");
       out.badges = [...document.querySelectorAll(".relay-badge")].map((b) => b.textContent);
       // ended pane -> reconnect
       const victim = panes[0];

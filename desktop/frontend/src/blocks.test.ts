@@ -20,7 +20,7 @@ function fake() {
         dispose() {},
         onRender(cb: (el: HTMLElement) => void) {
           queueMicrotask(() => {
-            const el = { className: "", textContent: "" } as unknown as HTMLElement;
+            const el = { className: "xterm-decoration", textContent: "" } as unknown as HTMLElement;
             cb(el);
             d.cls = el.className;
             d.text = el.textContent ?? "";
@@ -53,6 +53,8 @@ describe("BlockTracker", () => {
     const block = f.decos.find((d) => d.cls.includes("relay-block"))!;
     expect(block).toMatchObject({ line: 0, height: 3 });
     expect(block.cls).toContain("ok");
+    // xterm's own class carries the absolute positioning; losing it hides the overlay
+    expect(block.cls).toContain("xterm-decoration");
     const badge = f.decos.find((d) => d.cls.includes("relay-badge"))!;
     expect(badge.anchor).toBe("right");
     expect(badge.text).not.toContain("exit");
