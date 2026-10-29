@@ -1,4 +1,4 @@
-import { Terminal } from "@xterm/xterm";
+import { Terminal, type IDisposable } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { BlockTracker } from "./blocks";
@@ -16,6 +16,28 @@ const THEME = {
   brightBlack: "#5c6b82", brightRed: "#ff939d", brightGreen: "#b4e394", brightYellow: "#f3d398", brightBlue: "#7cc0f5", brightMagenta: "#d9aaf2", brightCyan: "#7ee3ea", brightWhite: "#ffffff",
 };
 
+/**
+ * Keeps content at the bottom of the pane until the buffer fills, the way a
+ * block terminal starts: new output pushes older output up and the top stays
+ * empty. xterm has no such mode, so the screen is shifted down by the unused
+ * rows. Full-screen programs and a scrolled buffer are left alone.
+ */
+export function anchorBottom(term: Terminal): IDisposable {
+  const apply = () => {
+    const screen = term.element?.querySelector<HTMLElement>(".xterm-screen");
+    if (!screen || !term.rows) return;
+    const buf = term.buffer.active;
+    let shift = 0;
+    if (buf.type === "normal" && buf.baseY === 0) {
+      shift = Math.max(0, term.rows - (buf.cursorY + 1)) * (screen.clientHeight / term.rows);
+    }
+    screen.style.transform = shift > 0 ? `translateY(${Math.round(shift)}px)` : "";
+  };
+  const subs = [term.onWriteParsed(apply), term.onCursorMove(apply), term.onResize(apply), term.onScroll(apply)];
+  apply();
+  return { dispose: () => subs.forEach((s) => s.dispose()) };
+}
+
 export interface Session {
   term: Terminal;
   ws: WebSocket;
@@ -30,7 +52,7 @@ export interface Session {
 export async function openSession(el: HTMLElement, target: string, scrollback = 10000): Promise<Session> {
   await document.fonts.load('400 13px "JetBrains Mono"').catch(() => []);
   const ep = await TerminalService.Endpoint();
-  const term = new Terminal({ scrollback, fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace', fontSize: 13, lineHeight: 1.35, allowProposedApi: true, cursorBlink: true, theme: THEME });
+  const term = new Terminal({ scrollback, fontFamily: '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace', fontSize: 14, lineHeight: 1.25, allowProposedApi: true, cursorBlink: true, theme: THEME });
   const fit = new FitAddon();
   term.loadAddon(fit);
   term.open(el);
@@ -56,8 +78,9 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
   const enc = new TextEncoder();
   const s: Session = { term, ws, webgl, dispose: () => { ws.close(); term.dispose(); } };
   const tracker = new BlockTracker(term as never, () => s.onBlocks?.());
+  const anchor = anchorBottom(term);
   const dispose = s.dispose;
-  s.dispose = () => { tracker.dispose(); dispose(); };
+  s.dispose = () => { tracker.dispose(); anchor.dispose(); dispose(); };
   let unacked = 0;
   ws.onmessage = (e) => {
     const data = new Uint8Array(e.data as ArrayBuffer);

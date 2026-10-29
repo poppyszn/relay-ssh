@@ -170,7 +170,9 @@ Done (stage A/B): tab strip as the macOS title bar, flat sidebar, status bar, qu
 
 Done (stage D, command blocks): the shell prints OSC 133 markers (A prompt start, B prompt end, D;exit) and the frontend (`blocks.ts`) draws each command as an xterm decoration: top divider, green or red left stripe, red tint on failure, and a right-aligned `exit N · duration` badge. Go never reads the markers. Local zsh and bash get the hooks injected (wrapper `ZDOTDIR` / `--rcfile`, user's own startup files sourced first, nothing modified). Remote hosts: a Shell menu / palette action "Enable command blocks in this session" types a visible one-liner into the user's bash or zsh; it is never sent automatically. Type-ahead and full-screen programs are handled; tests cover the marker state machine, and `RELAY_BENCH=smoke` verifies a green and a red block in the real window.
 
-Remaining: scrollback search, themes and font settings, a clipboard check in the real window, and Windows ConPTY.
+Layout follows the owner's Warp reference (2026-10-29): content is anchored to the bottom of the pane (the screen is shifted down by the unused rows until the buffer fills; `anchorBottom` in `terminal.ts`), each block has a blank row above and below it printed by the shell hooks (the block is finished at the next prompt so it includes the bottom row), dividers bleed edge to edge through the terminal padding, and type is 14px at line-height 1.25 (about 22.5px rows). Padding is on the `.xterm` element because FitAddon subtracts that, not a parent's padding.
+
+Remaining: scrollback search, themes and font settings, a clipboard check in the real window, a Relay-drawn header line (path, git, duration) instead of relying on the user's own prompt, and Windows ConPTY.
 
 ## 10. Working agreement (carried over from the CLI)
 
