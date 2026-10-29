@@ -1,7 +1,9 @@
 package core
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"os"
 	"strings"
@@ -92,6 +94,38 @@ func TestBackupRestoreRoundTripAndWrongPassphrase(t *testing.T) {
 	}
 	if _, ok := s.Find("web"); !ok {
 		t.Error("restored store is missing profile")
+	}
+}
+
+// A (legacy, unencrypted) backup is untrusted input: an entry that expands past the limit is refused
+// instead of being read into memory whole, and a restored connections.toml that would write a hostile
+// ssh config is refused by validation rather than installed.
+func TestRestoreRefusesOversizedEntriesAndHostileConnections(t *testing.T) {
+	plain := func(name string, body []byte) []byte {
+		var raw bytes.Buffer
+		gz := gzip.NewWriter(&raw)
+		tw := tar.NewWriter(gz)
+		_ = tw.WriteHeader(&tar.Header{Name: name, Size: int64(len(body)), Mode: 0o600})
+		_, _ = tw.Write(body)
+		_ = tw.Close()
+		_ = gz.Close()
+		return raw.Bytes()
+	}
+	defer func(old int64) { restoreEntryLimit = old }(restoreEntryLimit)
+	restoreEntryLimit = 1024
+	dst := paths.New(t.TempDir())
+	_ = paths.EnsureDirs(dst)
+	if err := Restore(dst, bytes.NewReader(plain("connections.toml", bytes.Repeat([]byte("a"), 4096))), "", false); err == nil {
+		t.Error("an entry larger than the limit was accepted")
+	}
+	restoreEntryLimit = 1 << 20
+	hostile := []byte("version = 1\n[[profile]]\nname = \"x\"\nhost = \"h\\n    ProxyCommand touch /tmp/x\"\nuser = \"u\"\nport = 22\nauth = \"agent\"\n")
+	good := newStore(t, agentProfile("keep", ""))
+	if err := Restore(good, bytes.NewReader(plain("connections.toml", hostile)), "", false); err == nil {
+		t.Error("a backup with a hostile connection was restored")
+	}
+	if s, err := config.Load(good.StoreFile); err != nil || len(s.Profiles) != 1 || s.Profiles[0].Name != "keep" {
+		t.Errorf("a refused restore changed the existing connections: %+v, %v", s, err)
 	}
 }
 

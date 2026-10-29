@@ -28,14 +28,20 @@ func Load(path string) (Store, error) {
 	if err != nil {
 		return Store{}, fmt.Errorf("reading %s: %w", path, err)
 	}
-	var s Store
-	if _, err := toml.Decode(string(data), &s); err != nil {
-		return Store{}, fmt.Errorf("parsing %s: %w", path, err)
-	}
-	if err := s.Validate(); err != nil {
+	s, err := Parse(data)
+	if err != nil {
 		return Store{}, fmt.Errorf("%s: %w", path, err)
 	}
 	return s, nil
+}
+
+// Parse decodes and validates connections.toml text that has not been trusted yet.
+func Parse(data []byte) (Store, error) {
+	var s Store
+	if _, err := toml.Decode(string(data), &s); err != nil {
+		return Store{}, fmt.Errorf("parsing: %w", err)
+	}
+	return s, s.Validate()
 }
 
 // Save validates, sorts, and writes the store atomically at 0600.
