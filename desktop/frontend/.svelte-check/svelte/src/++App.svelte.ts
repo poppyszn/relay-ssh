@@ -12,6 +12,7 @@ import StatusBar from "./StatusBar.svelte";
 import PaneView from "./PaneView.svelte";
 import Palette from "./Palette.svelte";
 import ProfileForm from "./ProfileForm.svelte";
+import Logo from "./Logo.svelte";
 import SettingsPanel from "./SettingsPanel.svelte";
 import ToolsPanel from "./ToolsPanel.svelte";
 import FilesPanel from "./FilesPanel.svelte";
@@ -21,6 +22,7 @@ import { sb } from "./foldertree.svelte";
 import { FilesService, ForwardsService, ProfilesService, TerminalService, ToolsService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 function $$render() {
 
+  
   
   
   
@@ -451,7 +453,7 @@ async () => {
              { const $$_weiVenaP5C = __sveltets_2_ensureComponent(PaneView); new $$_weiVenaP5C({ target: __sveltets_2_any(), props: {       "node":t.root,"tabId":t.id,"multi":leaves(t.root).length > 1,profiles,}});}
            }
         }
-           { svelteHTML.createElement("div", { "class":`welcome`,}); { svelteHTML.createElement("h1", {});  } { svelteHTML.createElement("p", {});         { svelteHTML.createElement("span", { "class":`kbd`,});mac ? "⌘T" : "Ctrl+Shift+T"; }     } }
+           { svelteHTML.createElement("div", { "class":`welcome`,}); { const $$_ogoL5C = __sveltets_2_ensureComponent(Logo); new $$_ogoL5C({ target: __sveltets_2_any(), props: {  "size":72,}});} { svelteHTML.createElement("h1", {});  } { svelteHTML.createElement("p", {});         { svelteHTML.createElement("span", { "class":`kbd`,});mac ? "⌘T" : "Ctrl+Shift+T"; }     } }
         
        }
      }

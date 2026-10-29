@@ -1,6 +1,10 @@
-# Relay
+<p align="center">
+  <img src="docs/assets/relay-icon.png" width="128" height="128" alt="Relay logo">
+</p>
 
-**A fast, modern SSH connection manager and terminal, built on OpenSSH.**
+<h1 align="center">Relay</h1>
+
+<p align="center"><b>A fast, modern SSH connection manager and terminal, built on OpenSSH.</b></p>
 
 Relay is a desktop app for people who live in SSH: a tree of your connections, a real terminal with
 per-command blocks, tabs and split panes, and the everyday tools around SSH (encrypted backup, key
