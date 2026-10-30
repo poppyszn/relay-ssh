@@ -49,6 +49,8 @@ companion that reads and writes the same data.
 - **Files:** browse, upload and download over `sftp`, reusing the login of the connection's terminal tab.
 - **Port forwards:** add, stop and save local, remote and SOCKS forwards on a live connection, with a
   diagram of how each one works.
+- **Remote Desktop (RDP):** connect to Windows servers in dedicated canvas tabs with WebAssembly IronRDP,
+  TOFU host certificates, SSH jump host tunnels, and age vault password storage.
 
 **Command line (`relay-ssh`)**
 
@@ -110,6 +112,7 @@ RELAY_SSH_HOME=/tmp/relay-home wails3 dev -config ./build/config.yml -port 9245
 Relay window (webview)          Go backend                      Your machine
 -----------------------         ---------------------------     -------------------------
 xterm.js (WebGL)        <--->   PTY session (raw bytes)  <--->  ssh <profile>
+IronRDP (WebAssembly)   <--->   Loopback gateway (bytes) <--->  rdp / ssh -L tunnel
 connection tree UI      <--->   internal/core (shared)   <--->  connections.toml
 tools, files, forwards          ssh / sftp / ssh-keygen         ~/.ssh/relay-ssh.d/config
 ```
@@ -117,12 +120,23 @@ tools, files, forwards          ssh / sftp / ssh-keygen         ~/.ssh/relay-ssh
 - `connections.toml` is the single source of truth. Saving regenerates
   `~/.ssh/relay-ssh.d/config`, pulled in by one marked `Include` block in `~/.ssh/config`. Relay only writes
   inside `~/.ssh/relay-ssh.d/` and that block.
-- Terminal bytes travel over a loopback WebSocket guarded by a per-launch random token and an exact
-  Origin allow-list.
+- Terminal bytes and RDP packets travel over loopback WebSockets guarded by random session tokens and exact
+  Origin allow-lists. Relay relays RDP bytes directly but never decodes them.
 - File transfers and live port forwards attach to the connection's terminal tab through OpenSSH
   connection sharing (`ControlMaster`), so they never need your credentials.
 - Backups are a gzip tarball encrypted with [age](https://age-encryption.org) (scrypt passphrase). Relay
   never stores the passphrase.
+
+## Remote Desktop (RDP)
+
+Relay provides embedded RDP client support in the desktop application alongside SSH:
+
+- **Saved profiles:** Remote desktop connections are saved in `connections.toml` with `protocol = "rdp"`, an optional `domain`, and port defaulting to 3389. The `relay-ssh` CLI ignores RDP profiles so OpenSSH configuration remains clean.
+- **Pure relay:** Relay relays RDP bytes directly between the server and an in-browser WebAssembly client ([IronRDP](https://github.com/Devolutions/IronRDP)) over a loopback WebSocket. Go does no RDP decoding or rendering.
+- **TOFU host certificates:** Server TLS certificates are pinned on first use in `~/.config/relay-ssh/rdp_hosts.toml`. If a certificate fingerprint changes, Relay displays a clear security warning and requires explicit user confirmation.
+- **Jump hosts:** RDP connections can tunnel through any saved SSH jump host via a local port forward (`ssh -L`), automatically torn down when the session closes.
+- **Credentials:** Passwords can be stored encrypted in Relay's age vault (`~/.config/relay-ssh/vault.age`) or prompted in-memory per session. Relay never writes passwords to disk or logs unencrypted.
+- **Clipboard & shortcuts:** Text clipboard synchronization is supported up to 1 MiB while the remote canvas has focus. Keyboard shortcuts using `⌘` stay with Relay so window and tab controls always work.
 
 ## Example `connections.toml`
 
@@ -146,6 +160,15 @@ forward_agent = true
   type = "local"                 # local | remote | dynamic
   listen = "8080"
   target = "localhost:80"
+
+[[profile]]
+name = "win-dc"
+protocol = "rdp"
+host = "10.0.0.12"
+user = "Administrator"
+domain = "CORP"
+port = 3389
+jump = "bastion"
 ```
 
 ## Roadmap
@@ -158,7 +181,8 @@ forward_agent = true
 - [ ] Signed and notarized macOS releases, installers
 - [ ] DevOps: environment tags with coloured tabs; AWS SSM (SSH over SSM and EC2 import); Kubernetes contexts
   pinned per tab with port forwards; a host-key manager for `known_hosts`
-- [ ] Encrypted vault for opt-in SSH password auto-fill
+- [x] Encrypted vault for opt-in SSH and RDP password auto-fill
+- [x] Embedded Remote Desktop (RDP) tabs with WebAssembly IronRDP, TOFU cert pinning and SSH jump tunnels
 - [x] Per-block menu: copy command, output, or both
 - [x] Light theme (Daylight) and System, which follows the OS
 - [x] Block header: directory and git branch on every block

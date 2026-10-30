@@ -18,17 +18,20 @@ publicly.
   config directory).
 - Command or argument **injection** into `ssh`, `sftp` or `ssh-keygen` through connection names, hosts,
   file names, folders, forward specs or other user-controlled input.
-- Weaknesses in the **local terminal socket** (token, Origin checks, loopback binding) or the desktop
-  app's webview boundary.
+- Weaknesses in the **local terminal socket or RDP gateway** (token, Origin checks, loopback binding, SSRF)
+  or the desktop app's webview boundary.
+- Flaws in the RDP host certificate TOFU verification, ASN.1 RDCleanPath validation, or SSH jump tunnel handling.
 - Backup and restore problems (weak encryption use, path traversal on restore, unsafe permissions).
 
 ## What Relay does today
 
-- It never stores secrets; `ssh` itself prompts for them.
+- It never stores secrets unencrypted; SSH relies on agent/keychain/prompts and optional passwords live in an age-encrypted secret vault (`~/.config/relay-ssh/vault.age`, mode `0600`) unlocked with a master password.
 - Backups use [age](https://age-encryption.org) with a scrypt passphrase and are written with `0600`
   permissions.
-- The terminal WebSocket listens on `127.0.0.1` only, requires a random per-launch token and an exact
-  Origin match.
+- Terminal and RDP gateway WebSockets listen on `127.0.0.1` only, requiring per-session random tokens and exact
+  Origin matches to prevent local SSRF or unauthorized access.
+- RDP host certificates use Trust-On-First-Use (TOFU) with SHA-256 fingerprints saved in `~/.config/relay-ssh/rdp_hosts.toml` (`0600`). Any certificate change produces a clear warning and stops the connection until confirmed.
+- RDP connection handshakes are validated via ASN.1 RDCleanPath parsing before raw RDP byte streaming begins.
 - File and forward operations validate paths and ports against strict patterns, and reject control
   characters so a crafted name cannot add extra `sftp` commands.
 

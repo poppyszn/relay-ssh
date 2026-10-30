@@ -27,6 +27,7 @@ Used all day, often with many tabs and panes open, mostly keyboard-driven (quick
 ## Capabilities and Constraints
 
 - Connections with folders, tags, jump hosts, agent forwarding and saved port forwards; import from `~/.ssh/config`.
+- Embedded Remote Desktop (RDP) sessions in dedicated canvas tabs: relays RDP traffic directly to client-side WebAssembly IronRDP via a loopback WebSocket gateway without decoding RDP packets in Go; TOFU host certificate store with SHA-256 fingerprint verification; SSH jump tunnel integration; clipboard text synchronization up to 1 MiB.
 - Terminal with tabs, split panes, scrollback search, themes, and optional command blocks (directory, git branch, exit status, duration; a setup line is typed into remote shells only with consent).
 - Tools: health check, passphrase-encrypted backup and restore, key adoption (passphrases go to the macOS Keychain and ssh-agent, never stored by Relay), snippets, file browser over sftp, live port forwards.
 - Optional encrypted vault for SSH and RDP passwords, opt-in per connection, filled only for the host a password was saved for; shown back to the owner only after the master password is entered again (`RevealSecret`), or retrieved once by the webview during RDP session startup (`RdpService.Credentials`).
@@ -44,7 +45,7 @@ Working app and its test and smoke harness; README and CLAUDE.md describe the pr
 
 ## Product Principles
 
-1. OpenSSH does the work; Relay organises and gets out of the way. Never put the app in the data path.
+1. OpenSSH does the work for SSH; for RDP, Relay relays RDP bytes but never decodes them. Relay organises and gets out of the way. Never put the app in the data path.
 2. Honest about secrets: nothing is stored without an explicit opt-in, and every stored thing says where it lives.
 3. The data stays human-repairable: one readable file, standard OpenSSH config.
 4. Speed and keyboard first. The common path (find a connection, open it) should take seconds and no mouse.

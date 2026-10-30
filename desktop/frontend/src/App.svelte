@@ -890,6 +890,40 @@
         out.autoBlocks = { sawHostKeyQuestion: seen(auto, "yes/no"), authedBeforeAnswer: typedBeforeLogin, authed: ws.session(auto)?.authed, authBy: ws.session(auto)?.authBy, blocks: ws.panes[auto]?.blocks, pill: !!document.querySelector(".tabview.on .hint") };
         settings.autoBlocks = autoBefore;
       }
+      // RDP tab chrome smoke check
+      {
+        const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+        const rdpSmokeProf: Profile = {
+          name: "smoke-rdp-profile",
+          protocol: "rdp",
+          host: "127.0.0.1",
+          port: 3389,
+          user: "Administrator",
+          domain: "WORKGROUP",
+          auth: "",
+          key: "",
+          folder: "",
+          tags: [],
+          jump: "",
+          forwardAgent: false,
+          blocks: "",
+          tunnels: [],
+        };
+        await ProfilesService.Save("smoke-rdp-profile", rdpSmokeProf);
+        await refresh();
+        await ws.openTab("smoke-rdp-profile");
+        await tick();
+        await wait(600);
+        const rdpView = document.querySelector(".rdp-view");
+        out.rdpChrome = {
+          present: !!rdpView,
+          hasStatus: !!rdpView?.querySelector('[role="status"]'),
+          hasCanvas: !!rdpView?.querySelector("canvas"),
+        };
+        if (ws.activeId) ws.closeTab(ws.activeId);
+        await ProfilesService.Delete("smoke-rdp-profile").catch(() => {});
+        await refresh();
+      }
     } catch (e) {
       out.error = String(e);
     }
