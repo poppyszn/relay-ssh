@@ -44,6 +44,9 @@ func Generate(s config.Store) string {
 	var b strings.Builder
 	b.WriteString(header)
 	for _, p := range profiles {
+		if p.IsRDP() {
+			continue
+		}
 		fmt.Fprintf(&b, "\nHost %s\n", p.Name)
 		fmt.Fprintf(&b, "    HostName %s\n", p.Host)
 		fmt.Fprintf(&b, "    User %s\n", p.User)

@@ -94,3 +94,24 @@ func TestCompletionScriptRejectsUnknownShell(t *testing.T) {
 		t.Fatal("CompletionScript(fish) should return an error, got nil")
 	}
 }
+
+func TestListProfileAddressesSkipsRdp(t *testing.T) {
+	p := paths.New(t.TempDir())
+	if err := paths.EnsureDirs(p); err != nil {
+		t.Fatal(err)
+	}
+	s := config.Store{Version: config.Version, Profiles: []config.Profile{
+		{Name: "ssh-box", Host: "h", User: "u", Port: 22, Auth: config.AuthAgent},
+		{Protocol: config.ProtocolRDP, Name: "win-rdp", Host: "h", User: "u", Port: 3389, Folder: "Remote"},
+	}}
+	if err := config.Save(p.StoreFile, s); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ListProfileAddresses(p)
+	if err != nil {
+		t.Fatalf("ListProfileAddresses: %v", err)
+	}
+	if len(got) != 1 || got[0] != "ssh-box" {
+		t.Errorf("ListProfileAddresses = %v, want ['ssh-box']", got)
+	}
+}

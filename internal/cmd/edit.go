@@ -27,6 +27,9 @@ func EditCmd(p paths.Paths, args []string) error {
 	if !ok {
 		return fmt.Errorf("profile %q not found", name)
 	}
+	if prof.IsRDP() {
+		return fmt.Errorf("profile %q is an rdp connection; edit it in the Relay desktop app", name)
+	}
 
 	in := bufio.NewScanner(os.Stdin)
 	fmt.Println(style.Header(fmt.Sprintf("── Edit profile %s ──", prof.Name)))

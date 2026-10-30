@@ -21,6 +21,9 @@ func Connect(p paths.Paths, name string) error {
 	if !ok {
 		return fmt.Errorf("profile %q not found", name)
 	}
+	if prof.IsRDP() {
+		return fmt.Errorf("profile %q is an rdp connection; open it in the Relay desktop app", name)
+	}
 	if err := core.Regenerate(p, s); err != nil {
 		return err
 	}
@@ -73,6 +76,9 @@ func CpCmd(p paths.Paths, args []string) error {
 	prof, ok := core.ResolveProfile(s, profName)
 	if !ok {
 		return fmt.Errorf("profile %q not found", profName)
+	}
+	if prof.IsRDP() {
+		return fmt.Errorf("profile %q is an rdp connection; scp is not supported for rdp", profName)
 	}
 
 	if err := core.Regenerate(p, s); err != nil {

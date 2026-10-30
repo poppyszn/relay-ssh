@@ -199,6 +199,60 @@ func TestLsFilterByTagEmptyResults(t *testing.T) {
 	}
 }
 
+func TestLsSkipsRdpProfiles(t *testing.T) {
+	p := paths.New(t.TempDir())
+	if err := paths.EnsureDirs(p); err != nil {
+		t.Fatal(err)
+	}
+	s := config.Store{Version: config.Version, Profiles: []config.Profile{
+		{Name: "ssh-box", Host: "ssh.local", User: "u", Port: 22, Auth: config.AuthAgent},
+		{Protocol: config.ProtocolRDP, Name: "win-rdp", Host: "win.local", User: "admin", Port: 3389},
+	}}
+	if err := config.Save(p.StoreFile, s); err != nil {
+		t.Fatal(err)
+	}
+
+	// Flat view
+	flat := capture(func() error {
+		return Ls(p, nil)
+	})
+	if strings.Contains(flat, "win-rdp") {
+		t.Errorf("flat Ls should not show RDP profile, got:\n%s", flat)
+	}
+	if !strings.Contains(flat, "ssh-box") {
+		t.Errorf("flat Ls should show SSH profile, got:\n%s", flat)
+	}
+
+	// Tree view
+	tree := capture(func() error {
+		return Ls(p, []string{"--tree"})
+	})
+	if strings.Contains(tree, "win-rdp") {
+		t.Errorf("tree Ls should not show RDP profile, got:\n%s", tree)
+	}
+	if !strings.Contains(tree, "ssh-box") {
+		t.Errorf("tree Ls should show SSH profile, got:\n%s", tree)
+	}
+
+	// Store with only RDP profiles should report "(no profiles)"
+	pOnlyRDP := paths.New(t.TempDir())
+	if err := paths.EnsureDirs(pOnlyRDP); err != nil {
+		t.Fatal(err)
+	}
+	sOnlyRDP := config.Store{Version: config.Version, Profiles: []config.Profile{
+		{Protocol: config.ProtocolRDP, Name: "win-only", Host: "win.local", User: "admin", Port: 3389},
+	}}
+	if err := config.Save(pOnlyRDP.StoreFile, sOnlyRDP); err != nil {
+		t.Fatal(err)
+	}
+	onlyRdpOut := capture(func() error {
+		return Ls(pOnlyRDP, nil)
+	})
+	if !strings.Contains(onlyRdpOut, "(no profiles)") {
+		t.Errorf("expected '(no profiles)' when only RDP profiles exist, got: %q", onlyRdpOut)
+	}
+}
+
 // capture redirects stdout and runs fn, returning the captured output.
 func capture(fn func() error) string {
 	old := os.Stdout

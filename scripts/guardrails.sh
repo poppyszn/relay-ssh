@@ -42,12 +42,12 @@ else
   good "all files within the 400-line cap"
 fi
 
-# 4. Total non-test Go LOC under 3170.
+# 4. Total non-test Go LOC under 3230.
 loc=$(find . -name '*.go' -not -name '*_test.go' -not -path './.git/*' -not -path './.claude/*' -not -path './desktop/*' -exec cat {} + | wc -l | tr -d ' ')
-if [ "$loc" -le 3170 ]; then
-  good "non-test Go lines: $loc of 3170"
+if [ "$loc" -le 3230 ]; then
+  good "non-test Go lines: $loc of 3230"
 else
-  bad "non-test Go lines: $loc, budget is 3170"
+  bad "non-test Go lines: $loc, budget is 3230"
 fi
 
 # 5. syscall.Exec appears exactly once, in internal/launch. More than one call

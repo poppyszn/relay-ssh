@@ -21,6 +21,11 @@ const (
 	AuthPassword AuthType = "password"
 )
 
+const (
+	ProtocolSSH = "ssh"
+	ProtocolRDP = "rdp"
+)
+
 // TunnelType selects which port-forwarding directive gets generated.
 type TunnelType string
 
@@ -50,11 +55,13 @@ type Tunnel struct {
 // Jump names another profile, never a free-text host, so a jump host gets the
 // same key and port handling as any other connection.
 type Profile struct {
+	Protocol     string   `toml:"protocol,omitempty"`
 	Name         string   `toml:"name"`
 	Host         string   `toml:"host"`
 	User         string   `toml:"user"`
+	Domain       string   `toml:"domain,omitempty"`
 	Port         int      `toml:"port"`
-	Auth         AuthType `toml:"auth"`
+	Auth         AuthType `toml:"auth,omitempty"`
 	Key          string   `toml:"key,omitempty"`
 	Folder       string   `toml:"folder,omitempty"`
 	Tags         []string `toml:"tags,omitempty"`
@@ -64,6 +71,11 @@ type Profile struct {
 	// "off", or empty to follow the app setting. The CLI ignores it.
 	Blocks  string   `toml:"blocks,omitempty"`
 	Tunnels []Tunnel `toml:"tunnel,omitempty"`
+}
+
+// IsRDP reports whether the profile is an RDP connection.
+func (p Profile) IsRDP() bool {
+	return p.Protocol == ProtocolRDP
 }
 
 // Store is the whole of connections.toml.

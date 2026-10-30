@@ -21,6 +21,9 @@ func ListProfileAddresses(p paths.Paths) ([]string, error) {
 	}
 	addrs := make([]string, 0, len(s.Profiles))
 	for _, prof := range s.Profiles {
+		if prof.IsRDP() {
+			continue
+		}
 		if prof.Folder == "" {
 			addrs = append(addrs, prof.Name)
 		} else {

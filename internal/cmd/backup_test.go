@@ -208,3 +208,53 @@ func TestRestoreLegacyPlaintextBackup(t *testing.T) {
 		t.Errorf("restored profiles = %v, want [legacy]", restored.Names())
 	}
 }
+
+func TestBackupAndRestorePreservesRdpProfile(t *testing.T) {
+	t.Setenv("RELAY_SSH_BACKUP_PASSPHRASE", "test-passphrase")
+
+	pSrc := paths.New(t.TempDir())
+	if err := paths.EnsureDirs(pSrc); err != nil {
+		t.Fatal(err)
+	}
+	s := config.Store{Version: config.Version, Profiles: []config.Profile{
+		{
+			Protocol: config.ProtocolRDP,
+			Name:     "win-backup-test",
+			Host:     "10.0.0.99",
+			User:     "Administrator",
+			Domain:   "TESTDOM",
+			Port:     3389,
+		},
+	}}
+	if err := config.Save(pSrc.StoreFile, s); err != nil {
+		t.Fatal(err)
+	}
+
+	backupDir := t.TempDir()
+	backupPath := filepath.Join(backupDir, "backup.tar.gz.age")
+
+	if err := BackupCmd(pSrc, []string{"-o", backupPath}); err != nil {
+		t.Fatalf("BackupCmd: %v", err)
+	}
+
+	pDst := paths.New(t.TempDir())
+	if err := paths.EnsureDirs(pDst); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := RestoreCmd(pDst, []string{backupPath}); err != nil {
+		t.Fatalf("RestoreCmd: %v", err)
+	}
+
+	restored, err := config.Load(pDst.StoreFile)
+	if err != nil {
+		t.Fatalf("loading restored config: %v", err)
+	}
+	if len(restored.Profiles) != 1 {
+		t.Fatalf("restored profiles count = %d, want 1", len(restored.Profiles))
+	}
+	p := restored.Profiles[0]
+	if p.Name != "win-backup-test" || p.Protocol != config.ProtocolRDP || p.Domain != "TESTDOM" || p.Port != 3389 {
+		t.Errorf("restored RDP profile mismatch: %+v", p)
+	}
+}

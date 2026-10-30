@@ -205,3 +205,30 @@ func TestDoctorNoFlagLeavesStaleConfigUntouched(t *testing.T) {
 		t.Errorf("expected GenConfig to remain stale, got %q", string(data))
 	}
 }
+
+func TestDoctorWithRdpProfile(t *testing.T) {
+	p := paths.New(t.TempDir())
+	if err := paths.EnsureDirs(p); err != nil {
+		t.Fatal(err)
+	}
+	s := config.Store{Version: config.Version, Profiles: []config.Profile{
+		{Name: "test-ssh", Host: "h", User: "u", Port: 22, Auth: config.AuthAgent},
+		{Protocol: config.ProtocolRDP, Name: "win-rdp", Host: "win.local", User: "admin", Port: 3389},
+	}}
+	if err := config.Save(p.StoreFile, s); err != nil {
+		t.Fatal(err)
+	}
+	if err := sshconfig.Write(p, s); err != nil {
+		t.Fatal(err)
+	}
+	if err := sshconfig.EnsureInclude(p); err != nil {
+		t.Fatal(err)
+	}
+
+	out := capture(func() error {
+		return DoctorCmd(p)
+	})
+	if !strings.Contains(out, "Health: OK") {
+		t.Errorf("doctor should report Health: OK with RDP profile, got:\n%s", out)
+	}
+}

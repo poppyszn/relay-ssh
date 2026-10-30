@@ -32,15 +32,13 @@ func Ls(p paths.Paths, args []string) error {
 	if err != nil {
 		return err
 	}
-	if filterTag != "" {
-		var filtered []config.Profile
-		for _, prof := range s.Profiles {
-			if containsTag(prof.Tags, filterTag) {
-				filtered = append(filtered, prof)
-			}
+	var filtered []config.Profile
+	for _, prof := range s.Profiles {
+		if !prof.IsRDP() && (filterTag == "" || containsTag(prof.Tags, filterTag)) {
+			filtered = append(filtered, prof)
 		}
-		s.Profiles = filtered
 	}
+	s.Profiles = filtered
 	if len(s.Profiles) == 0 {
 		fmt.Println(style.Dim("(no profiles)"))
 		return nil

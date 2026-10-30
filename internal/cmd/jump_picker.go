@@ -28,9 +28,12 @@ func PickJump(in *bufio.Scanner, s config.Store, profileName, current string) (s
 		options = append(options, keepLabel)
 	}
 	options = append(options, noJumpOption)
-	for _, name := range s.Names() {
-		if name != profileName && name != current {
-			options = append(options, name)
+	for _, prof := range s.Profiles {
+		if prof.IsRDP() {
+			continue
+		}
+		if prof.Name != profileName && prof.Name != current {
+			options = append(options, prof.Name)
 		}
 	}
 	if len(options) == 1 {

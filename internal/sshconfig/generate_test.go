@@ -185,3 +185,26 @@ func TestWriteCreatesTheConfigAt0600(t *testing.T) {
 		t.Errorf("mode = %o, want 600", perm)
 	}
 }
+
+func TestGenerateSkipsRdpProfiles(t *testing.T) {
+	s := config.Store{
+		Version: config.Version,
+		Profiles: []config.Profile{
+			{Name: "bastion", Host: "b.example.com", User: "admin", Port: 22, Auth: config.AuthAgent},
+			{
+				Protocol: config.ProtocolRDP,
+				Name:     "win-srv",
+				Host:     "10.0.0.10",
+				User:     "Administrator",
+				Port:     3389,
+			},
+		},
+	}
+	out := Generate(s)
+	if strings.Contains(out, "Host win-srv") {
+		t.Errorf("Generate() should not include RDP profile win-srv, got:\n%s", out)
+	}
+	if !strings.Contains(out, "Host bastion") {
+		t.Errorf("Generate() should include SSH profile bastion, got:\n%s", out)
+	}
+}

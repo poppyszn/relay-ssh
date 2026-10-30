@@ -76,3 +76,23 @@ func TestPickJumpOffersKeepCurrentFirst(t *testing.T) {
 		t.Errorf("PickJump keep-current = %q, want beta", got)
 	}
 }
+
+func TestPickJumpExcludesRdpProfiles(t *testing.T) {
+	disableFzfForTest = true
+	defer func() { disableFzfForTest = false }()
+
+	s := config.Store{Version: config.Version, Profiles: []config.Profile{
+		{Name: "ssh-target", Host: "h", User: "u", Port: 22, Auth: config.AuthAgent},
+		{Protocol: config.ProtocolRDP, Name: "win-rdp", Host: "h", User: "u", Port: 3389},
+	}}
+	// The only other profile is an RDP profile, so it must not be offered as a jump target!
+	// That means only "(no jump)" exists, so prompt should be skipped completely (returning "", nil).
+	in := bufio.NewScanner(strings.NewReader(""))
+	got, err := PickJump(in, s, "ssh-target", "")
+	if err != nil {
+		t.Fatalf("PickJump error: %v", err)
+	}
+	if got != "" {
+		t.Errorf("PickJump should exclude RDP profiles and return empty, got %q", got)
+	}
+}

@@ -93,17 +93,39 @@ func (p Profile) Validate() error {
 	if err := ValidateName(p.Name); err != nil {
 		return err
 	}
+	if p.Protocol != "" && p.Protocol != ProtocolSSH && p.Protocol != ProtocolRDP {
+		return fmt.Errorf("profile %q: unknown protocol %q (want %q or %q)", p.Name, p.Protocol, ProtocolSSH, ProtocolRDP)
+	}
 	if p.Host == "" {
 		return fmt.Errorf("profile %q: host is required", p.Name)
 	}
 	if p.User == "" {
 		return fmt.Errorf("profile %q: user is required", p.Name)
 	}
-	if err := errors.Join(checkValue("host", p.Host, false), checkValue("user", p.User, false), checkValue("key", p.Key, true)); err != nil {
+	if err := errors.Join(checkValue("host", p.Host, false), checkValue("user", p.User, false)); err != nil {
 		return fmt.Errorf("profile %q: %w", p.Name, err)
 	}
 	if strings.HasPrefix(p.Host, "-") {
 		return fmt.Errorf("profile %q: host must not start with '-'", p.Name)
+	}
+	if p.IsRDP() {
+		port := p.Port
+		if port == 0 {
+			port = 3389
+		}
+		if err := ValidatePort(port); err != nil {
+			return fmt.Errorf("profile %q: %w", p.Name, err)
+		}
+		if strings.HasPrefix(p.Domain, "-") || checkValue("domain", p.Domain, false) != nil {
+			return fmt.Errorf("profile %q: invalid domain %q", p.Name, p.Domain)
+		}
+		if p.Key != "" || len(p.Tunnels) > 0 || p.ForwardAgent || p.Blocks != "" {
+			return fmt.Errorf("profile %q: key, tunnel, forward_agent, and blocks are not supported for rdp", p.Name)
+		}
+		return ValidateFolder(p.Folder)
+	}
+	if err := checkValue("key", p.Key, true); err != nil {
+		return fmt.Errorf("profile %q: %w", p.Name, err)
 	}
 	if err := ValidatePort(p.Port); err != nil {
 		return fmt.Errorf("profile %q: %w", p.Name, err)
@@ -174,18 +196,24 @@ func (s Store) Validate() error {
 		}
 	}
 	seen := make(map[string]bool, len(s.Profiles))
-	for _, p := range s.Profiles {
-		if err := p.Validate(); err != nil {
+	for i := range s.Profiles {
+		if s.Profiles[i].IsRDP() && s.Profiles[i].Port == 0 {
+			s.Profiles[i].Port = 3389
+		}
+		if err := s.Profiles[i].Validate(); err != nil {
 			return err
 		}
-		if seen[p.Name] {
-			return fmt.Errorf("duplicate profile name %q", p.Name)
+		if seen[s.Profiles[i].Name] {
+			return fmt.Errorf("duplicate profile name %q", s.Profiles[i].Name)
 		}
-		seen[p.Name] = true
+		seen[s.Profiles[i].Name] = true
 	}
 	for _, p := range s.Profiles {
-		if p.Jump != "" && !seen[p.Jump] {
-			return fmt.Errorf("profile %q: jump target %q is not a saved profile", p.Name, p.Jump)
+		if p.Jump != "" {
+			target, ok := s.Find(p.Jump)
+			if !ok || target.IsRDP() {
+				return fmt.Errorf("profile %q: jump target %q must be a saved ssh profile", p.Name, p.Jump)
+			}
 		}
 	}
 	return s.checkJumpCycles()

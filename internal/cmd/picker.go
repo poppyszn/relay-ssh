@@ -19,10 +19,15 @@ func Pick(p paths.Paths) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if len(s.Profiles) == 0 {
+	var names []string
+	for _, prof := range s.Profiles {
+		if !prof.IsRDP() {
+			names = append(names, prof.Name)
+		}
+	}
+	if len(names) == 0 {
 		return "", fmt.Errorf("no profiles to pick from")
 	}
-	names := s.Names()
 	if len(names) == 1 {
 		return names[0], nil
 	}

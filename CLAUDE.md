@@ -59,7 +59,7 @@ that structurally impossible. Do not weaken it.
 | --- | --- |
 | Direct dependencies | 2 |
 | Lines per `.go` file | 400 |
-| Non-test Go lines, whole repo | 3170 |
+| Non-test Go lines, whole repo | 3230 |
 | `syscall.Exec` call sites | 1, in `internal/launch` |
 | TUI / SSH-protocol / PTY imports | 0 |
 
@@ -116,6 +116,8 @@ one), repoints the old block, and regenerates the generated config; the old `SSS
 `SSSH_BACKUP_PASSPHRASE` still work. About 110 lines across `internal/core`, `internal/sshconfig`,
 `internal/paths` and the entry point, each covered by a test that fails without it. Delete the
 migration once nobody has a tree under the old name.
+
+**3170 -> 3230, 2026-10-30.** RDP profile support and CLI skip. RDP profiles live in `connections.toml` (optional `protocol = "rdp"` and `domain` fields), with validation for host, user, port (default 3389), domain, and cross-profile jump rules (RDP can jump through SSH profiles, but no profile may jump through an RDP profile; key, tunnels, forward_agent, and blocks rejected for RDP). The CLI tools (`ls`, picker, jump picker, completion, ssh config generation, doctor, connect, cp, edit) safely skip or reject RDP profiles. About 61 lines added across `internal/config`, `internal/sshconfig`, and `internal/cmd`, each covered by tests that fail without it.
 
 ## How to work
 

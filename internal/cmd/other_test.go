@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/poppyszn/relay-ssh/internal/config"
@@ -159,4 +160,38 @@ func TestCpRejectsInvalidFormat(t *testing.T) {
 	if err == nil || err.Error() != "invalid format: use profile:remote-path" {
 		t.Errorf("CpCmd should reject invalid format, got: %v", err)
 	}
+}
+
+func TestRdpProfileRejectionsInCliCommands(t *testing.T) {
+	p := paths.New(t.TempDir())
+	if err := paths.EnsureDirs(p); err != nil {
+		t.Fatal(err)
+	}
+	s := config.Store{Version: config.Version, Profiles: []config.Profile{
+		{Protocol: config.ProtocolRDP, Name: "win-rdp", Host: "10.0.0.1", User: "admin", Port: 3389},
+	}}
+	if err := config.Save(p.StoreFile, s); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("Connect rejects RDP", func(t *testing.T) {
+		err := Connect(p, "win-rdp")
+		if err == nil || !strings.Contains(err.Error(), "rdp connection") {
+			t.Errorf("Connect should reject RDP profile with friendly error, got: %v", err)
+		}
+	})
+
+	t.Run("Edit rejects RDP", func(t *testing.T) {
+		err := EditCmd(p, []string{"win-rdp"})
+		if err == nil || !strings.Contains(err.Error(), "rdp connection") {
+			t.Errorf("Edit should reject RDP profile with friendly error, got: %v", err)
+		}
+	})
+
+	t.Run("Cp rejects RDP", func(t *testing.T) {
+		err := CpCmd(p, []string{"win-rdp:/file", "/tmp/local"})
+		if err == nil || !strings.Contains(err.Error(), "not supported for rdp") {
+			t.Errorf("Cp should reject RDP profile with friendly error, got: %v", err)
+		}
+	})
 }

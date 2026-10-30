@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/BurntSushi/toml"
 )
 
 func TestLoadMissingFileYieldsEmptyStore(t *testing.T) {
@@ -157,5 +159,113 @@ func TestStoreKeepsExplicitFoldersSortedAndDeduplicated(t *testing.T) {
 	// and a bad folder is refused before it reaches disk
 	if err := Save(path, Store{Version: Version, Folders: []string{"/bad"}}); err == nil {
 		t.Error("an invalid folder path must be refused")
+	}
+}
+
+func TestSaveThenLoadRoundTripsRdp(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "connections.toml")
+	want := Store{
+		Version: Version,
+		Profiles: []Profile{
+			{Name: "bastion", Host: "b.example.com", User: "admin", Port: 22, Auth: AuthAgent},
+			{
+				Protocol: ProtocolRDP,
+				Name:     "win-dc",
+				Host:     "10.0.0.10",
+				User:     "Administrator",
+				Domain:   "CORP",
+				Port:     3389,
+				Jump:     "bastion",
+				Folder:   "windows",
+				Tags:     []string{"corp", "prod"},
+			},
+		},
+	}
+	if err := Save(path, want); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	got, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	p, ok := got.Find("win-dc")
+	if !ok {
+		t.Fatal("win-dc not found after round trip")
+	}
+	if p.Protocol != ProtocolRDP {
+		t.Errorf("protocol = %q, want %q", p.Protocol, ProtocolRDP)
+	}
+	if p.Domain != "CORP" {
+		t.Errorf("domain = %q, want CORP", p.Domain)
+	}
+	if p.Port != 3389 {
+		t.Errorf("port = %d, want 3389", p.Port)
+	}
+	if p.Jump != "bastion" {
+		t.Errorf("jump = %q, want bastion", p.Jump)
+	}
+	if p.Folder != "windows" {
+		t.Errorf("folder = %q, want windows", p.Folder)
+	}
+}
+
+func TestUnknownKeysHandlingAndOlderCliBehavior(t *testing.T) {
+	// 1. BurntSushi/toml silently ignores unknown keys.
+	tomlData := `version = 1
+[[profile]]
+name = "futuristic"
+host = "future.example.com"
+user = "alice"
+port = 22
+auth = "agent"
+unknown_future_field = "something"
+another_custom_key = 12345
+`
+	s, err := Parse([]byte(tomlData))
+	if err != nil {
+		t.Fatalf("Parse with unknown keys should succeed, got: %v", err)
+	}
+	if len(s.Profiles) != 1 || s.Profiles[0].Name != "futuristic" {
+		t.Fatalf("parsed unexpected profiles: %v", s.Profiles)
+	}
+
+	// 2. What an older CLI does with an RDP profile:
+	// An older CLI struct had no Protocol or Domain fields, and required auth to be
+	// "agent", "key", or "password". When an RDP profile has no auth specified,
+	// older CLI decodes auth as "" and rejects the store on validation.
+	rdpToml := `version = 1
+[[profile]]
+name = "win-srv"
+protocol = "rdp"
+host = "10.0.0.1"
+user = "Administrator"
+domain = "CORP"
+port = 3389
+`
+	// Simulating older struct decoding by omitting Protocol/Domain:
+	type olderProfile struct {
+		Name string   `toml:"name"`
+		Host string   `toml:"host"`
+		User string   `toml:"user"`
+		Port int      `toml:"port"`
+		Auth AuthType `toml:"auth"`
+	}
+	type olderStore struct {
+		Version  int            `toml:"version"`
+		Profiles []olderProfile `toml:"profile"`
+	}
+	var old olderStore
+	if _, err := toml.Decode(rdpToml, &old); err != nil {
+		t.Fatalf("older decode: %v", err)
+	}
+	// Unknown fields "protocol" and "domain" were ignored.
+	if len(old.Profiles) != 1 || old.Profiles[0].Auth != "" {
+		t.Fatalf("expected Auth to be empty in older decode, got %q", old.Profiles[0].Auth)
+	}
+	// Older CLI validation checks auth:
+	if old.Profiles[0].Auth != AuthAgent && old.Profiles[0].Auth != AuthKey && old.Profiles[0].Auth != AuthPassword {
+		// Exactly as expected: older CLI fails closed with unknown auth error.
+	} else {
+		t.Fatal("older CLI should have rejected profile with empty auth")
 	}
 }
