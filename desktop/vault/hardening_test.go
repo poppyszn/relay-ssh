@@ -179,3 +179,45 @@ func TestVaultReadsTheOlderFormat(t *testing.T) {
 		t.Fatalf("an unbound legacy entry must not be released to a real host, got %v", err)
 	}
 }
+
+// Seeing a saved password back needs the master password every time, even with the vault open,
+// and checking it costs a full key derivation, so a page cannot guess it quickly.
+func TestVaultRevealNeedsTheMasterPassword(t *testing.T) {
+	v := newTestVault(t)
+	_ = v.Set("prod", "hunter2-hunter2", "h|u|22|")
+
+	sec, err := v.Reveal("prod", "correct-horse-battery-staple")
+	if err != nil || sec != "hunter2-hunter2" {
+		t.Fatalf("right master: %q %v", sec, err)
+	}
+	sec, err = v.Reveal("prod", "wrong-horse-battery-staple")
+	if !errors.Is(err, ErrIncorrectPassword) || sec != "" {
+		t.Fatalf("wrong master must refuse and return nothing, got %q %v", sec, err)
+	}
+	if _, err := v.Reveal("missing", "correct-horse-battery-staple"); !errors.Is(err, ErrNoSecret) {
+		t.Fatalf("no saved password: %v", err)
+	}
+}
+
+// It works while the vault is locked, and does not leave it unlocked afterwards.
+func TestVaultRevealWhileLockedStaysLocked(t *testing.T) {
+	v := newTestVault(t)
+	_ = v.Set("prod", "hunter2-hunter2", "h|u|22|")
+	v.Lock()
+	sec, err := v.Reveal("prod", "correct-horse-battery-staple")
+	if err != nil || sec != "hunter2-hunter2" {
+		t.Fatalf("%q %v", sec, err)
+	}
+	if v.Status().Unlocked {
+		t.Fatal("revealing a password unlocked the vault")
+	}
+}
+
+// A connection whose host changed can still be viewed: the person is looking at their own password.
+func TestVaultRevealIgnoresTheBinding(t *testing.T) {
+	v := newTestVault(t)
+	_ = v.Set("prod", "hunter2-hunter2", "old-host|u|22|")
+	if sec, err := v.Reveal("prod", "correct-horse-battery-staple"); err != nil || sec != "hunter2-hunter2" {
+		t.Fatalf("%q %v", sec, err)
+	}
+}

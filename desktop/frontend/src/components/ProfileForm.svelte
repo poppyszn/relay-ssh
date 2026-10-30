@@ -4,6 +4,7 @@
   import Icon, { type IconName } from "./Icon.svelte";
   import Modal from "./Modal.svelte";
   import VaultPanel from "./VaultPanel.svelte";
+  import RevealPassword from "./RevealPassword.svelte";
 
   let { initial, oldName, profiles, folders, onsave, ondelete, oncancel }: {
     initial: Profile;
@@ -77,6 +78,7 @@
   // svelte-ignore state_referenced_locally
   let hasSaved = $state(Boolean(oldName && vault.hasRemembered(oldName)));
   let changingPassword = $state(false);
+  let revealing = $state(false);
   let passwordInput = $state("");
   let pendingPassword = "";
   let vaultPromptMode = $state<"create" | "unlock" | null>(null);
@@ -212,6 +214,7 @@
             <div class="saved">
               <span class="chip ok"><Icon name="lock" size={14} />A password is saved</span>
               <span class="acts">
+                <button type="button" class="btn sm" onclick={() => (revealing = true)}>Show</button>
                 <button type="button" class="btn sm" onclick={() => (changingPassword = true)}>Change</button>
                 <button type="button" class="btn sm ghost danger" onclick={forgetSavedPassword}>Forget</button>
               </span>
@@ -303,6 +306,9 @@
     <button type="submit" form={formId} class="btn primary" disabled={busy} title="⌘↵">{isNew ? "Add connection" : "Save changes"}</button>
   {/snippet}
 </Modal>
+{#if revealing}
+  <RevealPassword connection={oldName} onclose={() => (revealing = false)} />
+{/if}
 {#if vaultPromptMode}
   <VaultPanel
     mode={vaultPromptMode}

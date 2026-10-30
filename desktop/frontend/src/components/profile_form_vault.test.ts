@@ -148,4 +148,41 @@ describe("ProfileForm vault password integration", () => {
     expect((r.onsave.mock.calls[0] as unknown[])[1]).toBe("");
     r.done();
   });
+
+  it("shows a saved password only after the master password is supplied", async () => {
+    vault.remembered = ["srv-saved"];
+    const reveal = vi.spyOn(VaultService, "RevealSecret").mockImplementation((_c, master) =>
+      (master === "right-master-pass" ? Promise.resolve("s3cret-pass") : Promise.reject(new Error("incorrect master password"))) as never);
+    const target = document.createElement("div");
+    document.body.append(target);
+    const prof = { ...blankProfile(), name: "srv-saved", host: "h", user: "u", auth: "password" as const };
+    const c = mount(ProfileForm, { target, props: { initial: prof, oldName: "srv-saved", profiles: [], folders: [], onsave: async () => {}, ondelete: () => {}, oncancel: () => {} } });
+    flushSync();
+    const show = Array.from(target.querySelectorAll("button")).find((b) => b.textContent === "Show")!;
+    show.click();
+    flushSync();
+    const ask = (master: string) => {
+      const input = document.body.querySelector<HTMLInputElement>('#reveal-form input[type="password"]')!;
+      input.value = master;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      flushSync();
+      document.body.querySelector<HTMLFormElement>("#reveal-form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    };
+    expect(document.body.textContent).toContain("Show saved password");
+    expect(document.body.querySelector('[aria-label="Saved password"]')).toBeNull();
+
+    ask("wrong-master-pass");
+    await new Promise((r) => setTimeout(r, 0));
+    flushSync();
+    expect(document.body.textContent).toContain("That master password is not right.");
+    expect(document.body.querySelector('[aria-label="Saved password"]')).toBeNull();
+
+    ask("right-master-pass");
+    await new Promise((r) => setTimeout(r, 0));
+    flushSync();
+    expect(document.body.querySelector<HTMLInputElement>('[aria-label="Saved password"]')?.value).toBe("s3cret-pass");
+    expect(reveal).toHaveBeenCalledWith("srv-saved", "right-master-pass");
+    unmount(c);
+    target.remove();
+  });
 });

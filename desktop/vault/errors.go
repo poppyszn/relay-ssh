@@ -11,6 +11,7 @@ var (
 	ErrMasterTooShort    = errors.New("master password must be at least 12 characters")
 	ErrNoVaultPath       = errors.New("the vault has nowhere to live: Relay could not find your home folder")
 	ErrBadSecret         = errors.New("a saved password cannot be empty or contain line breaks or control characters")
+	ErrNoSecret          = errors.New("no password is saved for this connection")
 	ErrBindingChanged    = errors.New("this connection's host, user, port or jump host changed since its password was saved")
 )
 
