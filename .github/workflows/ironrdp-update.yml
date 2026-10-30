@@ -1,0 +1,78 @@
+name: ironrdp-update
+# Weekly check for new Devolutions/IronRDP release tags. Because ironrdp-web is a git
+# workspace crate rather than a standalone crates.io release, Dependabot cannot bump it
+# automatically. This workflow looks up the latest release tag, bumps Cargo.toml/Cargo.lock,
+# runs the full verification gate, and opens a pull request for human review. Never auto-merge.
+on:
+  schedule:
+    - cron: '0 5 * * 1' # Weekly Monday at 05:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-and-update:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      CGO_CFLAGS: -mmacosx-version-min=13.0
+      CGO_LDFLAGS: -mmacosx-version-min=13.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: '1.27.3'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@4be25ebf6004b3cf4362145e7f1bf5287f39872e # master
+        with:
+          toolchain: '1.84.0'
+          targets: wasm32-unknown-unknown
+      - uses: jetli/wasm-pack-action@0d673aca0fb86c757c3e1e21b06f8c7d62057d39 # v0.4.0
+        with:
+          version: 'v0.13.1'
+      - name: Check for new IronRDP release
+        id: check_release
+        run: |
+          LATEST_TAG=$(gh api repos/Devolutions/IronRDP/releases/latest --jq .tag_name 2>/dev/null || echo "")
+          if [ -z "$LATEST_TAG" ]; then
+            echo "No release tag found or API limit reached"
+            exit 0
+          fi
+          CURRENT_TAG=$(grep -o 'tag = "[^"]*"' desktop/rdp-wasm/Cargo.toml | cut -d'"' -f2)
+          echo "Current: $CURRENT_TAG, Latest: $LATEST_TAG"
+          if [ "$LATEST_TAG" != "$CURRENT_TAG" ] && [ -n "$LATEST_TAG" ]; then
+            sed -i '' "s/tag = \"$CURRENT_TAG\"/tag = \"$LATEST_TAG\"/g" desktop/rdp-wasm/Cargo.toml
+            cargo update --manifest-path desktop/rdp-wasm/Cargo.toml
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+            echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run verification gate
+        if: steps.check_release.outputs.updated == 'true'
+        run: |
+          make rdp-wasm
+          npm ci --prefix desktop/frontend
+          make desktop-check
+      - name: Open Pull Request
+        if: steps.check_release.outputs.updated == 'true'
+        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.5
+        with:
+          commit-message: "chore(deps): bump IronRDP to ${{ steps.check_release.outputs.latest_tag }}"
+          title: "Update IronRDP to ${{ steps.check_release.outputs.latest_tag }}"
+          body: |
+            Automated weekly check detected a new release of `Devolutions/IronRDP`: `${{ steps.check_release.outputs.latest_tag }}`.
+            
+            All verification gates passed:
+            - WebAssembly rebuild (`make rdp-wasm`)
+            - Desktop gate (`make desktop-check`)
+            
+            ⚠️ **Human review required before merge**: Protocol library updates must never be auto-merged. Please inspect the IronRDP release notes.
+          branch: "update-ironrdp-${{ steps.check_release.outputs.latest_tag }}"
+          base: main
+          delete-branch: true

@@ -1,7 +1,10 @@
 name: desktop
 # The Relay desktop app is built and tested on macOS only for now. It runs only when
-# something the app is made of changes, because macOS minutes cost ten times as much.
+# something the app is made of changes, because macOS minutes cost ten times as much,
+# plus a weekly schedule to catch new security advisories on unchanged dependencies.
 on:
+  schedule:
+    - cron: '0 4 * * 1' # Weekly Monday at 04:00 UTC
   push:
     branches: [main]
     paths:
@@ -50,9 +53,18 @@ jobs:
           cache-dependency-path: desktop/frontend/package-lock.json
       - run: npm ci
         working-directory: desktop/frontend
+      - uses: dtolnay/rust-toolchain@4be25ebf6004b3cf4362145e7f1bf5287f39872e # master
+        with:
+          toolchain: '1.84.0'
+          targets: wasm32-unknown-unknown
+      - uses: jetli/wasm-pack-action@0d673aca0fb86c757c3e1e21b06f8c7d62057d39 # v0.4.0
+        with:
+          version: 'v0.13.1'
       - run: make desktop-check
-      # Known vulnerabilities: production npm packages, and the desktop module (needs the built frontend).
+      # Known vulnerabilities: production npm packages, Rust dependencies, and desktop module.
       - run: npm audit --omit=dev --audit-level=high
         working-directory: desktop/frontend
+      - name: Audit Rust dependencies
+        run: which cargo-audit >/dev/null 2>&1 || cargo install --version 0.20.0 cargo-audit --locked; cargo audit --file desktop/rdp-wasm/Cargo.lock
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
         working-directory: desktop

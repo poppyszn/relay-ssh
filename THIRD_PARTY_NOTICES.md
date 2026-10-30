@@ -23,6 +23,12 @@ carry their own licenses, which their packages include.
 | [@wailsio/runtime](https://github.com/wailsapp/wails) | MIT |
 | [Svelte](https://github.com/sveltejs/svelte) | MIT |
 
+## WebAssembly (bundled into the desktop app for RDP sessions)
+
+| Component | License |
+| --- | --- |
+| [Devolutions/IronRDP](https://github.com/Devolutions/IronRDP) (`ironrdp-web`, `iron-remote-desktop`) | MIT OR Apache-2.0 |
+
 ## Fonts (bundled into the desktop app)
 
 The fonts are licensed under the SIL Open Font License 1.1, which permits
