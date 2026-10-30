@@ -2,6 +2,7 @@
   import { onDestroy, onMount, tick } from "svelte";
   import { Events } from "@wailsio/runtime";
   import { RdpService, type Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { formatRdpError } from "../lib/rdp_errors";
   import Icon from "./Icon.svelte";
   import Modal from "./Modal.svelte";
 
@@ -33,11 +34,6 @@
 
   const MAX_CLIPBOARD = 1024 * 1024; // 1 MiB limit
 
-  function parseError(err: any): { title: string; hint: string } {
-    const msg = err?.message ?? String(err);
-    return { title: "Could not connect", hint: msg };
-  }
-
   async function connectSession() {
     viewState = "connecting";
     errorMessage = "";
@@ -62,7 +58,7 @@
 
       await startRdpClient(info, password || manualPassword);
     } catch (err: any) {
-      const formatted = parseError(err);
+      const formatted = formatRdpError(err?.message ?? String(err));
       errorMessage = formatted.title;
       errorHint = formatted.hint;
       viewState = "error";
@@ -95,7 +91,7 @@
         setupResizeObserver();
       }
     } catch (err: any) {
-      const formatted = parseError(err);
+      const formatted = formatRdpError(err?.message ?? String(err));
       errorMessage = formatted.title;
       errorHint = formatted.hint;
       viewState = "error";

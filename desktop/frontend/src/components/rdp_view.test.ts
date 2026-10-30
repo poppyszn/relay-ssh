@@ -2,9 +2,52 @@
 import { flushSync, mount, unmount } from "svelte";
 import { describe, expect, it, vi } from "vitest";
 import RdpView from "./RdpView.svelte";
+import { formatRdpError } from "../lib/rdp_errors";
 import { RdpService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
 describe("RdpView component", () => {
+  it("formats plain language errors correctly for all 8 failure causes", () => {
+    // 1. Jump host requires authentication
+    const jumpErr = formatRdpError("Open bastion first");
+    expect(jumpErr.title).toBe("Jump host requires authentication");
+    expect(jumpErr.hint).toContain("bastion");
+
+    // 2. Jump host unreachable
+    const jumpUnreach = formatRdpError("jump host unreachable");
+    expect(jumpUnreach.title).toBe("Jump host unreachable");
+    expect(jumpUnreach.hint).toContain("online");
+
+    // 3. Port closed or unreachable
+    const refErr = formatRdpError("dial tcp 127.0.0.1:3389: connection refused");
+    expect(refErr.title).toBe("Port closed or unreachable");
+    expect(refErr.hint).toContain("3389");
+
+    // 4. Host unreachable
+    const unreachErr = formatRdpError("no route to host");
+    expect(unreachErr.title).toBe("Host unreachable");
+    expect(unreachErr.hint).toContain("network");
+
+    // 5. Wrong password or NLA refused
+    const nlaErr = formatRdpError("NLA logon failed: access denied");
+    expect(nlaErr.title).toBe("Login failed (wrong password or NLA refused)");
+    expect(nlaErr.hint).toContain("credentials");
+
+    // 6. Certificate changed
+    const certErr = formatRdpError("certificate mismatch");
+    expect(certErr.title).toBe("Host certificate changed or rejected");
+    expect(certErr.hint).toContain("certificate");
+
+    // 7. Timed out
+    const timeoutErr = formatRdpError("connection timed out");
+    expect(timeoutErr.title).toBe("Connection timed out");
+    expect(timeoutErr.hint).toContain("latency");
+
+    // 8. Server closed the session
+    const closedErr = formatRdpError("connection reset by peer");
+    expect(closedErr.title).toBe("Session closed by server");
+    expect(closedErr.hint).toContain("terminated");
+  });
+
   it("mounts in connecting state and prompts for password if none saved", async () => {
     vi.spyOn(RdpService, "Open").mockResolvedValue({
       sessionId: "test-sess-1",
@@ -80,8 +123,8 @@ describe("RdpView component", () => {
     await new Promise((r) => setTimeout(r, 20));
     flushSync();
 
-    expect(target.textContent).toContain("Could not connect");
-    expect(target.textContent).toContain("Open bastion first");
+    expect(target.textContent).toContain("Jump host requires authentication");
+    expect(target.textContent).toContain("Open a connection to your jump host");
     expect(target.textContent).toContain("Reconnect");
 
     unmount(c);
