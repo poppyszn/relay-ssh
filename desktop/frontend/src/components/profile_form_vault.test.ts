@@ -185,4 +185,31 @@ describe("ProfileForm vault password integration", () => {
     unmount(c);
     target.remove();
   });
+
+  it("supports RDP protocol with domain and password vault", async () => {
+    vault.remembered = [];
+    const prof = { ...blankProfile(), name: "win1", protocol: "rdp", port: 3389, domain: "CORP" };
+    const target = document.createElement("div");
+    const c = mount(ProfileForm, {
+      target,
+      props: {
+        initial: prof,
+        oldName: "",
+        profiles: [],
+        folders: [],
+        onsave: async () => {},
+        ondelete: () => {},
+        oncancel: () => {},
+      },
+    });
+    flushSync();
+
+    expect(target.querySelector('input[placeholder="e.g. CORP or WORKGROUP"]')).not.toBeNull();
+    expect(target.querySelector('input[type="password"][aria-label="Password"]')).not.toBeNull();
+    // Key and Agent options are hidden for RDP
+    expect(target.textContent).not.toContain("Key file");
+    expect(target.textContent).not.toContain("Forward SSH agent");
+    expect(target.textContent).not.toContain("Port forwarding");
+    unmount(c);
+  });
 });

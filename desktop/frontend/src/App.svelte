@@ -85,7 +85,7 @@
   async function connect(p: Profile, split = false) {
     palette = false;
     banner = "";
-    if (p.auth === "password" && vault.exists && !vault.unlocked && vault.hasRemembered(p.name)) {
+    if ((p.auth === "password" || p.protocol === "rdp") && vault.exists && !vault.unlocked && vault.hasRemembered(p.name)) {
       unlockConnect = { profile: p, split };
       return;
     }
@@ -199,6 +199,7 @@
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     ws.blocksMode = (name) => profiles.find((p) => p.name === name)?.blocks;
     ws.profileAuth = (name) => profiles.find((p) => p.name === name)?.auth;
+    ws.profileProtocol = (name) => profiles.find((p) => p.name === name)?.protocol;
     sb.onFocusConnection = (name) => {
       const ids = ws.tabs.flatMap((t) => leaves(t.root)).filter((id) => ws.panes[id]?.target === name);
       const id = nextSession(ids, ws.focusedPane);

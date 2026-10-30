@@ -22,11 +22,12 @@
           ondblclick={() => { if (sb.justDragged) return; sb.learnOpen(); onconnect(profile); }} title={live ? `Click to show ${profile.name}. Double-click to open another tab.` : `Double-click to open ${profile.name} in a new tab`}>
     <span class="l1">
       <span class="dot" class:ok={live} class:live></span>
+      {#if profile.protocol === "rdp"}<span class="rdp-icon" title="RDP connection"><Icon name="rdp" size={14} /></span>{/if}
       <span class="name">{profile.name}</span>
       {#each tags as t}<span class="chip">{t}</span>{/each}
       {#if profile.jump}<span class="jump" title="Connects through {profile.jump}"><Icon name="arrow-right" size={14} />{profile.jump}</span>{/if}
     </span>
-    <span class="host mono">{profile.user}@{profile.host}{profile.port !== 22 ? `:${profile.port}` : ""}</span>
+    <span class="host mono">{profile.protocol === "rdp" && profile.domain ? `${profile.domain}\\` : ""}{profile.user}@{profile.host}{profile.protocol === "rdp" ? `:${profile.port || 3389}` : (profile.port !== 22 ? `:${profile.port}` : "")}</span>
   </button>
   <button type="button" class="icon-btn dense edit" data-nodrag aria-label="Edit {profile.name}" title="Edit" onclick={() => onedit(profile)}><Icon name="pencil" size={14} /></button>
 </div>
@@ -40,6 +41,7 @@
   .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); pointer-events: none; }
   .main { flex: 1; min-width: 0; padding: var(--s2) 0; display: grid; gap: 2px; background: none; border: 0; color: inherit; text-align: left; cursor: default; }
   .l1 { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+  .rdp-icon { display: inline-flex; align-items: center; color: var(--muted); flex: none; }
   .name { font-weight: 600; color: var(--strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .l1 .chip { flex: none; }
   .jump { display: flex; align-items: center; gap: 2px; font-size: var(--t-xs); color: var(--dim); flex: none; }

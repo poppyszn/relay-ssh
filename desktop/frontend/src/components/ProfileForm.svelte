@@ -28,7 +28,7 @@
   let busy = $state(false);
   let preview = $state({ config: "", problem: "" });
 
-  const others = $derived(profiles.map((x) => x.name).filter((n) => n !== oldName && n !== p.name));
+  const others = $derived(profiles.filter((x) => x.protocol !== "rdp").map((x) => x.name).filter((n) => n !== oldName && n !== p.name));
   const chain = $derived.by(() => {
     const out: string[] = [];
     let cur = p.jump;
@@ -111,8 +111,9 @@
     error = "";
 
     // A typed password, or a saved one that has to follow a rename, needs the vault open.
-    const typed = p.auth === "password" ? passwordInput : "";
-    const carrying = p.auth === "password" && hasSaved && oldName !== "" && oldName !== p.name;
+    const hasPassword = p.protocol === "rdp" || p.auth === "password";
+    const typed = hasPassword ? passwordInput : "";
+    const carrying = hasPassword && hasSaved && oldName !== "" && oldName !== p.name;
     if (typed || carrying) {
       const st = await vault.refresh();
       if (!st.unlocked && (st.exists || typed)) {
@@ -130,9 +131,17 @@
     busy = true;
     error = "";
     try {
-      await onsave({ ...$state.snapshot(p), port: Number(p.port), key: p.auth === "key" ? p.key : "" } as Profile, password);
+      const finalProfile: Profile = {
+        ...$state.snapshot(p),
+        port: Number(p.port) || (p.protocol === "rdp" ? 3389 : 22),
+        key: p.protocol === "rdp" ? "" : (p.auth === "key" ? p.key : ""),
+        blocks: p.protocol === "rdp" ? "" : p.blocks,
+        forwardAgent: p.protocol === "rdp" ? false : p.forwardAgent,
+        tunnels: p.protocol === "rdp" ? [] : p.tunnels,
+      };
+      await onsave(finalProfile, password);
       // The form is closed by now; keep the "has a saved password" hints in step.
-      if (p.auth !== "password" && oldName) vault.forget(oldName);
+      if (p.protocol !== "rdp" && p.auth !== "password" && oldName) vault.forget(oldName);
       else if (oldName && oldName !== p.name && hasSaved) vault.rename(oldName, p.name);
       if (password) vault.remember(p.name);
     } catch (err) {
@@ -168,48 +177,32 @@
   <form id={formId} class="cols" onsubmit={submit} onkeydown={keydown}>
     <div class="left">
       <section>
-        <h3 class="label">Connection</h3>
+        <div class="head">
+          <h3 class="label">Connection</h3>
+          <div class="seg proto-switch" role="group" aria-label="Protocol">
+            <button type="button" class="sm" aria-pressed={p.protocol !== "rdp"} onclick={() => { p.protocol = "ssh"; if (p.port === 3389) p.port = 22; }}>SSH</button>
+            <button type="button" class="sm" aria-pressed={p.protocol === "rdp"} onclick={() => { p.protocol = "rdp"; if (!p.port || p.port === 22) p.port = 3389; }}>RDP</button>
+          </div>
+        </div>
         <div class="g2">
           <label class="field"><span>Name</span><input class="mono" bind:value={p.name} required placeholder="web-1" /></label>
           <label class="field"><span>Folder</span><input class="mono" bind:value={p.folder} list="folders" placeholder="prod/eu" /></label>
         </div>
         <div class="g3">
-          <label class="field"><span>Host</span><input class="mono" bind:value={p.host} required placeholder="10.0.0.5 or example.com" /></label>
+          <label class="field"><span>Host</span><input class="mono" bind:value={p.host} required placeholder={p.protocol === "rdp" ? "192.168.1.100" : "10.0.0.5 or example.com"} /></label>
           <label class="field"><span>Port</span><input class="mono" type="number" bind:value={p.port} min="1" max="65535" required /></label>
-          <label class="field"><span>User</span><input class="mono" bind:value={p.user} required /></label>
+          <label class="field"><span>User</span><input class="mono" bind:value={p.user} required placeholder={p.protocol === "rdp" ? "Administrator" : "ubuntu"} /></label>
         </div>
+        {#if p.protocol === "rdp"}
+          <div class="g2">
+            <label class="field"><span>Domain (optional)</span><input class="mono" bind:value={p.domain} placeholder="e.g. CORP or WORKGROUP" /></label>
+          </div>
+        {/if}
       </section>
 
       <section>
         <h3 class="label">Authentication</h3>
-        <div class="seg" role="group" aria-label="Authentication">
-          {#each auths as a (a.id)}
-            <button type="button" aria-pressed={p.auth === a.id} onclick={() => (p.auth = a.id)}><Icon name={a.icon} />{a.label}</button>
-          {/each}
-        </div>
-        {#if p.auth === "key"}
-          <div class="inline">
-            <select aria-label="Key" value={keyChoice} onchange={pickKey}>
-              <option value="" disabled>Choose a key…</option>
-              {#if adoptedKeys.length}
-                <optgroup label="Adopted (in backups)">
-                  {#each adoptedKeys as k}<option value={`a:${k.name}`}>{k.name}{k.encrypted ? " (passphrase)" : ""}</option>{/each}
-                </optgroup>
-              {/if}
-              {#if linkedKeys.length}
-                <optgroup label="In ~/.ssh (not in backups)">
-                  {#each linkedKeys as k}<option value={`l:${k.path}`}>{k.name}{k.encrypted ? " (passphrase)" : ""}</option>{/each}
-                </optgroup>
-              {/if}
-              <option value="other">Another file…</option>
-            </select>
-            {#if keyChoice === "other"}
-              <input class="mono" bind:value={p.key} required placeholder="~/.ssh/id_ed25519 or a full path" aria-label="Key file path" />
-              <button type="button" class="btn" onclick={browse}>Browse</button>
-            {/if}
-          </div>
-          {#if keyChoice.startsWith("l:") || keyChoice === "other"}<p class="hint">This key stays where it is and is not in backups. Adopt it in Tools → Keys to copy it into Relay's vault.</p>{/if}
-        {:else if p.auth === "password"}
+        {#if p.protocol === "rdp"}
           {#if hasSaved && !changingPassword}
             <div class="saved">
               <span class="chip ok"><Icon name="lock" size={14} />A password is saved</span>
@@ -227,10 +220,58 @@
               {/if}
             </div>
           {/if}
-          <p class="hint">Stored encrypted in Relay's vault, unlocked with your master password. Leave empty to be asked each time.</p>
-        {/if}
-        {#if p.auth === "agent" || p.auth === "key"}
-          <p class="hint">{p.auth === "agent" ? "Uses keys loaded in your ssh-agent." : "Passphrases are asked by ssh and never stored."}</p>
+          <p class="hint">Stored encrypted in Relay's vault, unlocked with your master password. Leave empty to enter password when opening the session.</p>
+        {:else}
+          <div class="seg" role="group" aria-label="Authentication">
+            {#each auths as a (a.id)}
+              <button type="button" aria-pressed={p.auth === a.id} onclick={() => (p.auth = a.id)}><Icon name={a.icon} />{a.label}</button>
+            {/each}
+          </div>
+          {#if p.auth === "key"}
+            <div class="inline">
+              <select aria-label="Key" value={keyChoice} onchange={pickKey}>
+                <option value="" disabled>Choose a key…</option>
+                {#if adoptedKeys.length}
+                  <optgroup label="Adopted (in backups)">
+                    {#each adoptedKeys as k}<option value={`a:${k.name}`}>{k.name}{k.encrypted ? " (passphrase)" : ""}</option>{/each}
+                  </optgroup>
+                {/if}
+                {#if linkedKeys.length}
+                  <optgroup label="In ~/.ssh (not in backups)">
+                    {#each linkedKeys as k}<option value={`l:${k.path}`}>{k.name}{k.encrypted ? " (passphrase)" : ""}</option>{/each}
+                  </optgroup>
+                {/if}
+                <option value="other">Another file…</option>
+              </select>
+              {#if keyChoice === "other"}
+                <input class="mono" bind:value={p.key} required placeholder="~/.ssh/id_ed25519 or a full path" aria-label="Key file path" />
+                <button type="button" class="btn" onclick={browse}>Browse</button>
+              {/if}
+            </div>
+            {#if keyChoice.startsWith("l:") || keyChoice === "other"}<p class="hint">This key stays where it is and is not in backups. Adopt it in Tools → Keys to copy it into Relay's vault.</p>{/if}
+          {:else if p.auth === "password"}
+            {#if hasSaved && !changingPassword}
+              <div class="saved">
+                <span class="chip ok"><Icon name="lock" size={14} />A password is saved</span>
+                <span class="acts">
+                  <button type="button" class="btn sm" onclick={() => (revealing = true)}>Show</button>
+                  <button type="button" class="btn sm" onclick={() => (changingPassword = true)}>Change</button>
+                  <button type="button" class="btn sm ghost danger" onclick={forgetSavedPassword}>Forget</button>
+                </span>
+              </div>
+            {:else}
+              <div class="inline">
+                <input type="password" bind:value={passwordInput} placeholder={changingPassword ? "New password" : "Password (optional)"} aria-label="Password" autocomplete="new-password" />
+                {#if changingPassword}
+                  <button type="button" class="btn" onclick={() => { changingPassword = false; passwordInput = ""; }}>Cancel</button>
+                {/if}
+              </div>
+            {/if}
+            <p class="hint">Stored encrypted in Relay's vault, unlocked with your master password. Leave empty to be asked each time.</p>
+          {/if}
+          {#if p.auth === "agent" || p.auth === "key"}
+            <p class="hint">{p.auth === "agent" ? "Uses keys loaded in your ssh-agent." : "Passphrases are asked by ssh and never stored."}</p>
+          {/if}
         {/if}
       </section>
 
@@ -256,41 +297,55 @@
           {#each chain as h}<Icon name="arrow-right" size={14} /><span class="chip">{h}</span>{/each}
           <Icon name="arrow-right" size={14} /><span class="chip accent">{p.name || "new"}</span>
         </div>
-        <div class="opt">
-          <div><span class="t">Forward SSH agent</span><span class="hint">Lets this host use your local keys. Only for hosts you trust.</span></div>
-          <button type="button" role="switch" class="switch" aria-checked={p.forwardAgent} aria-label="Forward SSH agent" onclick={() => (p.forwardAgent = !p.forwardAgent)}></button>
-        </div>
-        <div class="opt">
-          <div><span class="t">Command blocks</span><span class="hint">Split this session's output into blocks. Needs bash or zsh on the host.</span></div>
-          <select bind:value={p.blocks} aria-label="Command blocks">
-            <option value="">App default</option>
-            <option value="on">Automatic</option>
-            <option value="off">Off</option>
-          </select>
-        </div>
-      </section>
-
-      <section>
-        <div class="head"><h3 class="label">Port forwarding</h3><button type="button" class="btn link" onclick={addTunnel}><Icon name="plus" size={14} />Add tunnel</button></div>
-        {#if p.tunnels.length}
-          <div class="tun"><span class="label">Type</span><span class="label">Listen</span><span class="label">Target</span><span></span></div>
-          {#each p.tunnels as t, i}
-            <div class="tun">
-              <select bind:value={t.type} aria-label="Tunnel type"><option value="local">Local</option><option value="remote">Remote</option><option value="dynamic">SOCKS</option></select>
-              <input class="mono" bind:value={t.listen} placeholder={t.type === "remote" ? "remote port" : "local port"} aria-label="Listen" required />
-              {#if t.type !== "dynamic"}<input class="mono" bind:value={t.target} placeholder="host:port" aria-label="Target" required />{:else}<span class="hint">No target</span>{/if}
-              <button type="button" class="icon-btn dense" aria-label="Remove tunnel" onclick={() => p.tunnels.splice(i, 1)}><Icon name="trash" /></button>
-            </div>
-          {/each}
-        {:else}
-          <p class="hint">Tunnels start with every login. Add one to forward a local or remote port, or a SOCKS proxy.</p>
+        {#if p.protocol !== "rdp"}
+          <div class="opt">
+            <div><span class="t">Forward SSH agent</span><span class="hint">Lets this host use your local keys. Only for hosts you trust.</span></div>
+            <button type="button" role="switch" class="switch" aria-checked={p.forwardAgent} aria-label="Forward SSH agent" onclick={() => (p.forwardAgent = !p.forwardAgent)}></button>
+          </div>
+          <div class="opt">
+            <div><span class="t">Command blocks</span><span class="hint">Split this session's output into blocks. Needs bash or zsh on the host.</span></div>
+            <select bind:value={p.blocks} aria-label="Command blocks">
+              <option value="">App default</option>
+              <option value="on">Automatic</option>
+              <option value="off">Off</option>
+            </select>
+          </div>
         {/if}
       </section>
+
+      {#if p.protocol !== "rdp"}
+        <section>
+          <div class="head"><h3 class="label">Port forwarding</h3><button type="button" class="btn link" onclick={addTunnel}><Icon name="plus" size={14} />Add tunnel</button></div>
+          {#if p.tunnels.length}
+            <div class="tun"><span class="label">Type</span><span class="label">Listen</span><span class="label">Target</span><span></span></div>
+            {#each p.tunnels as t, i}
+              <div class="tun">
+                <select bind:value={t.type} aria-label="Tunnel type"><option value="local">Local</option><option value="remote">Remote</option><option value="dynamic">SOCKS</option></select>
+                <input class="mono" bind:value={t.listen} placeholder={t.type === "remote" ? "remote port" : "local port"} aria-label="Listen" required />
+                {#if t.type !== "dynamic"}<input class="mono" bind:value={t.target} placeholder="host:port" aria-label="Target" required />{:else}<span class="hint">No target</span>{/if}
+                <button type="button" class="icon-btn dense" aria-label="Remove tunnel" onclick={() => p.tunnels.splice(i, 1)}><Icon name="trash" /></button>
+              </div>
+            {/each}
+          {:else}
+            <p class="hint">Tunnels start with every login. Add one to forward a local or remote port, or a SOCKS proxy.</p>
+          {/if}
+        </section>
+      {/if}
     </div>
 
     <aside>
-      <div class="phead"><h3 class="label">SSH config preview</h3><span class="hint">Written to ~/.ssh/relay-ssh.d/config on save</span></div>
-      <pre class="mono">{#each preview.config.split("\n") as line}{@const m = line.match(/^(\s*)(\S+)(.*)$/)}{#if m}{m[1]}<span class={m[1] ? "k2" : "k1"}>{m[2]}</span>{m[3]}{"\n"}{/if}{/each}</pre>
+      <div class="phead"><h3 class="label">{p.protocol === "rdp" ? "RDP connection summary" : "SSH config preview"}</h3><span class="hint">{p.protocol === "rdp" ? "Saved to connections.toml (skipped by SSH CLI)" : "Written to ~/.ssh/relay-ssh.d/config on save"}</span></div>
+      {#if p.protocol === "rdp"}
+        <div class="rdp-summary mono">
+          <p><strong>Protocol:</strong> RDP</p>
+          <p><strong>Host:</strong> {p.host || "—"}:{p.port || 3389}</p>
+          <p><strong>User:</strong> {p.user || "—"}</p>
+          {#if p.domain}<p><strong>Domain:</strong> {p.domain}</p>{/if}
+          {#if p.jump}<p><strong>Jump host:</strong> {p.jump}</p>{/if}
+        </div>
+      {:else}
+        <pre class="mono">{#each preview.config.split("\n") as line}{@const m = line.match(/^(\s*)(\S+)(.*)$/)}{#if m}{m[1]}<span class={m[1] ? "k2" : "k1"}>{m[2]}</span>{m[3]}{"\n"}{/if}{/each}</pre>
+      {/if}
       {#if started}
         <div class="notice" class:good={!preview.problem} class:bad={!!preview.problem}>{preview.problem || (p.jump ? "Valid. Jump chain resolves." : "Valid.")}</div>
       {/if}
@@ -345,6 +400,11 @@
   .tun { display: grid; grid-template-columns: 110px 1fr 1.4fr 24px; gap: var(--s2); align-items: center; }
   aside { width: 300px; flex: none; display: flex; flex-direction: column; gap: var(--s3); padding: var(--s5); overflow: auto; background: var(--bar); border-left: 1px solid var(--line); }
   .phead { display: grid; gap: 2px; }
+  .proto-switch { margin-left: auto; }
+  .proto-switch button { padding: 2px var(--s3); font-size: var(--t-xs); height: 24px; }
+  .rdp-summary { margin: 0; padding: var(--s3); background: var(--strip); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: var(--t-xs); line-height: 1.7; display: grid; gap: 4px; }
+  .rdp-summary p { margin: 0; }
+  .rdp-summary strong { color: var(--accent-text); }
   pre { margin: 0; padding: var(--s3); background: var(--strip); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: var(--t-xs); line-height: 1.7; white-space: pre; overflow-x: auto; }
   .k1 { color: var(--accent-text); } .k2 { color: var(--muted); }
   .fail { flex: none; margin: 0 var(--s5) var(--s3); }

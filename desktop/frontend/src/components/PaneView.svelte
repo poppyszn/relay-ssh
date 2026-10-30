@@ -9,6 +9,7 @@
   import ConnectingOverlay from "./ConnectingOverlay.svelte";
   import BlocksHint from "./BlocksHint.svelte";
   import Icon from "./Icon.svelte";
+  import RdpView from "./RdpView.svelte";
 
   let { node, tabId, multi, profiles }: { node: Node; tabId: string; multi: boolean; profiles: Profile[] } = $props();
 
@@ -51,29 +52,33 @@
         <button type="button" class="icon-btn dense close" data-nodrag aria-label="Close pane" onclick={() => ws.closePane(node.id)}><Icon name="x" size={14} /></button>
       </header>
     {/if}
-    <div class="term" use:attach={node.id}></div>
-    {#if info?.connecting && info.target}
-      <div class="cover" class:below-header={multi}><ConnectingOverlay target={info.target} {prof} since={info.since} oncancel={() => ws.cancelConnect(node.id)} /></div>
-    {/if}
-    {#if info?.target && !info.connecting && !info.ended && !info.blocks && !ws.autoBlocksFor(info.target)}
-      {#key node.id}<BlocksHint id={node.id} />{/key}
-    {/if}
-    {#if info?.fillHint}
-      <div class="fill-hint" role="status">
-        <span>{info.fillHint}</span>
-        <button type="button" class="icon-btn dense" aria-label="Dismiss hint" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].fillHint = ""; }}><Icon name="x" size={14} /></button>
-      </div>
-    {/if}
-    {#if sb.paneDrop?.id === node.id}
-      <div class="dropzone {sb.paneDrop.edge}" class:below-header={multi} aria-hidden="true"><span>{sb.paneDrop.verb ? `${sb.paneDrop.verb} ${sb.paneDrop.edge}` : sb.drag?.kind === "pane" ? (sb.paneDrop.edge === "center" ? "Swap places" : `Move ${sb.paneDrop.edge}`) : sb.paneDrop.edge === "center" ? "Open in a new tab" : `Split ${sb.paneDrop.edge}`}</span></div>
-    {/if}
-    {#if ws.searchPane === node.id && ws.session(node.id)}<SearchBar session={ws.session(node.id)!} onclose={() => ws.closeSearch()} />{/if}
-    {#if info?.ended && !info.bannerHidden}
-      <div class="ended" class:below-header={multi} role="alert">
-        <div><strong>{info.error ? "Could not connect" : "Session ended"}</strong><span>{info.error || `Press Enter to reconnect to ${info.target ?? "local shell"}`}</span></div>
-        <button type="button" class="btn sm primary" onclick={() => ws.reconnect(node.id)}>Reconnect</button>
-        <button type="button" class="icon-btn dense" aria-label="Dismiss" title="Dismiss (press Enter in the terminal to reconnect)" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].bannerHidden = true; }}><Icon name="x" size={14} /></button>
-      </div>
+    {#if prof?.protocol === "rdp"}
+      <RdpView target={info?.target ?? ""} {prof} />
+    {:else}
+      <div class="term" use:attach={node.id}></div>
+      {#if info?.connecting && info.target}
+        <div class="cover" class:below-header={multi}><ConnectingOverlay target={info.target} {prof} since={info.since} oncancel={() => ws.cancelConnect(node.id)} /></div>
+      {/if}
+      {#if info?.target && !info.connecting && !info.ended && !info.blocks && !ws.autoBlocksFor(info.target)}
+        {#key node.id}<BlocksHint id={node.id} />{/key}
+      {/if}
+      {#if info?.fillHint}
+        <div class="fill-hint" role="status">
+          <span>{info.fillHint}</span>
+          <button type="button" class="icon-btn dense" aria-label="Dismiss hint" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].fillHint = ""; }}><Icon name="x" size={14} /></button>
+        </div>
+      {/if}
+      {#if sb.paneDrop?.id === node.id}
+        <div class="dropzone {sb.paneDrop.edge}" class:below-header={multi} aria-hidden="true"><span>{sb.paneDrop.verb ? `${sb.paneDrop.verb} ${sb.paneDrop.edge}` : sb.drag?.kind === "pane" ? (sb.paneDrop.edge === "center" ? "Swap places" : `Move ${sb.paneDrop.edge}`) : sb.paneDrop.edge === "center" ? "Open in a new tab" : `Split ${sb.paneDrop.edge}`}</span></div>
+      {/if}
+      {#if ws.searchPane === node.id && ws.session(node.id)}<SearchBar session={ws.session(node.id)!} onclose={() => ws.closeSearch()} />{/if}
+      {#if info?.ended && !info.bannerHidden}
+        <div class="ended" class:below-header={multi} role="alert">
+          <div><strong>{info.error ? "Could not connect" : "Session ended"}</strong><span>{info.error || `Press Enter to reconnect to ${info.target ?? "local shell"}`}</span></div>
+          <button type="button" class="btn sm primary" onclick={() => ws.reconnect(node.id)}>Reconnect</button>
+          <button type="button" class="icon-btn dense" aria-label="Dismiss" title="Dismiss (press Enter in the terminal to reconnect)" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].bannerHidden = true; }}><Icon name="x" size={14} /></button>
+        </div>
+      {/if}
     {/if}
   </section>
 {:else}

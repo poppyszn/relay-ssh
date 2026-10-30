@@ -48,8 +48,14 @@ class Workspace {
   blocksMode: (target: string) => string | undefined = () => undefined;
   /** A connection's auth method ("agent", "key" or "password"), supplied by the app. */
   profileAuth: (target: string) => string | undefined = () => undefined;
+  /** A connection's protocol ("ssh" or "rdp"), supplied by the app. */
+  profileProtocol: (target: string) => string | undefined = () => undefined;
   private els = new Map<string, HTMLElement>();
   private sessions = new Map<string, Session>();
+
+  isRdp(target: string | null): boolean {
+    return target !== null && this.profileProtocol(target) === "rdp";
+  }
 
   get active(): Tab | undefined {
     return this.tabs.find((t) => t.id === this.activeId);
@@ -177,6 +183,10 @@ class Workspace {
     info.since = Date.now();
     this.sessions.get(id)?.dispose();
     this.els.get(id)?.replaceChildren();
+    if (this.isRdp(info.target)) {
+      info.connecting = false;
+      return;
+    }
     try {
       const s = await openSession(this.element(id), info.target ?? "local");
       s.ws.addEventListener("close", () => {

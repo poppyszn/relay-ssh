@@ -55,7 +55,13 @@
         <!-- svelte-ignore a11y_click_events_have_key_events (keys are handled on the dialog) -->
         <div class="row" role="option" tabindex="-1" aria-selected={i === sel} class:row-hl={i === sel} onmouseenter={() => (sel = i)} onclick={() => pick(i)}>
           <span class="dot" class:ok={active.has(p.name)}></span>
-          <span class="col"><span class="name">{p.name}</span><span class="sub mono">{p.folder ? p.folder + " · " : ""}{p.user}@{p.host}{p.port !== 22 ? ":" + p.port : ""}{p.jump ? " · via " + p.jump : ""}</span></span>
+          <span class="col">
+            <span class="name">
+              {#if p.protocol === "rdp"}<span class="rdp-icon" title="RDP connection"><Icon name="rdp" size={14} /></span>{/if}
+              {p.name}
+            </span>
+            <span class="sub mono">{p.folder ? p.folder + " · " : ""}{p.protocol === "rdp" ? "rdp · " : ""}{p.user}@{p.host}{p.port !== 22 && p.port !== 3389 ? ":" + p.port : ""}{p.jump ? " · via " + p.jump : ""}</span>
+          </span>
           <span class="tags">{#each p.tags ?? [] as t}<span class="chip">{t}</span>{/each}{#if i === sel}<span class="kbd">↵</span>{/if}</span>
         </div>
       {/each}
@@ -82,7 +88,8 @@
   .sect { padding: var(--s2) var(--s4) var(--s1); }
   .row { display: flex; align-items: center; gap: var(--s3); height: 40px; padding: 0 var(--s4); cursor: pointer; outline: none; }
   .col { display: grid; min-width: 0; }
-  .name { font-weight: 600; color: var(--strong); }
+  .name { font-weight: 600; color: var(--strong); display: flex; align-items: center; gap: 4px; }
+  .rdp-icon { display: inline-flex; align-items: center; color: var(--muted); }
   .sub { font-size: var(--t-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tags { margin-left: auto; display: flex; gap: var(--s2); align-items: center; }
   .push { margin-left: auto; }
