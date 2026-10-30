@@ -20,7 +20,7 @@ companion that reads and writes the same data.
 - **OpenSSH stays the SSH client.** Relay never reimplements the protocol. It generates standard
   OpenSSH config and runs your system `ssh`, `sftp` and `ssh-keygen`, so jump hosts, agents, hardware
   keys, passwords, passphrases and 2FA all keep working exactly as they do in a plain terminal.
-- **No secrets are stored by default.** Relay leaves passwords and passphrases to OpenSSH unless you opt in. For password-only servers, you can optionally store the password in an age-encrypted vault on disk (`~/.config/sssh/vault.age`), unlocked with your master password and auto-filled safely during authentication. A saved password is only ever sent to the host, user and port it was saved for, and it is not part of backups. Key passphrases (delegated to the macOS Keychain and ssh-agent) and 2FA codes are never stored by Relay.
+- **No secrets are stored by default.** Relay leaves passwords and passphrases to OpenSSH unless you opt in. For password-only servers, you can optionally store the password in an age-encrypted vault on disk (`~/.config/sssh/vault.age`), unlocked with your master password and auto-filled safely during authentication. A saved password is only ever sent to the host, user and port it was saved for, and it is not part of backups. You can view one again in the connection's settings, but only after entering the master password (every time, even with the vault unlocked). Key passphrases (delegated to the macOS Keychain and ssh-agent) and 2FA codes are never stored by Relay.
 - **Your data is one human-readable file.** Connections live in `connections.toml`, which you can edit
   with any editor. Relay regenerates an OpenSSH include file from it, and the CLI and the app always
   agree.

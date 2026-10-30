@@ -3,6 +3,7 @@ package vault
 import (
 	"crypto/subtle"
 	"errors"
+	"os"
 	"strings"
 )
 
@@ -144,4 +145,33 @@ func (v *Vault) Has(connection string) bool {
 	}
 	_, ok := v.secrets[strings.TrimSpace(connection)]
 	return ok
+}
+
+// Reveal returns a saved password for the person to read. The master password is checked against
+// the file every time, even while the vault is unlocked: the check costs a full key derivation, so
+// it cannot be guessed quickly, and an open vault is not enough to read a password back. The vault's
+// lock state is left as it was, and the binding is not consulted (this is the owner looking at it).
+func (v *Vault) Reveal(connection, master string) (string, error) {
+	v.mu.Lock()
+	path := v.path
+	v.mu.Unlock()
+	if path == "" {
+		return "", ErrNoVaultPath
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", ErrVaultNotFound
+		}
+		return "", err
+	}
+	payload, err := v.decryptPayload(master, data)
+	if err != nil {
+		return "", err
+	}
+	e, ok := payload.Secrets[strings.TrimSpace(connection)]
+	if !ok {
+		return "", ErrNoSecret
+	}
+	return e.Password, nil
 }

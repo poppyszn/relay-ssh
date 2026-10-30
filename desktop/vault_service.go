@@ -60,9 +60,10 @@ func defaultVaultPath() (string, error) {
 	return filepath.Join(filepath.Dir(p.StoreFile), "vault.age"), nil
 }
 
-// VaultService exposes secret vault operations to the frontend. No method returns a secret,
-// and none stores one: passwords go in through ProfilesService.SaveWithPassword, which binds
-// them to the connection being saved.
+// VaultService exposes secret vault operations to the frontend. Passwords go in only through
+// ProfilesService.SaveWithPassword, which binds them to the connection being saved, and come back
+// out only through RevealSecret, which needs the master password every time. Nothing else here
+// returns a secret.
 type VaultService struct{}
 
 func (VaultService) Status() VaultStatus {
@@ -108,4 +109,10 @@ func announceVaultLocked() {
 	if a := application.Get(); a != nil {
 		a.Event.Emit("vault", "locked")
 	}
+}
+
+// RevealSecret returns the password saved for a connection so the person can read it. The master
+// password must be supplied for every call, whether or not the vault is unlocked.
+func (VaultService) RevealSecret(connection, master string) (string, error) {
+	return getVault().Reveal(connection, master)
 }

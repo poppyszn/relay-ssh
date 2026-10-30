@@ -14,7 +14,7 @@ import (
 	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
-// No bound Wails method returns a secret.
+// RevealSecret is the only bound Wails method that returns a secret, and it needs the master password.
 func TestVaultServiceNoBoundMethodReturnsSecret(t *testing.T) {
 	svc := VaultService{}
 	svcType := reflect.TypeOf(svc)
@@ -27,7 +27,7 @@ func TestVaultServiceNoBoundMethodReturnsSecret(t *testing.T) {
 			outType := mType.Out(outIdx)
 
 			// No string or byte slice return types
-			if outType.Kind() == reflect.String {
+			if outType.Kind() == reflect.String && method.Name != "RevealSecret" {
 				t.Fatalf("method %s returns a string (potential secret leak)", method.Name)
 			}
 			if outType == reflect.TypeOf([]byte{}) {
@@ -318,5 +318,25 @@ func TestSaveWithPasswordChecksBeforeSaving(t *testing.T) {
 	keyProf.Auth = "agent"
 	if err := ps.SaveWithPassword("", keyProf, "fine-password"); err == nil {
 		t.Fatal("a password was accepted for a connection that does not use one")
+	}
+}
+
+func TestRevealSecretNeedsTheMasterPassword(t *testing.T) {
+	_, v := serviceTestHome(t)
+	ps := ProfilesService{}
+	prof := Profile{Name: "web", Host: "10.0.0.5", User: "alice", Port: 22, Auth: "password"}
+	if err := ps.SaveWithPassword("", prof, "alpha-web-pass"); err != nil {
+		t.Fatal(err)
+	}
+	vs := VaultService{}
+	if sec, err := vs.RevealSecret("web", "wrong-master-password"); err == nil || sec != "" {
+		t.Fatalf("a wrong master revealed %q (%v)", sec, err)
+	}
+	if sec, err := vs.RevealSecret("web", "correct-horse-battery-staple"); err != nil || sec != "alpha-web-pass" {
+		t.Fatalf("%q %v", sec, err)
+	}
+	v.Lock()
+	if sec, err := vs.RevealSecret("web", "correct-horse-battery-staple"); err != nil || sec != "alpha-web-pass" {
+		t.Fatalf("while locked: %q %v", sec, err)
 	}
 }
