@@ -14,7 +14,7 @@ publicly.
 ## What is in scope
 
 - Anything that causes Relay to **store, log or leak a secret** (passwords, passphrases, keys, 2FA codes).
-- Writes outside Relay's sandbox (`~/.ssh/sssh.d/`, its marked block in `~/.ssh/config`, its own
+- Writes outside Relay's sandbox (`~/.ssh/relay-ssh.d/`, its marked block in `~/.ssh/config`, its own
   config directory).
 - Command or argument **injection** into `ssh`, `sftp` or `ssh-keygen` through connection names, hosts,
   file names, folders, forward specs or other user-controlled input.

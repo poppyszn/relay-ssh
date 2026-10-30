@@ -1,7 +1,7 @@
-// Package keys manages SSH private keys that sssh adopts.
+// Package keys manages SSH private keys that relay-ssh adopts.
 //
-// A key is "adopted" when sssh copies it from the user's existing keyring into
-// ~/.ssh/sssh.d/keys/, giving sssh a local copy for restore operations. Non-adopted
+// A key is "adopted" when relay-ssh copies it from the user's existing keyring into
+// ~/.ssh/relay-ssh.d/keys/, giving relay-ssh a local copy for restore operations. Non-adopted
 // keys are "linked" — stored elsewhere and referenced by absolute or tilde path.
 package keys
 
@@ -18,7 +18,7 @@ import (
 	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
-// Adopt copies a key file into ~/.ssh/sssh.d/keys/ at 0600, or validates that
+// Adopt copies a key file into ~/.ssh/relay-ssh.d/keys/ at 0600, or validates that
 // it is already there. The key is renamed to keyName, idempotently. Returns the
 // basename used in the connections store.
 //
@@ -58,7 +58,7 @@ func ValidateAdopted(p paths.Paths, keyNames []string) []string {
 //
 // OpenSSH fingerprints keys using the MD5 hash of the public key blob,
 // not the private key file. We can't re-derive that blob from the private key
-// without parsing it. So sssh stores a fingerprint when adopting, and doctor
+// without parsing it. So relay-ssh stores a fingerprint when adopting, and doctor
 // compares the current source against the stored fingerprint. This detects
 // drift without needing a public key parser.
 func FingerprintMatches(p paths.Paths, keyName string, sourceData []byte) bool {

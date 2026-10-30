@@ -13,7 +13,7 @@ import (
 
 // BackupCmd creates an age-encrypted gzip tarball of connections.toml and keys.
 func BackupCmd(p paths.Paths, args []string) error {
-	outFile := "sssh-backup.tar.gz.age"
+	outFile := "relay-ssh-backup.tar.gz.age"
 	if len(args) > 0 && args[0] == "-o" && len(args) > 1 {
 		outFile = args[1]
 		if !strings.HasSuffix(outFile, ".age") {
@@ -21,7 +21,7 @@ func BackupCmd(p paths.Paths, args []string) error {
 		}
 	}
 
-	passphrase := os.Getenv("SSSH_BACKUP_PASSPHRASE")
+	passphrase := envPassphrase()
 	if passphrase == "" {
 		in := bufio.NewScanner(os.Stdin)
 		p, err := promptBackupPassphrase(in)
@@ -82,7 +82,7 @@ func RestoreCmd(p paths.Paths, args []string) error {
 	encrypted := strings.HasSuffix(backupPath, ".age")
 	passphrase := ""
 	if encrypted {
-		passphrase = os.Getenv("SSSH_BACKUP_PASSPHRASE")
+		passphrase = envPassphrase()
 		if passphrase == "" {
 			in := bufio.NewScanner(os.Stdin)
 			val, ok := scanHiddenLine(in, "Enter backup passphrase")
@@ -98,4 +98,12 @@ func RestoreCmd(p paths.Paths, args []string) error {
 	}
 	fmt.Printf("%s Backup restored.\n", style.Success("✓"))
 	return nil
+}
+
+// envPassphrase reads the backup passphrase from $RELAY_SSH_BACKUP_PASSPHRASE, or its old name.
+func envPassphrase() string {
+	if v := os.Getenv("RELAY_SSH_BACKUP_PASSPHRASE"); v != "" {
+		return v
+	}
+	return os.Getenv("SSSH_BACKUP_PASSPHRASE")
 }

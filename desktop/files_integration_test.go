@@ -75,7 +75,7 @@ func startSSHD(t *testing.T) (*FilesService, string) {
 		t.Skipf("sshd did not start: %s", log.String())
 	}
 
-	t.Setenv("SSSH_HOME", t.TempDir())
+	t.Setenv("RELAY_SSH_HOME", t.TempDir())
 	u, _ := user.Current()
 	if err := (ProfilesService{}).Save("", Profile{Name: "box", Host: "127.0.0.1", Port: port, User: u.Username, Auth: "key", Key: clientKey}); err != nil {
 		t.Fatal(err)

@@ -48,7 +48,7 @@ func TestAdoptHandlesTildePath(t *testing.T) {
 	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	testdir := filepath.Join(home, ".sssh-test-keys-temp")
+	testdir := filepath.Join(home, ".relay-ssh-test-keys-temp")
 	if err := os.MkdirAll(testdir, 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestAdoptHandlesTildePath(t *testing.T) {
 	if err := os.WriteFile(srcPath, []byte("rsa key"), 0o400); err != nil {
 		t.Fatal(err)
 	}
-	tildePath := "~/.sssh-test-keys-temp/id_rsa"
+	tildePath := "~/.relay-ssh-test-keys-temp/id_rsa"
 	_, err := Adopt(p, tildePath, "rsa-key")
 	if err != nil {
 		t.Fatalf("Adopt with tilde path: %v", err)

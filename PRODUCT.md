@@ -30,7 +30,7 @@ Used all day, often with many tabs and panes open, mostly keyboard-driven (quick
 - Terminal with tabs, split panes, scrollback search, themes, and optional command blocks (directory, git branch, exit status, duration; a setup line is typed into remote shells only with consent).
 - Tools: health check, passphrase-encrypted backup and restore, key adoption (passphrases go to the macOS Keychain and ssh-agent, never stored by Relay), snippets, file browser over sftp, live port forwards.
 - Optional encrypted vault for SSH passwords, opt-in per connection, filled only for the host a password was saved for; shown back to the owner only after the master password is entered again.
-- Relay stores no secrets by default. It writes only inside `~/.ssh/sssh.d/` and one marked block of `~/.ssh/config` (naming under review).
+- Relay stores no secrets by default. It writes only inside `~/.ssh/relay-ssh.d/` and one marked block of `~/.ssh/config`.
 - Terminology: "connection" (not "host" or "server profile"), "jump host", "port forward", "command blocks", "vault".
 - Undecided: Windows and Linux design details; signed and notarized macOS releases.
 

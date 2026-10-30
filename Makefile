@@ -1,15 +1,15 @@
-BINARY := sssh
-PKG    := ./cmd/sssh
+BINARY := relay-ssh
+PKG    := ./cmd/relay-ssh
 
 .PHONY: help build install test race vet fmt guardrails check desktop-check hooks clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-build: ## Build the sssh binary
+build: ## Build the relay-ssh binary
 	go build -o $(BINARY) $(PKG)
 
-install: ## Install sssh into $$GOPATH/bin
+install: ## Install relay-ssh into $$GOPATH/bin
 	go install $(PKG)
 
 test: ## Run the test suite

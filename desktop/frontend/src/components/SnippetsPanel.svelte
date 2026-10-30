@@ -128,7 +128,7 @@
 
   {#snippet footer()}
     {#if editing === null}
-      <span class="hint note">Saved in <span class="mono">~/.config/sssh/snippets.toml</span>. Insert types it for you to edit; Run also presses Enter.</span>
+      <span class="hint note">Saved in <span class="mono">~/.config/relay-ssh/snippets.toml</span>. Insert types it for you to edit; Run also presses Enter.</span>
     {:else}
       <button type="button" class="btn ghost" onclick={cancelEdit}>Cancel</button>
       <button type="submit" form={formId} class="btn primary">{editing ? "Save changes" : "Add snippet"}</button>

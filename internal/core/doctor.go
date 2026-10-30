@@ -48,7 +48,7 @@ func Diagnose(p paths.Paths) []Check {
 		content := string(sshConfigData)
 		switch {
 		case !sshconfig.HasBlock(content):
-			add("~/.ssh/config", Warn, "no managed block (run `sssh sync`)")
+			add("~/.ssh/config", Warn, "no managed block (run `relay-ssh sync`)")
 		case !sshconfig.BlockIsFirst(content):
 			add("~/.ssh/config", Fail, "managed block exists but is not at top")
 		default:
@@ -64,9 +64,9 @@ func Diagnose(p paths.Paths) []Check {
 	genData, genErr := os.ReadFile(p.GenConfig)
 	switch {
 	case genErr != nil:
-		add("generated config", Fail, "not found (run `sssh sync`)")
+		add("generated config", Fail, "not found (run `relay-ssh sync`)")
 	case string(genData) != expected:
-		add("generated config", Warn, "out of date (run `sssh sync`)")
+		add("generated config", Warn, "out of date (run `relay-ssh sync`)")
 	default:
 		add("generated config", OK, "up to date")
 	}

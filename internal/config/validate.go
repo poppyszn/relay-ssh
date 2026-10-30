@@ -8,7 +8,7 @@ import (
 )
 
 // reservedNames are the subcommands. A profile may not take one of these,
-// because `sssh <name>` dispatches on the same argument position: a profile
+// because `relay-ssh <name>` dispatches on the same argument position: a profile
 // called "backup" would be unreachable, and would shadow the backup command.
 var reservedNames = map[string]bool{
 	"ls": true, "add": true, "edit": true, "rm": true, "cp": true,
@@ -44,7 +44,7 @@ func ValidateName(name string) error {
 		return fmt.Errorf("name is required")
 	}
 	if reservedNames[name] {
-		return fmt.Errorf("name %q is reserved for the sssh subcommand of the same name", name)
+		return fmt.Errorf("name %q is reserved for the relay-ssh subcommand of the same name", name)
 	}
 	for _, r := range name {
 		if !validNameChar(r) {
@@ -163,7 +163,7 @@ func (t Tunnel) Validate() error {
 // Validate checks every profile, then the rules that span profiles.
 func (s Store) Validate() error {
 	if s.Version != Version {
-		return fmt.Errorf("unsupported store version %d (this sssh understands version %d)", s.Version, Version)
+		return fmt.Errorf("unsupported store version %d (this relay-ssh understands version %d)", s.Version, Version)
 	}
 	for _, f := range s.Folders {
 		if f == "" {

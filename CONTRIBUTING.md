@@ -11,10 +11,10 @@ them before opening a pull request, and open an issue first for anything bigger 
    the moment of use. They belong to `ssh`.
 3. **One human-editable source of truth:** `connections.toml`. The CLI and the app share it through
    `internal/`, so a change made in one must appear in the other.
-4. **Stay inside the sandbox.** Relay writes only to `~/.ssh/sssh.d/` and one marked block in
+4. **Stay inside the sandbox.** Relay writes only to `~/.ssh/relay-ssh.d/` and one marked block in
    `~/.ssh/config` (plus `known_hosts` merges). Every other write outside Relay's own config directory
    is a bug.
-5. **The CLI never sits in the data path.** `sssh` builds an argv and `exec`s `ssh`: no child process, no
+5. **The CLI never sits in the data path.** `relay-ssh` builds an argv and `exec`s `ssh`: no child process, no
    PTY, no terminal emulation. `CLAUDE.md` explains the history behind this (an earlier version failed
    by emulating a terminal in Go).
 6. **The desktop terminal is bytes in, bytes out.** Go moves raw bytes between a PTY and xterm.js with
@@ -32,13 +32,13 @@ github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0`).
 git clone https://github.com/poppyszn/relay-ssh && cd relay-ssh
 make check                      # CLI: format, vet, race tests, guardrails
 make desktop-check              # app: guardrails, Go tests, typecheck, frontend tests, build
-SSSH_HOME=/tmp/relay-home wails3 dev -config desktop/build/config.yml -port 9245   # run the app
+RELAY_SSH_HOME=/tmp/relay-home wails3 dev -config desktop/build/config.yml -port 9245   # run the app
 ```
 
 Run `make hooks` once to install the pre-push hook: on macOS it runs `make desktop-check` before every
 push (skip once with `git push --no-verify`). On other systems it does nothing.
 
-`SSSH_HOME` points Relay at a throwaway home so you never touch your real SSH setup. Run `desktop`
+`RELAY_SSH_HOME` points Relay at a throwaway home so you never touch your real SSH setup. Run `desktop`
 commands from the `desktop/` directory.
 
 ## Before you open a pull request

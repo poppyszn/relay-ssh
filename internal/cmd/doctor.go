@@ -19,7 +19,7 @@ func DoctorCmd(p paths.Paths, args ...string) error {
 		}
 	}
 
-	fmt.Println(style.Header("sssh health check"))
+	fmt.Println(style.Header("relay-ssh health check"))
 	fmt.Println(style.Dim("──────────────────"))
 	var issues int
 	for _, c := range core.Diagnose(p) {

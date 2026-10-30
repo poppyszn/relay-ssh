@@ -1,4 +1,4 @@
-// Command sssh manages SSH connection profiles and launches the real ssh
+// Command relay-ssh manages SSH connection profiles and launches the real ssh
 // binary. It is never running while a session is open: connecting replaces
 // this process via exec.
 package main
@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/poppyszn/relay-ssh/internal/cmd"
+	"github.com/poppyszn/relay-ssh/internal/core"
 	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
@@ -17,14 +18,23 @@ var version = "dev"
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "sssh:", err)
+		fmt.Fprintln(os.Stderr, "relay-ssh:", err)
 		os.Exit(1)
 	}
 }
 
+// migratedPaths is paths.Default, after moving anything left under the tool's old name (sssh).
+func migratedPaths() (paths.Paths, error) {
+	p, err := paths.Default()
+	if err != nil {
+		return p, err
+	}
+	return p, core.Migrate(p)
+}
+
 func run(args []string) error {
 	if len(args) == 0 {
-		p, err := paths.Default()
+		p, err := migratedPaths()
 		if err != nil {
 			return err
 		}
@@ -36,13 +46,13 @@ func run(args []string) error {
 	}
 	switch args[0] {
 	case "version", "--version", "-v":
-		fmt.Println("sssh " + version)
+		fmt.Println("relay-ssh " + version)
 		return nil
 	case "help", "--help", "-h":
 		fmt.Print(usage)
 		return nil
 	}
-	p, err := paths.Default()
+	p, err := migratedPaths()
 	if err != nil {
 		return err
 	}
@@ -102,27 +112,27 @@ func run(args []string) error {
 	return cmd.Connect(p, args[0])
 }
 
-const usage = `sssh — SSH connection manager
+const usage = `relay-ssh — SSH connection manager
 
 Usage:
-  sssh                    pick a connection and connect
-  sssh <name>             connect to a saved profile
-  sssh ls [--tree]        list profiles
-  sssh add                add a profile
-  sssh edit <name>        edit a profile
-  sssh rm <name>          remove a profile
-  sssh cp <name>:/p ./l   copy files with scp
-  sssh import             adopt hosts from ~/.ssh/config
-  sssh backup [-o FILE]   write an encrypted archive
-  sssh restore FILE       restore from an encrypted archive
-  sssh doctor [--fix]     check the installation (or fix deterministic issues)
-  sssh sync               regenerate ~/.ssh/sssh.d/config
-  sssh completion <shell> print a completion script (bash or zsh)
-  sssh version            print the version
+  relay-ssh                    pick a connection and connect
+  relay-ssh <name>             connect to a saved profile
+  relay-ssh ls [--tree]        list profiles
+  relay-ssh add                add a profile
+  relay-ssh edit <name>        edit a profile
+  relay-ssh rm <name>          remove a profile
+  relay-ssh cp <name>:/p ./l   copy files with scp
+  relay-ssh import             adopt hosts from ~/.ssh/config
+  relay-ssh backup [-o FILE]   write an encrypted archive
+  relay-ssh restore FILE       restore from an encrypted archive
+  relay-ssh doctor [--fix]     check the installation (or fix deterministic issues)
+  relay-ssh sync               regenerate ~/.ssh/relay-ssh.d/config
+  relay-ssh completion <shell> print a completion script (bash or zsh)
+  relay-ssh version            print the version
 
 Tab completion (zsh):
-  sssh completion zsh > "${fpath[1]}/_sssh" && exec zsh
+  relay-ssh completion zsh > "${fpath[1]}/_relay-ssh" && exec zsh
 
 Tab completion (bash):
-  echo 'source <(sssh completion bash)' >> ~/.bashrc
+  echo 'source <(relay-ssh completion bash)' >> ~/.bashrc
 `

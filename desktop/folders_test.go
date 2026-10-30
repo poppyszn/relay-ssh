@@ -22,7 +22,7 @@ func folderList(t *testing.T, svc ProfilesService) string {
 }
 
 func TestFolderLifecycle(t *testing.T) {
-	t.Setenv("SSSH_HOME", t.TempDir())
+	t.Setenv("RELAY_SSH_HOME", t.TempDir())
 	svc := ProfilesService{}
 	saveAgent(t, svc, "web", "prod/eu")
 	saveAgent(t, svc, "db", "")
@@ -102,7 +102,7 @@ func TestFolderLifecycle(t *testing.T) {
 }
 
 func TestDeletingOrEditingTheLastConnectionKeepsItsFolder(t *testing.T) {
-	t.Setenv("SSSH_HOME", t.TempDir())
+	t.Setenv("RELAY_SSH_HOME", t.TempDir())
 	svc := ProfilesService{}
 	saveAgent(t, svc, "a", "keep1")
 	saveAgent(t, svc, "b", "keep2")

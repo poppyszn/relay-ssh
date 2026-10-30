@@ -1,5 +1,5 @@
 // Package config defines the connection store: the TOML file that is the single
-// source of truth for every profile sssh knows about.
+// source of truth for every profile relay-ssh knows about.
 package config
 
 // Version is the schema version written into connections.toml. Load refuses a
@@ -40,11 +40,11 @@ type Tunnel struct {
 
 // Profile is one saved connection.
 //
-// Name doubles as the ssh Host alias and as the argument to `sssh <name>`,
+// Name doubles as the ssh Host alias and as the argument to `relay-ssh <name>`,
 // which is why Validate constrains it so tightly.
 //
 // Key is either a bare filename, meaning a key adopted into
-// ~/.ssh/sssh.d/keys/, or an absolute or ~-prefixed path, meaning a key linked
+// ~/.ssh/relay-ssh.d/keys/, or an absolute or ~-prefixed path, meaning a key linked
 // in place and therefore not covered by backups.
 //
 // Jump names another profile, never a free-text host, so a jump host gets the

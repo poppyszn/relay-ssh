@@ -12,7 +12,7 @@ import (
 // "folder/name" for a profile in a folder, or just "name" otherwise. This is
 // exactly the string a completion script should offer and exactly what
 // resolveProfile accepts, so a tab-completed name is always immediately
-// usable (`sssh <TAB>` -> `sssh Vascon/dev-app-server`, not something that
+// usable (`relay-ssh <TAB>` -> `relay-ssh Vascon/dev-app-server`, not something that
 // then fails with "profile not found").
 func ListProfileAddresses(p paths.Paths) ([]string, error) {
 	s, err := config.Load(p.StoreFile)
@@ -32,7 +32,7 @@ func ListProfileAddresses(p paths.Paths) ([]string, error) {
 }
 
 // CompletionScript returns a shell completion script for the given shell.
-// The script calls back into `sssh __complete-profiles` at completion time
+// The script calls back into `relay-ssh __complete-profiles` at completion time
 // (not at generation time), so profiles added or removed after the script is
 // installed still complete correctly -- nothing needs regenerating when
 // connections.toml changes.
@@ -47,21 +47,21 @@ func CompletionScript(shell string) (string, error) {
 	}
 }
 
-const zshCompletion = `#compdef sssh
+const zshCompletion = `#compdef relay-ssh
 
-_sssh() {
+_relay-ssh() {
   local -a profiles
-  profiles=(${(f)"$(sssh __complete-profiles 2>/dev/null)"})
+  profiles=(${(f)"$(relay-ssh __complete-profiles 2>/dev/null)"})
   _describe 'profile' profiles
 }
 
-_sssh "$@"
+_relay-ssh "$@"
 `
 
-const bashCompletion = `_sssh_complete() {
+const bashCompletion = `_relay-ssh_complete() {
   local cur
   cur="${COMP_WORDS[COMP_CWORD]}"
-  COMPREPLY=( $(compgen -W "$(sssh __complete-profiles 2>/dev/null)" -- "$cur") )
+  COMPREPLY=( $(compgen -W "$(relay-ssh __complete-profiles 2>/dev/null)" -- "$cur") )
 }
-complete -F _sssh_complete sssh
+complete -F _relay-ssh_complete relay-ssh
 `

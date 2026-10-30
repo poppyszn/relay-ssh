@@ -13,7 +13,7 @@ import (
 )
 
 func TestBackupCreatesEncryptedFile(t *testing.T) {
-	t.Setenv("SSSH_BACKUP_PASSPHRASE", "secret123")
+	t.Setenv("RELAY_SSH_BACKUP_PASSPHRASE", "secret123")
 	p := paths.New(t.TempDir())
 	if err := paths.EnsureDirs(p); err != nil {
 		t.Fatal(err)
@@ -34,13 +34,13 @@ func TestBackupCreatesEncryptedFile(t *testing.T) {
 		t.Fatalf("BackupCmd: %v", err)
 	}
 
-	if _, err := os.Stat("sssh-backup.tar.gz.age"); err != nil {
-		t.Errorf("expected sssh-backup.tar.gz.age to be created, got: %v", err)
+	if _, err := os.Stat("relay-ssh-backup.tar.gz.age"); err != nil {
+		t.Errorf("expected relay-ssh-backup.tar.gz.age to be created, got: %v", err)
 	}
 }
 
 func TestBackupAppendsAgeSuffix(t *testing.T) {
-	t.Setenv("SSSH_BACKUP_PASSPHRASE", "secret123")
+	t.Setenv("RELAY_SSH_BACKUP_PASSPHRASE", "secret123")
 	p := paths.New(t.TempDir())
 	if err := paths.EnsureDirs(p); err != nil {
 		t.Fatal(err)
@@ -76,7 +76,7 @@ func TestBackupAppendsAgeSuffix(t *testing.T) {
 
 func TestBackupRestoreRoundTripEncrypted(t *testing.T) {
 	passphrase := "correct-horse-battery-staple"
-	t.Setenv("SSSH_BACKUP_PASSPHRASE", passphrase)
+	t.Setenv("RELAY_SSH_BACKUP_PASSPHRASE", passphrase)
 
 	pSrc := paths.New(t.TempDir())
 	if err := paths.EnsureDirs(pSrc); err != nil {
@@ -98,7 +98,7 @@ func TestBackupRestoreRoundTripEncrypted(t *testing.T) {
 		t.Fatalf("BackupCmd: %v", err)
 	}
 
-	backupPath := filepath.Join(backupDir, "sssh-backup.tar.gz.age")
+	backupPath := filepath.Join(backupDir, "relay-ssh-backup.tar.gz.age")
 	pDst := paths.New(t.TempDir())
 	if err := paths.EnsureDirs(pDst); err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestBackupRestoreRoundTripEncrypted(t *testing.T) {
 }
 
 func TestRestoreWrongPassphraseProducesSpecificError(t *testing.T) {
-	t.Setenv("SSSH_BACKUP_PASSPHRASE", "good-passphrase")
+	t.Setenv("RELAY_SSH_BACKUP_PASSPHRASE", "good-passphrase")
 
 	pSrc := paths.New(t.TempDir())
 	if err := paths.EnsureDirs(pSrc); err != nil {
@@ -143,14 +143,14 @@ func TestRestoreWrongPassphraseProducesSpecificError(t *testing.T) {
 		t.Fatalf("BackupCmd: %v", err)
 	}
 
-	backupPath := filepath.Join(backupDir, "sssh-backup.tar.gz.age")
+	backupPath := filepath.Join(backupDir, "relay-ssh-backup.tar.gz.age")
 	pDst := paths.New(t.TempDir())
 	if err := paths.EnsureDirs(pDst); err != nil {
 		t.Fatal(err)
 	}
 
 	// Attempt restore with wrong passphrase
-	t.Setenv("SSSH_BACKUP_PASSPHRASE", "wrong-passphrase")
+	t.Setenv("RELAY_SSH_BACKUP_PASSPHRASE", "wrong-passphrase")
 	err := RestoreCmd(pDst, []string{backupPath})
 	if err == nil {
 		t.Fatal("expected restore with wrong passphrase to fail, got nil")
@@ -189,8 +189,8 @@ func TestRestoreLegacyPlaintextBackup(t *testing.T) {
 	gz.Close()
 	f.Close()
 
-	// Restore into pDst without setting SSSH_BACKUP_PASSPHRASE
-	t.Setenv("SSSH_BACKUP_PASSPHRASE", "")
+	// Restore into pDst without setting RELAY_SSH_BACKUP_PASSPHRASE
+	t.Setenv("RELAY_SSH_BACKUP_PASSPHRASE", "")
 	pDst := paths.New(t.TempDir())
 	if err := paths.EnsureDirs(pDst); err != nil {
 		t.Fatal(err)

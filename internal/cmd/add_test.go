@@ -10,9 +10,9 @@ import (
 )
 
 // TestAddRegeneratesConfigWithoutRequiringSync guards a real reported bug:
-// `sssh doctor` showed "generated config not found" right after `sssh add`,
-// because add saved the store but never regenerated ~/.ssh/sssh.d/config --
-// the user had to know to separately run `sssh sync`. Add must leave the
+// `relay-ssh doctor` showed "generated config not found" right after `relay-ssh add`,
+// because add saved the store but never regenerated ~/.ssh/relay-ssh.d/config --
+// the user had to know to separately run `relay-ssh sync`. Add must leave the
 // generated config current on its own.
 func TestAddRegeneratesConfigWithoutRequiringSync(t *testing.T) {
 	disableFzfForTest = true

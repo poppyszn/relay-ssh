@@ -79,7 +79,7 @@ func TestTerminalSocketRejectsBadOriginAndToken(t *testing.T) {
 // Profile sessions must start as the multiplexing master so the file browser can
 // attach to their authenticated connection, and the profile name stays last.
 func TestProfileSessionIsTheMultiplexMaster(t *testing.T) {
-	t.Setenv("SSSH_HOME", t.TempDir())
+	t.Setenv("RELAY_SSH_HOME", t.TempDir())
 	if err := (ProfilesService{}).Save("", Profile{Name: "web", Host: "h", User: "u", Port: 22, Auth: "agent"}); err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestProfileSessionIsTheMultiplexMaster(t *testing.T) {
 // restart. Connections that do not need it get no extra options (and no key is pushed into the agent).
 func TestSessionsUseTheKeychainForEncryptedKeys(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
+	t.Setenv("RELAY_SSH_HOME", home)
 	dir := filepath.Join(home, "keys")
 	_ = os.MkdirAll(dir, 0o700)
 	locked := makeKey(t, dir, "locked", "hunter2")

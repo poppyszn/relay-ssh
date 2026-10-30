@@ -289,7 +289,7 @@
     </div>
 
     <aside>
-      <div class="phead"><h3 class="label">SSH config preview</h3><span class="hint">Written to ~/.ssh/sssh.d/config on save</span></div>
+      <div class="phead"><h3 class="label">SSH config preview</h3><span class="hint">Written to ~/.ssh/relay-ssh.d/config on save</span></div>
       <pre class="mono">{#each preview.config.split("\n") as line}{@const m = line.match(/^(\s*)(\S+)(.*)$/)}{#if m}{m[1]}<span class={m[1] ? "k2" : "k1"}>{m[2]}</span>{m[3]}{"\n"}{/if}{/each}</pre>
       {#if started}
         <div class="notice" class:good={!preview.problem} class:bad={!!preview.problem}>{preview.problem || (p.jump ? "Valid. Jump chain resolves." : "Valid.")}</div>
@@ -300,7 +300,7 @@
   {#if error}<div class="notice bad fail" role="alert">{error}</div>{/if}
 
   {#snippet footer()}
-    <span class="cli hint">Connect from the CLI <code class="mono">sssh {p.name || "name"}</code></span>
+    <span class="cli hint">Connect from the CLI <code class="mono">relay-ssh {p.name || "name"}</code></span>
     {#if !isNew}<button type="button" class="btn ghost danger" onclick={ondelete}>Delete</button>{/if}
     <button type="button" class="btn ghost" onclick={oncancel}>Cancel</button>
     <button type="submit" form={formId} class="btn primary" disabled={busy} title="⌘↵">{isNew ? "Add connection" : "Save changes"}</button>

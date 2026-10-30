@@ -11,13 +11,46 @@ import (
 	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
-// The markers delimit the only part of ~/.ssh/config that sssh owns. Every
+// The markers delimit the only part of ~/.ssh/config that relay-ssh owns. Every
 // byte outside them belongs to the user and is never modified.
 const (
-	BeginMarker = "# >>> sssh managed block >>>"
-	EndMarker   = "# <<< sssh managed block <<<"
-	IncludeLine = "Include ~/.ssh/sssh.d/config"
+	BeginMarker = "# >>> relay-ssh managed block >>>"
+	EndMarker   = "# <<< relay-ssh managed block <<<"
+	IncludeLine = "Include ~/.ssh/relay-ssh.d/config"
 )
+
+// The markers and include line this tool wrote under its former name, sssh.
+const (
+	legacyBegin   = "# >>> sssh managed block >>>"
+	legacyEnd     = "# <<< sssh managed block <<<"
+	legacyInclude = "Include ~/.ssh/sssh.d/config"
+)
+
+// UpgradeLegacyBlock rewrites a managed block written under the old name so its markers and
+// Include line use the new ones, leaving every other byte of the file alone. It reports
+// whether it changed anything.
+func UpgradeLegacyBlock(p paths.Paths) (bool, error) {
+	data, err := os.ReadFile(p.SSHConfig)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("reading %s: %w", p.SSHConfig, err)
+	}
+	old := string(data)
+	if !strings.Contains(old, legacyBegin) {
+		return false, nil
+	}
+	upgraded := strings.NewReplacer(legacyBegin, BeginMarker, legacyEnd, EndMarker, legacyInclude, IncludeLine).Replace(old)
+	mode := os.FileMode(0o600)
+	if info, statErr := os.Stat(p.SSHConfig); statErr == nil {
+		mode = info.Mode().Perm()
+	}
+	if err := fsutil.WriteFile(p.SSHConfig, []byte(upgraded), mode); err != nil {
+		return false, fmt.Errorf("updating %s: %w", p.SSHConfig, err)
+	}
+	return true, nil
+}
 
 // Block is what gets inserted into the user's ssh config. The Include path uses
 // a tilde rather than an absolute path so the same line works on any machine
@@ -73,7 +106,7 @@ func RemoveBlock(content string) string {
 }
 
 // BlockIsFirst reports whether the managed block appears before any Host or
-// Match directive. `sssh doctor` uses this to catch a config where the block was
+// Match directive. `relay-ssh doctor` uses this to catch a config where the block was
 // moved down, which disables it without any visible error.
 func BlockIsFirst(content string) bool {
 	for _, line := range strings.Split(content, "\n") {
@@ -91,7 +124,7 @@ func BlockIsFirst(content string) bool {
 
 // EnsureInclude adds the managed block to the user's ssh config if it is not
 // already there, creating the file if the machine has none. An existing file
-// keeps its permissions: sssh has no business tightening or loosening a mode
+// keeps its permissions: relay-ssh has no business tightening or loosening a mode
 // the user chose.
 func EnsureInclude(p paths.Paths) error {
 	data, err := os.ReadFile(p.SSHConfig)
