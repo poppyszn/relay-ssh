@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in Relay or sssh does not work as expected
+description: Something in Relay or relay-ssh does not work as expected
 labels: ["bug"]
 body:
   - type: markdown
@@ -11,7 +11,7 @@ body:
     id: part
     attributes:
       label: Which part?
-      options: [Relay desktop app, sssh command line, Both / not sure]
+      options: [Relay desktop app, relay-ssh command line, Both / not sure]
     validations:
       required: true
   - type: textarea

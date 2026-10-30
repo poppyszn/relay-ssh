@@ -9,7 +9,7 @@ import (
 
 func TestSnippetsRoundTripSortedAndPrivate(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
+	t.Setenv("RELAY_SSH_HOME", home)
 	svc := SnippetsService{}
 
 	if got, err := svc.List(); err != nil || len(got) != 0 {
@@ -30,14 +30,14 @@ func TestSnippetsRoundTripSortedAndPrivate(t *testing.T) {
 	if got[0].Command != "df -h\ndu -sh *" {
 		t.Errorf("a multi-line command did not survive: %q", got[0].Command)
 	}
-	info, err := os.Stat(filepath.Join(home, ".config", "sssh", "snippets.toml"))
+	info, err := os.Stat(filepath.Join(home, ".config", "relay-ssh", "snippets.toml"))
 	if err != nil || info.Mode().Perm() != 0o600 {
 		t.Errorf("snippets.toml = %v, %v (want 0600)", info, err)
 	}
 }
 
 func TestSnippetsRenameEditAndDelete(t *testing.T) {
-	t.Setenv("SSSH_HOME", t.TempDir())
+	t.Setenv("RELAY_SSH_HOME", t.TempDir())
 	svc := SnippetsService{}
 	_ = svc.Save("", Snippet{Name: "a", Command: "echo a"})
 	_ = svc.Save("", Snippet{Name: "b", Command: "echo b"})
@@ -67,7 +67,7 @@ func TestSnippetsRenameEditAndDelete(t *testing.T) {
 }
 
 func TestSnippetsRejectBadInput(t *testing.T) {
-	t.Setenv("SSSH_HOME", t.TempDir())
+	t.Setenv("RELAY_SSH_HOME", t.TempDir())
 	svc := SnippetsService{}
 	for name, s := range map[string]Snippet{
 		"empty name":      {Name: "  ", Command: "ls"},
@@ -88,8 +88,8 @@ func TestSnippetsRejectBadInput(t *testing.T) {
 
 func TestSnippetsRefuseAGarbledFile(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
-	dir := filepath.Join(home, ".config", "sssh")
+	t.Setenv("RELAY_SSH_HOME", home)
+	dir := filepath.Join(home, ".config", "relay-ssh")
 	_ = os.MkdirAll(dir, 0o700)
 	_ = os.WriteFile(filepath.Join(dir, "snippets.toml"), []byte("[[snippet\nname = "), 0o600)
 	if _, err := (SnippetsService{}).List(); err == nil {

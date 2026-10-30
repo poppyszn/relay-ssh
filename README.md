@@ -8,7 +8,7 @@
 
 Relay is a desktop app for people who live in SSH: a tree of your connections, a real terminal with
 per-command blocks, tabs and split panes, and the everyday tools around SSH (encrypted backup, key
-management, file browsing, port forwards) in one place. It ships with **`sssh`**, a small command-line
+management, file browsing, port forwards) in one place. It ships with **`relay-ssh`**, a small command-line
 companion that reads and writes the same data.
 
 > **Status: early and macOS first.** Relay is being built in the open. The desktop app is developed
@@ -20,7 +20,7 @@ companion that reads and writes the same data.
 - **OpenSSH stays the SSH client.** Relay never reimplements the protocol. It generates standard
   OpenSSH config and runs your system `ssh`, `sftp` and `ssh-keygen`, so jump hosts, agents, hardware
   keys, passwords, passphrases and 2FA all keep working exactly as they do in a plain terminal.
-- **No secrets are stored by default.** Relay leaves passwords and passphrases to OpenSSH unless you opt in. For password-only servers, you can optionally store the password in an age-encrypted vault on disk (`~/.config/sssh/vault.age`), unlocked with your master password and auto-filled safely during authentication. A saved password is only ever sent to the host, user and port it was saved for, and it is not part of backups. You can view one again in the connection's settings, but only after entering the master password (every time, even with the vault unlocked). Key passphrases (delegated to the macOS Keychain and ssh-agent) and 2FA codes are never stored by Relay.
+- **No secrets are stored by default.** Relay leaves passwords and passphrases to OpenSSH unless you opt in. For password-only servers, you can optionally store the password in an age-encrypted vault on disk (`~/.config/relay-ssh/vault.age`), unlocked with your master password and auto-filled safely during authentication. A saved password is only ever sent to the host, user and port it was saved for, and it is not part of backups. You can view one again in the connection's settings, but only after entering the master password (every time, even with the vault unlocked). Key passphrases (delegated to the macOS Keychain and ssh-agent) and 2FA codes are never stored by Relay.
 - **Your data is one human-readable file.** Connections live in `connections.toml`, which you can edit
   with any editor. Relay regenerates an OpenSSH include file from it, and the CLI and the app always
   agree.
@@ -41,7 +41,7 @@ companion that reads and writes the same data.
   on each block copies the command, its output, or both.
   Local zsh and bash are set up automatically; for a remote host you opt in (a button, or
   automatically per connection or for all of them, once the login has finished).
-- **Snippets:** saved commands (`~/.config/sssh/snippets.toml`) that you insert into, or run in, any terminal.
+- **Snippets:** saved commands (`~/.config/relay-ssh/snippets.toml`) that you insert into, or run in, any terminal.
 - **Tools:** health check with one-click fixes, passphrase-encrypted backup and restore, import from
   `~/.ssh/config`, key management (adopt a key into the vault; for a key with a passphrase, Relay asks once and
   hands it to the macOS Keychain and ssh-agent so ssh stops asking; Relay never stores it), and the **encrypted secret vault**
@@ -50,22 +50,22 @@ companion that reads and writes the same data.
 - **Port forwards:** add, stop and save local, remote and SOCKS forwards on a live connection, with a
   diagram of how each one works.
 
-**Command line (`sssh`)**
+**Command line (`relay-ssh`)**
 
 ```
-sssh                    pick a connection and connect
-sssh <name>             connect to a saved profile
-sssh ls [--tree]        list profiles
-sssh add | edit | rm    manage profiles
-sssh cp <name>:/p ./l   copy files with scp
-sssh import             adopt hosts from ~/.ssh/config
-sssh backup | restore   encrypted archive of connections and keys
-sssh doctor [--fix]     check the installation
-sssh sync               regenerate ~/.ssh/sssh.d/config
-sssh completion <shell> bash or zsh completions
+relay-ssh                    pick a connection and connect
+relay-ssh <name>             connect to a saved profile
+relay-ssh ls [--tree]        list profiles
+relay-ssh add | edit | rm    manage profiles
+relay-ssh cp <name>:/p ./l   copy files with scp
+relay-ssh import             adopt hosts from ~/.ssh/config
+relay-ssh backup | restore   encrypted archive of connections and keys
+relay-ssh doctor [--fix]     check the installation
+relay-ssh sync               regenerate ~/.ssh/relay-ssh.d/config
+relay-ssh completion <shell> bash or zsh completions
 ```
 
-`sssh` builds an argv and replaces itself with `ssh`; it is not running while you are connected.
+`relay-ssh` builds an argv and replaces itself with `ssh`; it is not running while you are connected.
 
 ## Install and build
 
@@ -75,10 +75,16 @@ You need [Go](https://go.dev) 1.27+ and, for the desktop app, [Node.js](https://
 **CLI**
 
 ```bash
-go install github.com/poppyszn/relay-ssh/cmd/sssh@latest
+go install github.com/poppyszn/relay-ssh/cmd/relay-ssh@latest
 # or, from a checkout:
-make build            # produces ./sssh
+make build            # produces ./relay-ssh
 ```
+
+**Coming from `sssh`?** The command-line tool used to be called `sssh`. The first time `relay-ssh` or the app
+starts it moves `~/.config/sssh` to `~/.config/relay-ssh` and `~/.ssh/sssh.d` to `~/.ssh/relay-ssh.d`, repoints the
+managed block in `~/.ssh/config`, and regenerates the generated config, so your connections and keys carry
+over. It never overwrites a `relay-ssh` folder that already exists, and the old `SSSH_HOME` and
+`SSSH_BACKUP_PASSPHRASE` variables still work. You can delete the old `sssh` binary afterwards.
 
 **Desktop app (macOS)**
 
@@ -91,11 +97,11 @@ wails3 dev -config ./build/config.yml -port 9245     # run with live reload
 To try it without touching your real SSH setup, point it at a throwaway home first:
 
 ```bash
-SSSH_HOME=/tmp/relay-home wails3 dev -config ./build/config.yml -port 9245
+RELAY_SSH_HOME=/tmp/relay-home wails3 dev -config ./build/config.yml -port 9245
 ```
 
-`SSSH_HOME` redirects where Relay reads and writes its own files (`connections.toml`,
-`~/.ssh/sssh.d/`). A production build is `npm run build` in `desktop/frontend`, then `go build` in
+`RELAY_SSH_HOME` redirects where Relay reads and writes its own files (`connections.toml`,
+`~/.ssh/relay-ssh.d/`). A production build is `npm run build` in `desktop/frontend`, then `go build` in
 `desktop/`.
 
 ## How it works
@@ -105,12 +111,12 @@ Relay window (webview)          Go backend                      Your machine
 -----------------------         ---------------------------     -------------------------
 xterm.js (WebGL)        <--->   PTY session (raw bytes)  <--->  ssh <profile>
 connection tree UI      <--->   internal/core (shared)   <--->  connections.toml
-tools, files, forwards          ssh / sftp / ssh-keygen         ~/.ssh/sssh.d/config
+tools, files, forwards          ssh / sftp / ssh-keygen         ~/.ssh/relay-ssh.d/config
 ```
 
 - `connections.toml` is the single source of truth. Saving regenerates
-  `~/.ssh/sssh.d/config`, pulled in by one marked `Include` block in `~/.ssh/config`. Relay only writes
-  inside `~/.ssh/sssh.d/` and that block.
+  `~/.ssh/relay-ssh.d/config`, pulled in by one marked `Include` block in `~/.ssh/config`. Relay only writes
+  inside `~/.ssh/relay-ssh.d/` and that block.
 - Terminal bytes travel over a loopback WebSocket guarded by a per-launch random token and an exact
   Origin allow-list.
 - File transfers and live port forwards attach to the connection's terminal tab through OpenSSH

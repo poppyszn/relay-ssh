@@ -1,4 +1,4 @@
-// Package core holds the UI-free operations shared by the sssh CLI and the
+// Package core holds the UI-free operations shared by the relay-ssh CLI and the
 // Relay desktop app: profile lookup and removal, ssh_config import, backup and
 // restore, and health checks. Nothing here prints or prompts.
 package core
@@ -13,7 +13,7 @@ import (
 )
 
 // ResolveProfile finds a profile by name, also accepting the "folder/name"
-// form `sssh ls --tree` prints. Profile names are already globally unique
+// form `relay-ssh ls --tree` prints. Profile names are already globally unique
 // (Store.Validate enforces it) regardless of folder, so the folder segment
 // is a display convention, not part of the stored identifier -- this just
 // lets a name pasted straight out of `ls --tree` actually work.
@@ -32,9 +32,9 @@ func ResolveProfile(s config.Store, target string) (config.Profile, bool) {
 
 // Regenerate writes the generated SSH config and ensures the managed
 // Include block exists. Every operation that changes the store calls this
-// immediately after saving, so `sssh doctor` and the real
-// ~/.ssh/sssh.d/config never drift from connections.toml waiting on a
-// separate, easy-to-forget `sssh sync`.
+// immediately after saving, so `relay-ssh doctor` and the real
+// ~/.ssh/relay-ssh.d/config never drift from connections.toml waiting on a
+// separate, easy-to-forget `relay-ssh sync`.
 func Regenerate(p paths.Paths, s config.Store) error {
 	if err := sshconfig.Write(p, s); err != nil {
 		return err

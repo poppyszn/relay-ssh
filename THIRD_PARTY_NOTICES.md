@@ -1,6 +1,6 @@
 # Third-party notices
 
-Relay and `sssh` are released under the [MIT License](LICENSE). They build on the
+Relay and `relay-ssh` are released under the [MIT License](LICENSE). They build on the
 open-source software below, each under its own license. This list covers direct
 dependencies and everything bundled into the desktop app; transitive dependencies
 carry their own licenses, which their packages include.

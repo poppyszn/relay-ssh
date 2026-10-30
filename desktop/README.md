@@ -1,11 +1,11 @@
 # Relay desktop app
 
 The Wails 3 app: a Go backend (this folder) and a Svelte 5 + xterm.js frontend (`frontend/`).
-It shares its logic with the `sssh` CLI through `../internal/core`; the root [README](../README.md)
+It shares its logic with the `relay-ssh` CLI through `../internal/core`; the root [README](../README.md)
 explains what the app does, [CONTRIBUTING](../CONTRIBUTING.md) the checks to run.
 
 ```bash
-SSSH_HOME=/tmp/relay-home wails3 dev -config ./build/config.yml -port 9245   # live reload, throwaway home
+RELAY_SSH_HOME=/tmp/relay-home wails3 dev -config ./build/config.yml -port 9245   # live reload, throwaway home
 make desktop-check                                                            # from the repo root
 ```
 

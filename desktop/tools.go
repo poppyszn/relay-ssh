@@ -60,6 +60,7 @@ func setup() (paths.Paths, error) {
 // version made world-readable, instead of waiting for the first write.
 func prepareDirs() {
 	if p, err := paths.Default(); err == nil {
+		_ = core.Migrate(p) // first: a tree under the old name must move before new folders appear
 		_ = paths.EnsureDirs(p)
 	}
 }

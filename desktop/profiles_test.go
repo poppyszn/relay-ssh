@@ -8,7 +8,7 @@ import (
 
 func TestProfilesServiceRoundTrip(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
+	t.Setenv("RELAY_SSH_HOME", home)
 	svc := ProfilesService{}
 
 	bastion := Profile{Name: "bastion", Host: "b.example.com", User: "ops", Port: 22, Auth: "agent", Folder: "prod", Tags: []string{"jump"}}
@@ -29,7 +29,7 @@ func TestProfilesServiceRoundTrip(t *testing.T) {
 	}
 
 	// the generated ssh config is what the terminal's ssh actually reads
-	cfg, err := os.ReadFile(home + "/.ssh/sssh.d/config")
+	cfg, err := os.ReadFile(home + "/.ssh/relay-ssh.d/config")
 	if err != nil || !strings.Contains(string(cfg), "Host web") || !strings.Contains(string(cfg), "ProxyJump bastion") {
 		t.Errorf("generated config = %q, %v", cfg, err)
 	}
@@ -52,7 +52,7 @@ func TestProfilesServiceRoundTrip(t *testing.T) {
 }
 
 func TestPreviewUsesRealGeneratorAndReportsProblems(t *testing.T) {
-	t.Setenv("SSSH_HOME", t.TempDir())
+	t.Setenv("RELAY_SSH_HOME", t.TempDir())
 	svc := ProfilesService{}
 	if err := svc.Save("", Profile{Name: "bastion", Host: "b.example.com", User: "ops", Port: 22, Auth: "agent"}); err != nil {
 		t.Fatal(err)
@@ -88,7 +88,7 @@ func TestPreviewUsesRealGeneratorAndReportsProblems(t *testing.T) {
 // the generated ssh config (it is an app setting, not an ssh option).
 func TestProfileBlocksModeRoundTrips(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
+	t.Setenv("RELAY_SSH_HOME", home)
 	svc := ProfilesService{}
 	if err := svc.Save("", Profile{Name: "box", Host: "h", User: "u", Port: 22, Auth: "agent", Blocks: "on"}); err != nil {
 		t.Fatal(err)
@@ -100,7 +100,7 @@ func TestProfileBlocksModeRoundTrips(t *testing.T) {
 	if err := svc.Save("", Profile{Name: "box2", Host: "h", User: "u", Port: 22, Auth: "agent", Blocks: "sometimes"}); err == nil {
 		t.Error("an unknown blocks mode should be rejected")
 	}
-	cfg, _ := os.ReadFile(home + "/.ssh/sssh.d/config")
+	cfg, _ := os.ReadFile(home + "/.ssh/relay-ssh.d/config")
 	if strings.Contains(strings.ToLower(string(cfg)), "blocks") {
 		t.Errorf("blocks leaked into the generated ssh config:\n%s", cfg)
 	}
@@ -111,7 +111,7 @@ func TestProfileBlocksModeRoundTrips(t *testing.T) {
 // key is already like that can still be edited.
 func TestSavingABareKeyNameRequiresAnAdoptedKey(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
+	t.Setenv("RELAY_SSH_HOME", home)
 	svc := ProfilesService{}
 	_ = os.MkdirAll(home+"/.ssh", 0o700)
 	_ = os.WriteFile(home+"/.ssh/id_work", []byte("-----BEGIN OPENSSH PRIVATE KEY-----\nx\n"), 0o600)
@@ -136,13 +136,13 @@ func TestSavingABareKeyNameRequiresAnAdoptedKey(t *testing.T) {
 		_ = svc.Delete("box")
 	}
 
-	_ = os.MkdirAll(home+"/.ssh/sssh.d/keys", 0o700)
-	_ = os.WriteFile(home+"/.ssh/sssh.d/keys/id_work", []byte("k"), 0o600)
+	_ = os.MkdirAll(home+"/.ssh/relay-ssh.d/keys", 0o700)
+	_ = os.WriteFile(home+"/.ssh/relay-ssh.d/keys/id_work", []byte("k"), 0o600)
 	if err := svc.Save("", missing); err != nil {
 		t.Errorf("an adopted key by name should be accepted: %v", err)
 	}
 	// once it is gone, unrelated edits to the saved connection still save
-	_ = os.Remove(home + "/.ssh/sssh.d/keys/id_work")
+	_ = os.Remove(home + "/.ssh/relay-ssh.d/keys/id_work")
 	edit := missing
 	edit.Host = "other-host"
 	if err := svc.Save("box", edit); err != nil {

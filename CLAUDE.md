@@ -1,4 +1,4 @@
-# relay-ssh (sssh and Relay) — working agreement
+# relay-ssh (relay-ssh and Relay) — working agreement
 
 Read this before changing anything. It encodes why v1 was abandoned.
 
@@ -12,16 +12,16 @@ Three jobs, in order of importance:
 3. Jump hosts, tunnels, `scp`, and agent forwarding are saved profile properties,
    not flags you have to remember.
 
-It is not a terminal, a multiplexer, or an SSH client. The desktop app (Relay) wraps `sssh` with a native GUI, terminal tabs, and an optional encrypted vault for SSH passwords with safe auto-fill.
+It is not a terminal, a multiplexer, or an SSH client. The desktop app (Relay) wraps `relay-ssh` with a native GUI, terminal tabs, and an optional encrypted vault for SSH passwords with safe auto-fill.
 
 ## The three invariants
 
 Violating one of these is a defect, not a trade-off.
 
-1. **sssh is never running while you are connected.** It builds an argv and
+1. **relay-ssh is never running while you are connected.** It builds an argv and
    `exec`s `ssh`, replacing its own process image. No child process, no pipes,
    no PTY, no bytes flowing through Go.
-2. **sssh owns `~/.ssh/sssh.d/` and one marked block in `~/.ssh/config`.**
+2. **relay-ssh owns `~/.ssh/relay-ssh.d/` and one marked block in `~/.ssh/config`.**
    Every write outside that sandbox is a bug. The single exception is
    `known_hosts`, which is merged and never overwritten.
 3. **The source of truth is a file a human can repair with `vim`.**
@@ -35,12 +35,12 @@ times a second. Copying text was slow, long output stalled sessions, the machine
 ran hot. Roughly 12,000 of its 29,000 lines existed to serve a goal the user
 never had.
 
-Every symptom traced to one cause: sssh was in the data path. Invariant 1 makes
+Every symptom traced to one cause: relay-ssh was in the data path. Invariant 1 makes
 that structurally impossible. Do not weaken it.
 
 ## Before adding any feature, answer these
 
-- **Does it require sssh to be running while a session is open?**
+- **Does it require relay-ssh to be running while a session is open?**
   If yes, the answer is no. This rules out tabs, panes, splits, scrollback,
   text selection, mouse support, session lists, and connection multiplexing —
   permanently, not "not yet".
@@ -51,7 +51,7 @@ that structurally impossible. Do not weaken it.
   The budget is two. Spend one only if the alternative is implementing crypto
   or a parser for a format you do not control.
 - **Does it store a secret?**
-  Relay stores **no** secrets by default. Passwords can be stored only if the user explicitly opts in per connection, and are kept only in the age-encrypted secret vault (`~/.config/sssh/vault.age`), unlocked with a master password, and never written to `connections.toml`, the generated SSH config, or logs. Key passphrases (delegated to ssh-agent and the macOS Keychain) and 2FA codes are never stored by Relay.
+  Relay stores **no** secrets by default. Passwords can be stored only if the user explicitly opts in per connection, and are kept only in the age-encrypted secret vault (`~/.config/relay-ssh/vault.age`), unlocked with a master password, and never written to `connections.toml`, the generated SSH config, or logs. Key passphrases (delegated to ssh-agent and the macOS Keychain) and 2FA codes are never stored by Relay.
 
 ## Budgets, enforced by `scripts/guardrails.sh` in CI
 
@@ -59,7 +59,7 @@ that structurally impossible. Do not weaken it.
 | --- | --- |
 | Direct dependencies | 2 |
 | Lines per `.go` file | 400 |
-| Non-test Go lines, whole repo | 3050 |
+| Non-test Go lines, whole repo | 3170 |
 | `syscall.Exec` call sites | 1, in `internal/launch` |
 | TUI / SSH-protocol / PTY imports | 0 |
 
@@ -69,9 +69,9 @@ of this file.
 
 **2500 -> 2900, 2026-09-19.** The original budget covered the 17-task
 foundation plan. Real, requested functionality since then -- folder-qualified
-profile addressing (`sssh Acme/dev-app-server`), auto-regenerating
-`~/.ssh/sssh.d/config` after every mutating command instead of requiring a
-separate `sssh sync`, a real picker for jump-host selection replacing free-text
+profile addressing (`relay-ssh Acme/dev-app-server`), auto-regenerating
+`~/.ssh/relay-ssh.d/config` after every mutating command instead of requiring a
+separate `relay-ssh sync`, a real picker for jump-host selection replacing free-text
 entry, and (in progress at the time of this bump) hidden passphrase entry for
 `backup`/`restore` and shell tab-completion for profile names -- pushed past
 2500 on genuine feature work, not scope creep. 2900 leaves headroom for the
@@ -106,6 +106,16 @@ characters in those fields (and spaces where they would split a value, and a hos
 and caps how much of one archive entry it reads (`config.Parse` is `Load` without the file).
 About 40 lines in `internal/config` and `internal/core`, each covered by a test that fails
 without it.
+
+**3050 -> 3170, 2026-10-30.** The tool is called relay-ssh now, not sssh. Renaming the command,
+the folders (`~/.config/relay-ssh`, `~/.ssh/relay-ssh.d`), the managed block in `~/.ssh/config`
+and the environment variables meant that anyone who already used it would silently lose their
+connections and the `ssh <name>` aliases (an `Include` of a missing file is ignored). So the start of
+the CLI and of the app now runs `core.Migrate`: it moves the old folders (never over an existing new
+one), repoints the old block, and regenerates the generated config; the old `SSSH_HOME` and
+`SSSH_BACKUP_PASSPHRASE` still work. About 110 lines across `internal/core`, `internal/sshconfig`,
+`internal/paths` and the entry point, each covered by a test that fails without it. Delete the
+migration once nobody has a tree under the old name.
 
 ## How to work
 

@@ -11,7 +11,7 @@ import (
 func newHome(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
+	t.Setenv("RELAY_SSH_HOME", home)
 	return home
 }
 
@@ -22,7 +22,7 @@ func TestHealthAndFix(t *testing.T) {
 		t.Fatal(err)
 	}
 	tools := ToolsService{}
-	if err := os.WriteFile(filepath.Join(os.Getenv("SSSH_HOME"), ".ssh", "sssh.d", "config"), []byte("stale"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(os.Getenv("RELAY_SSH_HOME"), ".ssh", "relay-ssh.d", "config"), []byte("stale"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	before, _ := tools.Health()
@@ -123,7 +123,7 @@ func TestKeysListAndAdopt(t *testing.T) {
 // so a wrong one leaves no half-adopted key behind.
 func TestAdoptAskForTheKeysPassphrase(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
+	t.Setenv("RELAY_SSH_HOME", home)
 	t.Setenv("SSH_AUTH_SOCK", startAgent(t))
 	keychainEnabled = false // never touch the real Keychain from a test
 	t.Cleanup(func() { keychainEnabled = runtime.GOOS == "darwin" })
@@ -148,7 +148,7 @@ func TestAdoptAskForTheKeysPassphrase(t *testing.T) {
 	if err := tools.AdoptKey(locked, "wrong"); err == nil {
 		t.Error("an encrypted key was adopted with the wrong passphrase")
 	}
-	vault := filepath.Join(home, ".ssh", "sssh.d", "keys", "id_locked")
+	vault := filepath.Join(home, ".ssh", "relay-ssh.d", "keys", "id_locked")
 	if _, err := os.Stat(vault); err == nil {
 		t.Error("a failed adoption left a copy of the key in the vault")
 	}
@@ -170,18 +170,39 @@ func TestAdoptAskForTheKeysPassphrase(t *testing.T) {
 // starts, not only the first time something is written.
 func TestStartupTightensDirectoryPermissions(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
-	for _, d := range []string{".config/sssh", ".ssh/sssh.d/keys"} {
+	t.Setenv("RELAY_SSH_HOME", home)
+	for _, d := range []string{".config/relay-ssh", ".ssh/relay-ssh.d/keys"} {
 		if err := os.MkdirAll(filepath.Join(home, d), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		_ = os.Chmod(filepath.Join(home, d), 0o755)
 	}
 	prepareDirs()
-	for _, d := range []string{".config/sssh", ".ssh/sssh.d/keys"} {
+	for _, d := range []string{".config/relay-ssh", ".ssh/relay-ssh.d/keys"} {
 		info, err := os.Stat(filepath.Join(home, d))
 		if err != nil || info.Mode().Perm() != 0o700 {
 			t.Errorf("%s = %v, %v (want 0700)", d, info, err)
 		}
+	}
+}
+
+// An app started on a machine that still has the data under the old name moves it first, so the
+// connections the person had are still there.
+func TestPrepareDirsMovesDataKeptUnderTheOldName(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("RELAY_SSH_HOME", root)
+	old := filepath.Join(root, ".config", "sssh")
+	if err := os.MkdirAll(old, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(old, "connections.toml"), []byte("version = 1\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	prepareDirs()
+	if _, err := os.Stat(filepath.Join(root, ".config", "relay-ssh", "connections.toml")); err != nil {
+		t.Fatalf("the store did not move: %v", err)
+	}
+	if _, err := os.Stat(old); err == nil {
+		t.Fatal("the old folder is still there")
 	}
 }

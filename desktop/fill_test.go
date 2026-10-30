@@ -36,7 +36,7 @@ func hashSecret(s string) string {
 func setupTestStoreAndVault(t *testing.T) (paths.Paths, *vault.Vault) {
 	t.Helper()
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
+	t.Setenv("RELAY_SSH_HOME", home)
 
 	p, err := paths.Default()
 	if err != nil {

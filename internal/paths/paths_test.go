@@ -10,13 +10,13 @@ import (
 func TestNewDerivesEveryLocationFromRoot(t *testing.T) {
 	p := New("/home/u")
 	cases := map[string]string{
-		"ConfigDir":  "/home/u/.config/sssh",
-		"StoreFile":  "/home/u/.config/sssh/connections.toml",
+		"ConfigDir":  "/home/u/.config/relay-ssh",
+		"StoreFile":  "/home/u/.config/relay-ssh/connections.toml",
 		"SSHDir":     "/home/u/.ssh",
 		"SSHConfig":  "/home/u/.ssh/config",
-		"Sandbox":    "/home/u/.ssh/sssh.d",
-		"GenConfig":  "/home/u/.ssh/sssh.d/config",
-		"KeysDir":    "/home/u/.ssh/sssh.d/keys",
+		"Sandbox":    "/home/u/.ssh/relay-ssh.d",
+		"GenConfig":  "/home/u/.ssh/relay-ssh.d/config",
+		"KeysDir":    "/home/u/.ssh/relay-ssh.d/keys",
 		"KnownHosts": "/home/u/.ssh/known_hosts",
 	}
 	got := map[string]string{
@@ -62,7 +62,7 @@ func TestEnsureDirsIsIdempotent(t *testing.T) {
 
 func TestDefaultHonoursSSSHHome(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("SSSH_HOME", dir)
+	t.Setenv("RELAY_SSH_HOME", dir)
 	p, err := Default()
 	if err != nil {
 		t.Fatalf("Default: %v", err)
@@ -70,18 +70,31 @@ func TestDefaultHonoursSSSHHome(t *testing.T) {
 	if p.Root != dir {
 		t.Errorf("Root = %q, want %q", p.Root, dir)
 	}
-	if p.StoreFile != filepath.Join(dir, ".config", "sssh", "connections.toml") {
+	if p.StoreFile != filepath.Join(dir, ".config", "relay-ssh", "connections.toml") {
 		t.Errorf("StoreFile = %q", p.StoreFile)
 	}
 }
 
 func TestDefaultFallsBackToHomeDir(t *testing.T) {
-	t.Setenv("SSSH_HOME", "")
+	t.Setenv("RELAY_SSH_HOME", "")
 	p, err := Default()
 	if err != nil {
 		t.Fatalf("Default: %v", err)
 	}
 	if p.Root == "" {
 		t.Error("Root is empty")
+	}
+}
+
+func TestDefaultPrefersTheNewHomeVariableAndStillHonoursTheOld(t *testing.T) {
+	t.Setenv("RELAY_SSH_HOME", "")
+	t.Setenv("SSSH_HOME", "/old/home")
+	p, err := Default()
+	if err != nil || p.Root != "/old/home" {
+		t.Fatalf("old variable: %q %v", p.Root, err)
+	}
+	t.Setenv("RELAY_SSH_HOME", "/new/home")
+	if p, _ := Default(); p.Root != "/new/home" {
+		t.Fatalf("new variable should win, got %q", p.Root)
 	}
 }

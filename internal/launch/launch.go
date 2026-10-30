@@ -1,7 +1,7 @@
-// Package launch replaces the sssh process with SSH.
+// Package launch replaces the relay-ssh process with SSH.
 //
-// Instead of spawning a child ssh process, sssh builds an argv and execs it,
-// replacing itself entirely. This means sssh never consumes memory during the
+// Instead of spawning a child ssh process, relay-ssh builds an argv and execs it,
+// replacing itself entirely. This means relay-ssh never consumes memory during the
 // connection and never slows down terminal I/O.
 package launch
 
@@ -25,7 +25,7 @@ var execFunc = func(name string, argv []string) error {
 //
 // Profile and environment are final; ssh receives exactly what the profile
 // specifies, nothing more, nothing less. The user can modify ~/.ssh/config
-// outside sssh's managed block if they need SSH options sssh doesn't surface.
+// outside relay-ssh's managed block if they need SSH options relay-ssh doesn't surface.
 func SSH(p paths.Paths, profile config.Profile) error {
 	argv := []string{"ssh", "-F", p.GenConfig, profile.Name}
 	return execFunc("ssh", argv)

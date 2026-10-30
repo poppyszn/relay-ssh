@@ -52,7 +52,7 @@ func TestVaultServiceNoBoundMethodReturnsSecret(t *testing.T) {
 // and locked vault never fails a profile save.
 func TestProfilesServiceKeepsSecretsConsistent(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
+	t.Setenv("RELAY_SSH_HOME", home)
 
 	p, err := paths.Default()
 	if err != nil {
@@ -163,7 +163,7 @@ func TestProfilesServiceKeepsSecretsConsistent(t *testing.T) {
 // connections.toml, or generated ssh config.
 func TestNoSecretLeakInConfigsOrLogs(t *testing.T) {
 	home := t.TempDir()
-	t.Setenv("SSSH_HOME", home)
+	t.Setenv("RELAY_SSH_HOME", home)
 
 	p, err := paths.Default()
 	if err != nil {
@@ -247,7 +247,7 @@ func TestNoSecretLeakInConfigsOrLogs(t *testing.T) {
 
 func serviceTestHome(t *testing.T) (paths.Paths, *vault.Vault) {
 	t.Helper()
-	t.Setenv("SSSH_HOME", t.TempDir())
+	t.Setenv("RELAY_SSH_HOME", t.TempDir())
 	p, err := paths.Default()
 	if err != nil {
 		t.Fatal(err)

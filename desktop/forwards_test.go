@@ -161,7 +161,7 @@ func startMaster(t *testing.T, files *FilesService, box string) {
 	if len(p) == 0 {
 		t.Fatal("no profile")
 	}
-	conf := fmt.Sprintf("%s/.ssh/sssh.d/config", mustEnv(t, "SSSH_HOME"))
+	conf := fmt.Sprintf("%s/.ssh/relay-ssh.d/config", mustEnv(t, "RELAY_SSH_HOME"))
 	args := []string{"-F", conf}
 	args = append(args, muxOptions(true)...)
 	args = append(args, files.extraOpts...)
