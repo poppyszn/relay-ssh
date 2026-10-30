@@ -14,33 +14,36 @@ import (
 	"github.com/poppyszn/relay-ssh/internal/paths"
 )
 
-// RevealSecret is the only bound Wails method that returns a secret, and it needs the master password.
+// RevealSecret and Credentials are the only bound Wails methods that return a secret.
+// RevealSecret needs the master password; Credentials is a one-shot retrieval for an
+// active RDP session whose vault binding matches.
 func TestVaultServiceNoBoundMethodReturnsSecret(t *testing.T) {
-	svc := VaultService{}
-	svcType := reflect.TypeOf(svc)
+	for _, svc := range []any{&VaultService{}, &RdpService{}} {
+		svcType := reflect.TypeOf(svc)
 
-	for i := 0; i < svcType.NumMethod(); i++ {
-		method := svcType.Method(i)
-		mType := method.Type
+		for i := 0; i < svcType.NumMethod(); i++ {
+			method := svcType.Method(i)
+			mType := method.Type
 
-		for outIdx := 0; outIdx < mType.NumOut(); outIdx++ {
-			outType := mType.Out(outIdx)
+			for outIdx := 0; outIdx < mType.NumOut(); outIdx++ {
+				outType := mType.Out(outIdx)
 
-			// No string or byte slice return types
-			if outType.Kind() == reflect.String && method.Name != "RevealSecret" {
-				t.Fatalf("method %s returns a string (potential secret leak)", method.Name)
-			}
-			if outType == reflect.TypeOf([]byte{}) {
-				t.Fatalf("method %s returns []byte (potential secret leak)", method.Name)
-			}
+				// No string or byte slice return types except RevealSecret and Credentials
+				if outType.Kind() == reflect.String && method.Name != "RevealSecret" && method.Name != "Credentials" {
+					t.Fatalf("method %s returns a string (potential secret leak)", method.Name)
+				}
+				if outType == reflect.TypeOf([]byte{}) {
+					t.Fatalf("method %s returns []byte (potential secret leak)", method.Name)
+				}
 
-			// If it's a struct (like VaultStatus), verify it has no secret fields
-			if outType.Kind() == reflect.Struct {
-				for f := 0; f < outType.NumField(); f++ {
-					field := outType.Field(f)
-					fieldName := strings.ToLower(field.Name)
-					if strings.Contains(fieldName, "secret") || strings.Contains(fieldName, "password") || strings.Contains(fieldName, "passphrase") {
-						t.Fatalf("method %s returns struct with suspicious field %s", method.Name, field.Name)
+				// If it's a struct (like VaultStatus or RdpSessionInfo), verify it has no secret fields
+				if outType.Kind() == reflect.Struct {
+					for f := 0; f < outType.NumField(); f++ {
+						field := outType.Field(f)
+						fieldName := strings.ToLower(field.Name)
+						if (strings.Contains(fieldName, "secret") || strings.Contains(fieldName, "password") || strings.Contains(fieldName, "passphrase")) && field.Type.Kind() != reflect.Bool {
+							t.Fatalf("method %s returns struct with suspicious field %s", method.Name, field.Name)
+						}
 					}
 				}
 			}

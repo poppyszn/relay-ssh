@@ -15,6 +15,7 @@ make desktop-check                                                            # 
 | --- | --- |
 | `main.go`, `terminal.go`, `session.go` | App start-up, the loopback WebSocket, and one PTY per terminal pane. Bytes pass through untouched. |
 | `profiles.go`, `folders.go`, `tools.go`, `keypass.go`, `snippets.go`, `files.go`, `forwards.go` | Wails services the UI calls: connections, tools (health, backup, import, keys), key passphrases, snippets, file browser, port forwards. |
+| `rdp_service.go`, `rdp_gateway.go`, `rdp_codec.go`, `rdp_cert.go`, `rdp_tunnel.go` | Embedded RDP support: session management, loopback gateway speaking RDCleanPath, TOFU certificate store (`~/.config/relay-ssh/rdp_hosts.toml`), and jump tunnels. |
 | `integration.go` | Shell integration for command blocks (local zsh/bash, and the remote opt-in snippet). |
 | `vault_service.go`, `fill.go` | The password vault's service for the UI, and the rules that decide whether a password prompt may be answered. |
 | `vault/` | The encrypted vault itself (age, scrypt): lifecycle, entries, file format, idle lock. No Wails, no sessions. |
@@ -26,4 +27,7 @@ make desktop-check                                                            # 
 | `scripts/guardrails.sh` | Desktop-only invariants (no terminal emulation in Go, flow control, loopback socket). |
 
 The Go services are in one `main` package because Wails binds them by type; anything that does
-not need Wails or a session belongs in its own package (as `vault/` is).
+not need Wails or a session belongs in its own package (as `vault/` is). Only two bound Wails
+methods may return a secret: `RevealSecret` (requires master password re-entry) and
+`RdpService.Credentials` (one-shot password retrieval for active RDP session with intact vault
+binding). All other methods return non-sensitive metadata only.

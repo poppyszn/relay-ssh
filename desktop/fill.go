@@ -20,6 +20,13 @@ import (
 // connection that was edited outside the app (or restored from a backup) with a new host
 // cannot make Relay hand the old password to that host.
 func bindingOf(p config.Profile) string {
+	if p.IsRDP() {
+		port := p.Port
+		if port == 0 {
+			port = 3389
+		}
+		return fmt.Sprintf("rdp|%s|%s|%d|%s|%s", strings.ToLower(p.Host), p.User, port, p.Jump, p.Domain)
+	}
 	port := p.Port
 	if port == 0 {
 		port = 22

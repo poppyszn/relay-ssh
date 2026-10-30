@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 
+	"github.com/poppyszn/relay-ssh/internal/paths"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -31,15 +33,46 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	p, err := paths.Default()
+	if err != nil {
+		log.Fatal(err)
+	}
+	certStorePath := filepath.Join(filepath.Dir(p.StoreFile), "rdp_hosts.toml")
+	certStore, err := LoadRdpCertStore(certStorePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	rdpGw, err := NewRdpGateway(certStore, func(ev RdpCertEvent) {
+		if app != nil {
+			app.Event.Emit("rdp:cert", ev)
+		}
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	rdpService := NewRdpService(rdpGw)
+
 	app = application.New(application.Options{
 		Name:        "Relay",
 		Description: "SSH connection manager and terminal",
-		Services:    []application.Service{application.NewService(term), application.NewService(&ProfilesService{}), application.NewService(&ToolsService{}), application.NewService(&FilesService{}), application.NewService(&ForwardsService{}), application.NewService(&SnippetsService{}), application.NewService(&VaultService{})},
-		Assets:      application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
-		Mac:         application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
+		Services: []application.Service{
+			application.NewService(term),
+			application.NewService(&ProfilesService{}),
+			application.NewService(&ToolsService{}),
+			application.NewService(&FilesService{}),
+			application.NewService(&ForwardsService{}),
+			application.NewService(&SnippetsService{}),
+			application.NewService(&VaultService{}),
+			application.NewService(rdpService),
+		},
+		Assets:   application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
+		Mac:      application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
 	})
 	app.OnShutdown(func() {
 		getVault().Lock()
+		rdpService.CloseAll()
+		_ = rdpGw.Close()
 	})
 	app.Menu.Set(buildMenu(app))
 	app.Window.NewWithOptions(windowOptions())

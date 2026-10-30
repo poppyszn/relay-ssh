@@ -133,6 +133,17 @@ func (g *RdpGateway) TrustCert(sessionID string, accept bool) bool {
 	}
 }
 
+// UnregisterSession removes a session and its token from the gateway.
+func (g *RdpGateway) UnregisterSession(sessionID string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	if reg, exists := g.sessions[sessionID]; exists {
+		delete(g.sessions, sessionID)
+		delete(g.tokens, reg.Token)
+	}
+}
+
 // Close shuts down the gateway server and listener.
 func (g *RdpGateway) Close() error {
 	g.mu.Lock()

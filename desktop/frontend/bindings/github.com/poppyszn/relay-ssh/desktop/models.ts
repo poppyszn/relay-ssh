@@ -111,6 +111,24 @@ export interface Profile {
     "forwardAgent": boolean;
     "blocks": string;
     "tunnels": TunnelDTO[] | null;
+    "protocol"?: string;
+    "domain"?: string;
+}
+
+/**
+ * RdpSessionInfo provides the frontend with the loopback gateway connection details
+ * and remote target information needed to establish an IronRDP session.
+ * It deliberately contains NO secret.
+ */
+export interface RdpSessionInfo {
+    "sessionId": string;
+    "wsUrl": string;
+    "token": string;
+    "host": string;
+    "user": string;
+    "domain": string;
+    "port": number;
+    "hasSavedPassword": boolean;
 }
 
 /**

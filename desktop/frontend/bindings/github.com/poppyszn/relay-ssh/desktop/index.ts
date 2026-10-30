@@ -4,6 +4,7 @@
 import * as FilesService from "./filesservice.js";
 import * as ForwardsService from "./forwardsservice.js";
 import * as ProfilesService from "./profilesservice.js";
+import * as RdpService from "./rdpservice.js";
 import * as SnippetsService from "./snippetsservice.js";
 import * as TerminalService from "./terminalservice.js";
 import * as ToolsService from "./toolsservice.js";
@@ -12,6 +13,7 @@ export {
     FilesService,
     ForwardsService,
     ProfilesService,
+    RdpService,
     SnippetsService,
     TerminalService,
     ToolsService,
@@ -30,6 +32,7 @@ export type {
     Listing,
     PreviewResult,
     Profile,
+    RdpSessionInfo,
     Snippet,
     TunnelDTO,
     VaultStatus

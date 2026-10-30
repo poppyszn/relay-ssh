@@ -36,6 +36,8 @@ type Profile struct {
 	ForwardAgent bool        `json:"forwardAgent"`
 	Blocks       string      `json:"blocks"`
 	Tunnels      []TunnelDTO `json:"tunnels"`
+	Protocol     string      `json:"protocol,omitempty"`
+	Domain       string      `json:"domain,omitempty"`
 }
 
 // ProfilesService exposes the connection store to the frontend. Every change
@@ -44,6 +46,7 @@ type ProfilesService struct{}
 
 func toProfile(c config.Profile) Profile {
 	p := Profile{
+		Protocol: c.Protocol, Domain: c.Domain,
 		Name: c.Name, Host: c.Host, User: c.User, Port: c.Port, Auth: string(c.Auth),
 		Key: c.Key, Folder: c.Folder, Tags: c.Tags, Jump: c.Jump, ForwardAgent: c.ForwardAgent, Blocks: c.Blocks,
 		Tunnels: []TunnelDTO{},
@@ -59,6 +62,7 @@ func toProfile(c config.Profile) Profile {
 
 func fromProfile(p Profile) config.Profile {
 	c := config.Profile{
+		Protocol: p.Protocol, Domain: p.Domain,
 		Name: p.Name, Host: p.Host, User: p.User, Port: p.Port, Auth: config.AuthType(p.Auth),
 		Key: p.Key, Folder: p.Folder, Tags: p.Tags, Jump: p.Jump, ForwardAgent: p.ForwardAgent, Blocks: p.Blocks,
 	}
@@ -94,7 +98,7 @@ func (ps ProfilesService) Save(oldName string, prof Profile) error {
 // connection's host, user and port. It checks the password and the vault first, so a refusal
 // leaves nothing half-saved.
 func (ps ProfilesService) SaveWithPassword(oldName string, prof Profile, password string) error {
-	if prof.Auth != "password" {
+	if prof.Protocol != config.ProtocolRDP && prof.Auth != "password" {
 		return errors.New("passwords are only kept for connections that use password auth")
 	}
 	if !vault.ValidSecret(password) {
@@ -134,7 +138,7 @@ func (ProfilesService) save(oldName string, prof Profile, password string) error
 	// only released for the connection details it was saved with.
 	v := getVault()
 	newBinding := bindingOf(fromProfile(prof))
-	if prof.Auth != "password" {
+	if prof.Protocol != config.ProtocolRDP && prof.Auth != "password" {
 		_ = v.Forget(prof.Name)
 		if oldName != "" {
 			_ = v.Forget(oldName)
@@ -177,11 +181,14 @@ func (ProfilesService) Preview(oldName string, prof Profile) PreviewResult {
 	cand := fromProfile(prof)
 	// Generate has no validation of its own, so the preview renders even
 	// while the form is half filled in; Problem says what blocks saving.
-	block := sshconfig.Generate(config.Store{Version: config.Version, Profiles: []config.Profile{cand}})
-	if i := strings.Index(block, "Host "); i >= 0 {
-		block = block[i:]
+	var res PreviewResult
+	if !cand.IsRDP() {
+		block := sshconfig.Generate(config.Store{Version: config.Version, Profiles: []config.Profile{cand}})
+		if i := strings.Index(block, "Host "); i >= 0 {
+			block = block[i:]
+		}
+		res.Config = strings.TrimRight(block, "\n")
 	}
-	res := PreviewResult{Config: strings.TrimRight(block, "\n")}
 
 	p, err := paths.Default()
 	if err != nil {
