@@ -70,15 +70,17 @@
 </div>
 
 <style>
-  /* Same inset, rounded highlight as connection rows (see ConnRow). */
-  .head { position: relative; isolation: isolate; display: flex; align-items: center; gap: var(--s1); height: var(--h-md); padding-right: var(--s4); color: var(--text2); user-select: none; }
-  .head::before { content: ""; position: absolute; inset: 1px var(--s2); z-index: -1; border-radius: var(--r-sm); transition: background var(--dur-1) var(--ease); }
+  /* Same inset, rounded highlight as connection rows (see ConnRow), and the same rule: no stacking
+     context on .head, or the folder menu opens underneath the rows that follow. */
+  .head { position: relative; display: flex; align-items: center; gap: var(--s1); height: var(--h-md); padding-right: var(--s4); color: var(--text2); user-select: none; }
+  .head::before { content: ""; position: absolute; inset: 1px var(--s2); pointer-events: none; border-radius: var(--r-sm); transition: background var(--dur-1) var(--ease); }
   .head:hover::before { background: var(--hover); }
   .head.sel::before { background: var(--accent-faint); }
   .head.ok::before { background: var(--accent-hl); outline: 1px dashed var(--accent); outline-offset: -1px; }
   .head.bad::before { outline: 1px dashed var(--err); outline-offset: -1px; }
   .head.bad { cursor: not-allowed; }
   .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); pointer-events: none; }
+  .caret, .name, .count, .more, .edit { position: relative; }
   .caret { width: 20px; border-radius: var(--r-xs); color: var(--dim); transition: transform var(--dur-2) var(--ease), background var(--dur-1) var(--ease); }
   .name { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s2); height: 100%; padding: 0; background: none; border: 0; color: inherit; text-align: left; cursor: default; font-weight: 600; }
   .ico { display: grid; color: var(--accent-text); flex: none; }
