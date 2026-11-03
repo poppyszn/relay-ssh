@@ -125,6 +125,12 @@
       case "snippets": return (snippetsOpen = !snippetsOpen);
       case "enable-blocks": return ws.focusedPane && ws.enableBlocks(ws.focusedPane);
     }
+    // tab-1 .. tab-8 pick that tab; tab-9 is always the last one.
+    const n = /^tab-([1-9])$/.exec(id);
+    if (n) {
+      const t = n[1] === "9" ? ws.tabs.at(-1) : ws.tabs[Number(n[1]) - 1];
+      if (t) ws.select(t.id);
+    }
   }
 
   // Opens a local tab with the ssh-keygen command typed but not run, so the user
@@ -183,6 +189,7 @@
   // Windows and Linux have no app menu: Ctrl+Shift combos avoid clashing with
   // terminal control keys. On macOS the native menu owns the shortcuts.
   function keydown(e: KeyboardEvent) {
+    if (!mac && e.altKey && !e.ctrlKey && !e.shiftKey && /^[1-9]$/.test(e.key)) { e.preventDefault(); return run(`tab-${e.key}`); }
     if (mac || !e.ctrlKey || !e.shiftKey) return;
     const map: Record<string, string> = { T: "new-tab", N: "new-connection", M: "new-folder", K: "quick-open", D: "split-right", W: "close", B: "toggle-sidebar", F: "find", ",": "settings", O: "files", P: "forwards", S: "snippets" };
     const id = map[e.key.toUpperCase()];
@@ -948,7 +955,7 @@
           </div>
         {:else}
           <div class="welcome">
-            <Logo size={56} />
+            <Logo size={44} />
             <h1>Relay</h1>
             <p>{profiles.length ? "Open a connection from the list, or start a local shell." : "Add your first connection, or bring in the hosts you already have."}</p>
             <div class="actions">
@@ -956,9 +963,13 @@
                 <button type="button" class="btn primary" onclick={() => newConnection("")}>New connection</button>
                 <button type="button" class="btn" onclick={() => { toolsTab = "import"; toolsOpen = true; }}>Import from ~/.ssh/config</button>
               {/if}
-              <button type="button" class="btn" onclick={() => ws.openTab(null)}>Local shell <span class="kbd">{mac ? "⌘T" : "Ctrl+Shift+T"}</span></button>
+              <button type="button" class="btn" onclick={() => ws.openTab(null)}>Local shell</button>
             </div>
-            <p class="keys"><span class="kbd">{mac ? "⌘K" : "Ctrl+K"}</span> quick open</p>
+            <dl class="keys">
+              {#each [["Quick open", mac ? "⌘K" : "Ctrl+Shift+K"], ["New connection", mac ? "⌘N" : "Ctrl+Shift+N"], ["Local shell", mac ? "⌘T" : "Ctrl+Shift+T"], ["Switch tab", mac ? "⌘1–9" : "Alt+1–9"]] as [what, key] (what)}
+                <div><dt>{what}</dt><dd><span class="kbd">{key}</span></dd></div>
+              {/each}
+            </dl>
           </div>
         {/each}
       </div>
@@ -975,7 +986,7 @@
 {#if toast}<div class="toast" role="status"><Icon name="check" />{toast}</div>{/if}
 {#if settingsOpen}{#await import("./components/SettingsPanel.svelte") then { default: SettingsPanel }}<SettingsPanel section={settingsSection} onclose={() => { settingsOpen = false; settingsSection = undefined; }} />{/await}{/if}
 <DragGhost />
-{#if palette}{#await import("./components/Palette.svelte") then { default: Palette }}<Palette {profiles} active={open} {actions} onconnect={connect} onaction={run} onclose={() => (palette = false)} />{/await}{/if}
+{#if palette}{#await import("./components/Palette.svelte") then { default: Palette }}<Palette {profiles} active={open} {actions} onconnect={connect} onnew={(t) => { palette = false; form = { initial: { ...blankProfile(), name: t.host, ...t }, oldName: "" }; }} onaction={run} onclose={() => (palette = false)} />{/await}{/if}
 {#if unlockConnect && VaultPanel}
   <VaultPanel
     mode="unlock-connect"
@@ -1019,7 +1030,10 @@
   .welcome h1 { color: var(--strong); margin: var(--s3) 0 0; font-size: var(--t-xl); font-weight: 600; }
   .welcome p { margin: 0; max-width: 40ch; }
   .welcome .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s2); margin-top: var(--s4); }
-  .welcome .keys { margin-top: var(--s2); font-size: var(--t-sm); color: var(--dim); }
+  .welcome .keys { display: grid; gap: var(--s1); width: 240px; margin: var(--s6) 0 0; padding-top: var(--s4); border-top: 1px solid var(--line); font-size: var(--t-sm); }
+  .welcome .keys div { display: flex; justify-content: space-between; align-items: center; }
+  .welcome .keys dt { color: var(--muted); }
+  .welcome .keys dd { margin: 0; }
   .banner { margin: var(--s2) var(--s3) 0; justify-content: space-between; align-items: center; }
   .confirm-text { margin: 0; line-height: 1.5; }
   .toast { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: var(--z-toast); display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-pop); font-size: var(--t-md); color: var(--text); }

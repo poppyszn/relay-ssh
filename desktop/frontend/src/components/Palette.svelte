@@ -1,17 +1,19 @@
 <script lang="ts">
   import { tick } from "svelte";
   import type { Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import { matches } from "../lib/lib";
+  import { matches, parseTarget } from "../lib/lib";
   import { pop, veil } from "../lib/motion";
   import EmptyState from "./EmptyState.svelte";
   import Icon from "./Icon.svelte";
 
   export interface Action { id: string; label: string; hint: string }
-  let { profiles, active, actions, onconnect, onaction, onclose }: {
+  let { profiles, active, actions, onconnect, onnew, onaction, onclose }: {
     profiles: Profile[];
     active: Set<string>;
     actions: Action[];
     onconnect: (p: Profile, split: boolean) => void;
+    /** Opens the new-connection form prefilled with a pasted `ssh user@host`. */
+    onnew: (t: { user: string; host: string; port: number }) => void;
     onaction: (id: string) => void;
     onclose: () => void;
   } = $props();
@@ -23,13 +25,18 @@
 
   const conns = $derived(profiles.filter((p) => matches(p, query)).slice(0, 8));
   const acts = $derived(query.trim() ? actions.filter((a) => a.label.toLowerCase().includes(query.trim().toLowerCase())) : actions);
-  const total = $derived(conns.length + acts.length);
+  const target = $derived(parseTarget(query));
+  // A pasted target comes first: it is what the user typed, and it never connects without the form.
+  const off = $derived(target ? 1 : 0);
+  const total = $derived(off + conns.length + acts.length);
   $effect(() => { query; sel = 0; });
   $effect(() => { tick().then(() => input?.focus()); });
   // Keep the highlighted row in view as the arrows move through a long list.
   $effect(() => { sel; tick().then(() => list?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" })); });
 
   function pick(i: number, split = false) {
+    if (target && i === 0) return onnew(target);
+    i -= off;
     if (i < conns.length) onconnect(conns[i], split);
     else if (acts[i - conns.length]) onaction(acts[i - conns.length].id);
   }
@@ -47,11 +54,20 @@
     <div class="query">
       <Icon name="search" size={20} />
       <input bind:this={input} bind:value={query} placeholder="Connect to…" aria-label="Connect to" />
-      <span class="hint">Search name, host, folder or #tag</span>
+      <span class="hint">Search, or paste ssh user@host</span>
     </div>
     <div class="list" role="listbox" aria-label="Results" bind:this={list}>
+      {#if target}
+        <!-- svelte-ignore a11y_click_events_have_key_events (keys are handled on the dialog) -->
+        <div class="row" role="option" tabindex="-1" aria-selected={sel === 0} class:row-hl={sel === 0} onmouseenter={() => (sel = 0)} onclick={() => pick(0)}>
+          <span class="lead"><Icon name="plus" size={14} /></span>
+          <span class="col"><span class="name">New connection</span><span class="sub mono">{target.user ? target.user + "@" : ""}{target.host}{target.port !== 22 ? ":" + target.port : ""}</span></span>
+          {#if sel === 0}<span class="kbd push">↵</span>{/if}
+        </div>
+      {/if}
       {#if conns.length}<div class="label sect">Connections</div>{/if}
-      {#each conns as p, i (p.name)}
+      {#each conns as p, k (p.name)}
+        {@const i = off + k}
         <!-- svelte-ignore a11y_click_events_have_key_events (keys are handled on the dialog) -->
         <div class="row" role="option" tabindex="-1" aria-selected={i === sel} class:row-hl={i === sel} onmouseenter={() => (sel = i)} onclick={() => pick(i)}>
           <span class="dot" class:ok={active.has(p.name)}></span>
@@ -67,7 +83,7 @@
       {/each}
       {#if acts.length}<div class="label sect">Actions</div>{/if}
       {#each acts as a, j (a.id)}
-        {@const i = conns.length + j}
+        {@const i = off + conns.length + j}
         <!-- svelte-ignore a11y_click_events_have_key_events (keys are handled on the dialog) -->
         <div class="row" role="option" tabindex="-1" aria-selected={i === sel} class:row-hl={i === sel} onmouseenter={() => (sel = i)} onclick={() => pick(i)}>
           <span class="col"><span>{a.label}</span></span><span class="kbd push">{a.hint}</span>
@@ -90,6 +106,7 @@
   .col { display: grid; min-width: 0; }
   .name { font-weight: 600; color: var(--strong); display: flex; align-items: center; gap: 4px; }
   .rdp-icon { display: inline-flex; align-items: center; color: var(--muted); }
+  .lead { display: inline-grid; place-items: center; width: 8px; color: var(--accent-text); }
   .sub { font-size: var(--t-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tags { margin-left: auto; display: flex; gap: var(--s2); align-items: center; }
   .push { margin-left: auto; }

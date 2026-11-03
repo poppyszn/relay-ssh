@@ -10,7 +10,8 @@ export interface FolderNode {
  * whitespace-separated term must match somewhere; "#tag" matches tags by prefix only. */
 export function matches(p: Profile, query: string): boolean {
   const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const hay = [p.name, p.host, p.user, p.folder].join(" ").toLowerCase();
+  // "rdp" (and the Windows domain) find remote desktops; ssh hosts get no protocol word, so "ssh" stays a plain search.
+  const hay = [p.name, p.host, p.user, p.folder, ...(p.protocol === "rdp" ? ["rdp", p.domain ?? ""] : [])].join(" ").toLowerCase();
   return terms.every((t) =>
     t.startsWith("#") ? (p.tags ?? []).some((g) => g.toLowerCase().startsWith(t.slice(1))) : hay.includes(t) || (p.tags ?? []).some((g) => g.toLowerCase().includes(t)),
   );
@@ -27,6 +28,22 @@ export function groupByFolder(profiles: Profile[]): FolderNode[] {
 
 export function blankProfile(): Profile {
   return { name: "", host: "", user: "", port: 22, auth: "agent", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } as Profile;
+}
+
+/** A host someone pasted into quick open: `ssh [-p N] [user@]host [-p N]`, `ssh://user@host:port`
+ * or `user@host[:port]`. Anything else, including any other ssh option, is an ordinary search (null).
+ * The result only prefills the new-connection form, which validates it again. */
+export function parseTarget(q: string): { user: string; host: string; port: number } | null {
+  let s = q.trim();
+  const ssh = /^ssh(:\/\/|\s+)/.test(s);
+  s = s.replace(/^ssh:\/\//, "").replace(/^ssh\s+/, "");
+  let port = 22;
+  s = s.replace(/(^|\s)-p\s+(\d+)(?=\s|$)/, (_, pre, n) => ((port = Number(n)), pre)).trim();
+  const m = /^(?:([A-Za-z0-9._-]+)@)?([A-Za-z0-9][A-Za-z0-9.-]*)(?::(\d+))?$/.exec(s);
+  if (!m || (!ssh && !m[1])) return null;
+  if (m[3]) port = Number(m[3]);
+  if (port < 1 || port > 65535) return null;
+  return { user: m[1] ?? "", host: m[2], port };
 }
 
 export function parseTags(s: string): string[] {

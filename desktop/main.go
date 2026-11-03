@@ -157,6 +157,15 @@ func buildMenu(app *application.App) *application.Menu {
 	shell.Add("Close Tab").SetAccelerator(acc("Cmd+Shift+W", "Ctrl+Alt+W")).OnClick(send("close-tab"))
 	shell.Add("Next Tab").SetAccelerator(acc("Cmd+Shift+]", "Ctrl+Tab")).OnClick(send("next-tab"))
 	shell.Add("Previous Tab").SetAccelerator(acc("Cmd+Shift+[", "Ctrl+Shift+Tab")).OnClick(send("prev-tab"))
+	// Cmd+1..8 pick that tab and Cmd+9 the last one, as in browsers and Terminal. Alt on Windows and
+	// Linux, where Ctrl+digit can reach the shell.
+	for i := 1; i <= 9; i++ {
+		label := fmt.Sprintf("Tab %d", i)
+		if i == 9 {
+			label = "Last Tab"
+		}
+		shell.Add(label).SetAccelerator(acc(fmt.Sprintf("Cmd+%d", i), fmt.Sprintf("Alt+%d", i))).OnClick(send(fmt.Sprintf("tab-%d", i)))
+	}
 
 	menu.AddRole(application.EditMenu)
 	view := menu.AddSubmenu("View")

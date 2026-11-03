@@ -16,6 +16,12 @@ describe("matches", () => {
     expect(matches(p, "#web")).toBe(false);
   });
   it("empty query matches everything", () => expect(matches(p, "  ")).toBe(true));
+  it("rdp finds remote desktops (and their Windows domain), not ssh hosts", () => {
+    const win = mk({ name: "win-build", host: "10.0.2.50", protocol: "rdp", domain: "CORP" });
+    expect(matches(win, "rdp")).toBe(true);
+    expect(matches(win, "corp")).toBe(true);
+    expect(matches(p, "rdp")).toBe(false);
+  });
 });
 
 describe("groupByFolder", () => {
@@ -301,5 +307,22 @@ describe("PromptTracker", () => {
     expect(t.observe({ kind: "generic" })).toBe("send");
     expect(t.observe(null)).toBeNull();
     expect(t.observe({ kind: "generic" })).toBe("rejected");
+  });
+});
+
+import { parseTarget } from "./lib";
+describe("parseTarget", () => {
+  it("reads what people paste from a terminal", () => {
+    expect(parseTarget("ssh deploy@10.0.2.15")).toEqual({ user: "deploy", host: "10.0.2.15", port: 22 });
+    expect(parseTarget("ssh -p 2222 root@db.example.com")).toEqual({ user: "root", host: "db.example.com", port: 2222 });
+    expect(parseTarget("ssh root@db.example.com -p 2222")).toEqual({ user: "root", host: "db.example.com", port: 2222 });
+    expect(parseTarget("ssh://ops@bastion.example.com:2200")).toEqual({ user: "ops", host: "bastion.example.com", port: 2200 });
+    expect(parseTarget("  pi@192.168.1.2:22 ")).toEqual({ user: "pi", host: "192.168.1.2", port: 22 });
+    expect(parseTarget("ssh staging.example.com")).toEqual({ user: "", host: "staging.example.com", port: 22 });
+  });
+  it("leaves ordinary searches alone", () => {
+    for (const q of ["", "prod", "db-primary", "#dev", "Acme/bastion", "ssh", "user@", "@host", "a@b c", "x@-oProxyCommand=sh", "x@host:99999", "ssh -o ProxyCommand=sh host"]) {
+      expect(parseTarget(q), q).toBeNull();
+    }
   });
 });
