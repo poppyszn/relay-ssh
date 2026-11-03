@@ -110,8 +110,8 @@
 <style>
   .strip { height: 40px; flex: none; display: flex; align-items: center; background: var(--strip); border-bottom: 1px solid var(--line); }
   .strip.mac { padding-left: 84px; }
-  .tabs { position: relative; align-self: stretch; display: flex; align-items: center; min-width: 0; overflow: hidden; padding-left: var(--s1); }
-  .tab { position: relative; display: flex; align-items: center; align-self: stretch; flex: 0 1 200px; min-width: 56px; max-width: 240px; padding-right: var(--s1); border-radius: var(--r-sm) var(--r-sm) 0 0; color: var(--muted); transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
+  .tabs { position: relative; flex: 1 1 0; align-self: stretch; display: flex; align-items: center; min-width: 0; overflow: hidden; padding-left: var(--s1); }
+  .tab { position: relative; display: flex; align-items: center; align-self: stretch; flex: 0 1 200px; min-width: 72px; max-width: 220px; padding-right: var(--s1); border-radius: var(--r-sm) var(--r-sm) 0 0; color: var(--muted); transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
   .tab:not(.active):hover { background: var(--hover); color: var(--text); }
   .tab.active { background: var(--bg); color: var(--strong); margin-bottom: -1px; }
   .tab.active::before { content: ""; position: absolute; inset: 0 var(--s2) auto var(--s2); height: 2px; border-radius: 0 0 2px 2px; background: var(--accent); }
@@ -123,7 +123,7 @@
   .x { opacity: 0; }
   .tab:hover .x, .tab.active .x, .x:focus-visible { opacity: 1; }
   .plus { margin-left: var(--s1); }
-  .search { margin: 0 var(--s3) 0 auto; flex: none; width: 220px; height: var(--h-sm); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s1) 0 var(--s3); background: var(--field); border: 1px solid var(--line); border-radius: var(--r-sm); color: var(--muted); }
+  .search { margin: 0 var(--s3); flex: none; width: 220px; height: var(--h-sm); display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s1) 0 var(--s3); background: var(--field); border: 1px solid var(--line); border-radius: var(--r-sm); color: var(--muted); }
   .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
   .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; padding: 0; box-shadow: none; font-size: var(--t-sm); }
   .search input:focus { box-shadow: none; }

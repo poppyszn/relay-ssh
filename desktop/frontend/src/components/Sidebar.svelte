@@ -57,7 +57,7 @@
 <aside>
   <div class="head">
     <div class="title"><span>Connections</span><span class="n">{profiles.length}</span></div>
-    <button type="button" class="btn sm primary add" data-add-button aria-haspopup="menu" aria-expanded={addOpen} onclick={() => (addOpen = !addOpen)}>
+    <button type="button" class="btn sm ghost add" data-add-button aria-haspopup="menu" aria-expanded={addOpen} onclick={() => (addOpen = !addOpen)}>
       <Icon name="plus" size={14} /><span>Add</span><Icon name="chevron-down" size={14} />
     </button>
     {#if addOpen}
@@ -109,15 +109,15 @@
     {/if}
   </nav>
 
-  <footer>{profiles.length} connection{profiles.length === 1 ? "" : "s"} · {folders.length} folder{folders.length === 1 ? "" : "s"}</footer>
 </aside>
 
 <style>
-  aside { position: relative; width: 268px; flex: none; display: flex; flex-direction: column; background: var(--rail); border-right: 1px solid var(--line); min-height: 0; }
-  .head { position: relative; display: flex; align-items: center; justify-content: space-between; height: 52px; padding: 0 var(--s3) 0 var(--s4); border-bottom: 1px solid var(--line); }
+  aside { position: relative; width: 284px; flex: none; display: flex; flex-direction: column; background: var(--rail); border-right: 1px solid var(--line); min-height: 0; }
+  .head { position: relative; display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 var(--s3) 0 var(--s4); border-bottom: 1px solid var(--line); }
   .title { display: flex; align-items: baseline; gap: var(--s2); font-size: var(--t-md); font-weight: 600; color: var(--strong); }
   .n { font-size: var(--t-xs); font-weight: 400; color: var(--dim); }
-  .add { gap: var(--s1); padding: 0 var(--s2) 0 var(--s3); }
+  .add { gap: var(--s1); padding: 0 var(--s1) 0 var(--s2); color: var(--muted); }
+  .add[aria-expanded="true"] { background: var(--line); color: var(--strong); }
   .err { margin: var(--s2) var(--s3) 0; justify-content: space-between; align-items: center; }
   nav { flex: 1; overflow: auto; position: relative; }
   .new { display: flex; align-items: center; gap: var(--s2); height: 36px; padding: 0 var(--s3) 0 22px; background: var(--hover); color: var(--accent-text); }
@@ -127,5 +127,4 @@
   .rootzone { margin: var(--s3); padding: var(--s4); text-align: center; font-size: var(--t-sm); color: var(--dim); border: 1px dashed var(--floatline); border-radius: var(--r-sm); }
   .rootzone.ok { color: var(--accent-text); border-color: var(--accent); background: var(--accent-soft); }
   .rootzone.bad { color: var(--err-text); border-color: var(--err); }
-  footer { display: flex; align-items: center; height: 28px; padding: 0 var(--s4); border-top: 1px solid var(--line); background: var(--bar); font-size: var(--t-sm); color: var(--dim); }
 </style>

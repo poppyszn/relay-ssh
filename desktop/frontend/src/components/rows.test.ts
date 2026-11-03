@@ -18,6 +18,17 @@ describe("ConnRow", () => {
     expect(target.textContent).toContain("web");
     unmount(c);
   });
+
+  // The name line used to carry tags, the jump host and the edit button, so names truncated to a letter.
+  it("keeps the name line to the name and one tag, and puts the jump host with the address", () => {
+    const target = document.createElement("div");
+    const profile = { ...blankProfile(), name: "dev-app-server", host: "10.0.2.15", user: "deploy", port: 2222, jump: "bastion", tags: ["dev", "eu", "web"] };
+    const c = mount(ConnRow, { target, props: { ...props(0), profile } });
+    expect([...target.querySelectorAll(".tags .chip")].map((e) => e.textContent)).toEqual(["dev"]);
+    expect(target.querySelector(".more")?.textContent).toBe("+2");
+    expect(target.querySelector(".l2")?.textContent).toBe("deploy@10.0.2.15:2222via bastion");
+    unmount(c);
+  });
 });
 
 // (MouseEvent stands in for PointerEvent, whose button and coordinates happy-dom ignores.)
