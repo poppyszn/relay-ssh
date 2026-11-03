@@ -6,12 +6,12 @@
   import { leaves } from "./lib/panes";
   import TabBar from "./components/TabBar.svelte";
   import Sidebar from "./components/Sidebar.svelte";
+  import DeleteConnection from "./components/DeleteConnection.svelte";
   import StatusBar from "./components/StatusBar.svelte";
   import PaneView from "./components/PaneView.svelte";
   import DragGhost from "./components/DragGhost.svelte";
   import Logo from "./components/Logo.svelte";
   import Icon from "./components/Icon.svelte";
-  import Modal from "./components/Modal.svelte";
   import BlockMenu from "./components/BlockMenu.svelte";
   import { copyText } from "./lib/clipboard";
   import { settings } from "./state/settings.svelte";
@@ -175,15 +175,10 @@
     form = null;
     await refresh();
   }
-  async function remove(p: Profile) {
+  async function deleted() {
     confirmDelete = null;
-    try {
-      await ProfilesService.Delete(p.name);
-      form = null;
-      await refresh();
-    } catch (e) {
-      banner = String(e);
-    }
+    form = null;
+    await refresh();
   }
 
   // Windows and Linux have no app menu: Ctrl+Shift combos avoid clashing with
@@ -1010,13 +1005,7 @@
   <ProfileForm initial={formShown!.initial} oldName={formShown!.oldName} {profiles} {folders} onsave={save} ondelete={() => (confirmDelete = profiles.find((p) => p.name === form!.oldName) ?? null)} oncancel={() => (form = null)} />
 {/if}
 {#if confirmDelete}
-  <Modal title="Delete connection" size="sm" role="alertdialog" onclose={() => (confirmDelete = null)}>
-    <p class="confirm-text">Delete <strong>{deleting?.name}</strong>? This removes it from connections.toml and your SSH config.</p>
-    {#snippet footer()}
-      <button type="button" class="btn" data-autofocus onclick={() => (confirmDelete = null)}>Cancel</button>
-      <button type="button" class="btn danger" onclick={() => remove(confirmDelete!)}>Delete</button>
-    {/snippet}
-  </Modal>
+  <DeleteConnection profile={deleting!} {profiles} ondeleted={deleted} onclose={() => (confirmDelete = null)} />
 {/if}
 
 <style>
@@ -1035,7 +1024,6 @@
   .welcome .keys dt { color: var(--muted); }
   .welcome .keys dd { margin: 0; }
   .banner { margin: var(--s2) var(--s3) 0; justify-content: space-between; align-items: center; }
-  .confirm-text { margin: 0; line-height: 1.5; }
   .toast { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: var(--z-toast); display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-pop); font-size: var(--t-md); color: var(--text); }
   .toast :global(svg) { color: var(--ok); }
 </style>
