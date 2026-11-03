@@ -70,13 +70,16 @@
 </div>
 
 <style>
-  .head { position: relative; display: flex; align-items: center; gap: var(--s1); height: var(--h-md); padding-right: var(--s2); color: var(--text2); user-select: none; transition: background var(--dur-1) var(--ease); }
-  .head:hover { background: var(--hover); }
-  .head.sel { background: var(--accent-faint); }
-  .head.ok { background: var(--accent-hl); outline: 1px dashed var(--accent); outline-offset: -1px; }
-  .head.bad { outline: 1px dashed var(--err); outline-offset: -1px; cursor: not-allowed; }
+  /* Same inset, rounded highlight as connection rows (see ConnRow). */
+  .head { position: relative; isolation: isolate; display: flex; align-items: center; gap: var(--s1); height: var(--h-md); padding-right: var(--s4); color: var(--text2); user-select: none; }
+  .head::before { content: ""; position: absolute; inset: 1px var(--s2); z-index: -1; border-radius: var(--r-sm); transition: background var(--dur-1) var(--ease); }
+  .head:hover::before { background: var(--hover); }
+  .head.sel::before { background: var(--accent-faint); }
+  .head.ok::before { background: var(--accent-hl); outline: 1px dashed var(--accent); outline-offset: -1px; }
+  .head.bad::before { outline: 1px dashed var(--err); outline-offset: -1px; }
+  .head.bad { cursor: not-allowed; }
   .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); pointer-events: none; }
-  .caret { width: 20px; color: var(--dim); transition: transform var(--dur-2) var(--ease), background var(--dur-1) var(--ease); }
+  .caret { width: 20px; border-radius: var(--r-xs); color: var(--dim); transition: transform var(--dur-2) var(--ease), background var(--dur-1) var(--ease); }
   .name { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s2); height: 100%; padding: 0; background: none; border: 0; color: inherit; text-align: left; cursor: default; font-weight: 600; }
   .ico { display: grid; color: var(--accent-text); flex: none; }
   .ico.empty { color: var(--dim); }
@@ -86,5 +89,5 @@
   .head:hover .more, .more:focus-visible { display: inline-grid; }
   .head:hover .count { display: none; }
   .edit { flex: 1; min-width: 0; height: var(--h-sm); padding: 0 var(--s2); font-size: var(--t-md); font-weight: 500; }
-  .new { display: flex; align-items: center; gap: var(--s2); height: 36px; padding-right: var(--s3); background: var(--hover); color: var(--accent-text); }
+  .new { display: flex; align-items: center; gap: var(--s2); height: 36px; margin: 0 var(--s2); padding-right: var(--s3); border-radius: var(--r-sm); background: var(--hover); color: var(--accent-text); }
 </style>

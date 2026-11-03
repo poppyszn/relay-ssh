@@ -119,8 +119,8 @@
   .add { gap: var(--s1); padding: 0 var(--s1) 0 var(--s2); color: var(--muted); }
   .add[aria-expanded="true"] { background: var(--line); color: var(--strong); }
   .err { margin: var(--s2) var(--s3) 0; justify-content: space-between; align-items: center; }
-  nav { flex: 1; overflow: auto; position: relative; }
-  .new { display: flex; align-items: center; gap: var(--s2); height: 36px; padding: 0 var(--s3) 0 22px; background: var(--hover); color: var(--accent-text); }
+  nav { flex: 1; overflow: auto; position: relative; padding: var(--s1) 0; }
+  .new { display: flex; align-items: center; gap: var(--s2); height: 36px; margin: 0 var(--s2); padding: 0 var(--s3) 0 14px; border-radius: var(--r-sm); background: var(--hover); color: var(--accent-text); }
   .edit { flex: 1; min-width: 0; height: var(--h-sm); padding: 0 var(--s2); font-size: var(--t-md); font-weight: 500; }
   .tip { margin: var(--s3) var(--s4); font-size: var(--t-sm); line-height: 1.5; color: var(--dim); }
   .tip b { color: var(--muted); font-weight: 600; }

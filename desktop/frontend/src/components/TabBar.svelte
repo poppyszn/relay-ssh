@@ -110,15 +110,15 @@
 <style>
   .strip { height: 40px; flex: none; display: flex; align-items: center; background: var(--strip); border-bottom: 1px solid var(--line); }
   .strip.mac { padding-left: 84px; }
-  .tabs { position: relative; flex: 1 1 0; align-self: stretch; display: flex; align-items: center; min-width: 0; overflow: hidden; padding-left: var(--s1); }
-  .tab { position: relative; display: flex; align-items: center; align-self: stretch; flex: 0 1 200px; min-width: 72px; max-width: 220px; padding-right: var(--s1); border-radius: var(--r-sm) var(--r-sm) 0 0; color: var(--muted); transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
+  .tabs { position: relative; flex: 1 1 0; align-self: stretch; display: flex; align-items: center; gap: 2px; min-width: 0; overflow: hidden; padding-left: var(--s2); }
+  /* Tabs are rounded pills in the strip; the active one is a raised surface with a hairline edge. */
+  .tab { position: relative; display: flex; align-items: center; height: var(--h-sm); flex: 0 1 176px; min-width: 72px; max-width: 200px; padding-right: 2px; border-radius: var(--r-sm); color: var(--muted); transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease); }
   .tab:not(.active):hover { background: var(--hover); color: var(--text); }
-  .tab.active { background: var(--bg); color: var(--strong); margin-bottom: -1px; }
-  .tab.active::before { content: ""; position: absolute; inset: 0 var(--s2) auto var(--s2); height: 2px; border-radius: 0 0 2px 2px; background: var(--accent); }
+  .tab.active { background: var(--active); color: var(--strong); box-shadow: inset 0 0 0 1px var(--line2), 0 1px 2px var(--shadow); }
   .tab.dragging { opacity: 0.45; }
   .tab.drop, .plus.drop { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
-  .slot { position: absolute; top: var(--s1); bottom: var(--s1); width: 2px; margin-left: -1px; background: var(--accent); z-index: 2; pointer-events: none; }
-  .main { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; gap: var(--s2); padding: 0 0 0 var(--s3); background: none; border: 0; color: inherit; font-weight: 500; text-align: left; }
+  .slot { position: absolute; top: var(--s2); bottom: var(--s2); width: 2px; margin-left: -1px; background: var(--accent); z-index: 2; pointer-events: none; }
+  .main { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; gap: var(--s2); padding: 0 0 0 var(--s3); border-radius: inherit; background: none; border: 0; color: inherit; font-weight: 500; text-align: left; }
   .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .x { opacity: 0; }
   .tab:hover .x, .tab.active .x, .x:focus-visible { opacity: 1; }

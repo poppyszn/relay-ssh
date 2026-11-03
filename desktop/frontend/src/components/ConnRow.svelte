@@ -35,15 +35,17 @@
 </div>
 
 <style>
-  .row { position: relative; display: flex; align-items: center; user-select: none; transition: background var(--dur-1) var(--ease); }
-  .row:hover { background: var(--hover); }
-  .row.selected { background: var(--active); }
-  .row.current { background: var(--accent-hl); }
+  /* The highlight is an inset, rounded layer behind the row, so indent guides stay continuous lines. */
+  .row { position: relative; isolation: isolate; display: flex; align-items: center; user-select: none; }
+  .row::before { content: ""; position: absolute; inset: 1px var(--s2); z-index: -1; border-radius: var(--r-sm); transition: background var(--dur-1) var(--ease); }
+  .row:hover::before { background: var(--hover); }
+  .row.selected::before { background: var(--active); }
+  .row.current::before { background: var(--accent-hl); }
   .row.dragging { opacity: 0.38; }
   .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); pointer-events: none; }
   /* Two lines: name (and one tag) over the address. The lead column holds the state dot or the RDP glyph,
      and the tags leave the edit button its room on the first line, so hovering never re-truncates the name. */
-  .main { flex: 1; min-width: 0; display: grid; grid-template-columns: 14px minmax(0, auto) 1fr; column-gap: var(--s2); row-gap: 1px; align-items: center; padding: 7px var(--s2) 7px 0; background: none; border: 0; color: inherit; text-align: left; cursor: default; }
+  .main { flex: 1; min-width: 0; display: grid; grid-template-columns: 14px minmax(0, auto) 1fr; column-gap: var(--s2); row-gap: 1px; align-items: center; padding: 7px var(--s4) 7px 0; background: none; border: 0; color: inherit; text-align: left; cursor: default; }
   .lead { display: grid; place-items: center; }
   .dot.idle { background: transparent; box-shadow: inset 0 0 0 1.5px var(--dot-off); }
   .rdp-icon { display: inline-flex; color: var(--muted); }
@@ -56,6 +58,6 @@
   .host { flex: 0 0.01 auto; min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
   .via { flex: 0 1 auto; min-width: 0; color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
   .via::before { content: "·"; margin-right: var(--s2); }
-  .edit { position: absolute; right: var(--s1); top: 5px; opacity: 0; pointer-events: none; }
+  .edit { position: absolute; right: var(--s3); top: 5px; opacity: 0; pointer-events: none; }
   .row:hover .edit, .edit:focus-visible { opacity: 1; pointer-events: auto; }
 </style>
