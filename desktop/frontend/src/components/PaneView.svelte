@@ -7,7 +7,6 @@
   import PaneView from "./PaneView.svelte";
   import SearchBar from "./SearchBar.svelte";
   import ConnectingOverlay from "./ConnectingOverlay.svelte";
-  import BlocksHint from "./BlocksHint.svelte";
   import Icon from "./Icon.svelte";
   import RdpView from "./RdpView.svelte";
 
@@ -58,9 +57,6 @@
       <div class="term" use:attach={node.id}></div>
       {#if info?.connecting && info.target}
         <div class="cover" class:below-header={multi}><ConnectingOverlay target={info.target} {prof} since={info.since} oncancel={() => ws.cancelConnect(node.id)} /></div>
-      {/if}
-      {#if info?.target && !info.connecting && !info.ended && !info.blocks && !ws.autoBlocksFor(info.target)}
-        {#key node.id}<BlocksHint id={node.id} />{/key}
       {/if}
       {#if info?.fillHint}
         <div class="fill-hint" role="status">
