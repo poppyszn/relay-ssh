@@ -2,6 +2,7 @@
   import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import EmptyState from "./EmptyState.svelte";
   import Modal from "./Modal.svelte";
+  import RestoreBackup from "./RestoreBackup.svelte";
 
   type Tab = "health" | "backup" | "import" | "keys";
   let { initial = "health", onclose, onchanged, ongenerate }: { initial?: Tab; onclose: () => void; onchanged: () => void; ongenerate: () => void } = $props();
@@ -50,27 +51,25 @@
     } catch (e) { backupNote = { ok: false, text: msg(e) }; }
   }
   let restorePath = $state("");
-  let restorePass = $state("");
   let needsPass = $state(false);
-  let confirmRestore = $state(false);
+  /** The restore dialog is open for restorePath. */
+  let restoring = $state(false);
   let restoreNote = $state<{ ok: boolean; text: string } | null>(null);
+  // Choosing a backup goes straight to the dialog that asks for its passphrase and confirms.
   async function chooseRestore() {
-    restoreNote = null; confirmRestore = false;
+    restoreNote = null;
     try {
       const path = await ToolsService.PickRestorePath();
       if (!path) return;
       restorePath = path;
       needsPass = await ToolsService.NeedsPassphrase(path);
+      restoring = true;
     } catch (e) { restoreNote = { ok: false, text: msg(e) }; }
   }
-  async function restore() {
-    confirmRestore = false;
-    try {
-      await ToolsService.Restore(restorePath, restorePass);
-      restoreNote = { ok: true, text: "Backup restored. Your connections and keys are back." };
-      restorePass = "";
-      onchanged();
-    } catch (e) { restoreNote = { ok: false, text: msg(e) }; }
+  function restored() {
+    restoring = false;
+    restoreNote = { ok: true, text: "Backup restored. Your connections and keys are back." };
+    onchanged();
   }
 
   // Tabs: arrow keys move between them (the list is vertical).
@@ -176,20 +175,7 @@
         <section>
           <h3>Restore</h3>
           <p class="hint">Replaces your current connections and adopted keys with the contents of a backup.</p>
-          <div class="actions"><button type="button" class="btn" onclick={chooseRestore}>Choose backup…</button><span class="path mono">{restorePath || "No file chosen"}</span></div>
-          {#if restorePath}
-            {#if !needsPass}<div class="notice warn" role="alert">This backup is not encrypted, so nothing proves it is yours. Only restore a file you made or trust: it replaces your connections and keys. Connections that could not be written safely into your ssh config are refused.</div>{/if}
-            {#if needsPass}<label class="field one"><span>Passphrase</span><input type="password" bind:value={restorePass} autocomplete="off" /></label>{/if}
-            {#if confirmRestore}
-              <div class="notice warn" role="alert">This replaces your current connections and adopted keys.</div>
-              <div class="actions">
-                <button type="button" class="btn" onclick={() => (confirmRestore = false)}>Cancel</button>
-                <button type="button" class="btn danger" onclick={restore}>Replace</button>
-              </div>
-            {:else}
-              <div class="actions"><button type="button" class="btn" onclick={() => (confirmRestore = true)}>Restore</button></div>
-            {/if}
-          {/if}
+          <div class="actions"><button type="button" class="btn" onclick={chooseRestore}>Choose backup…</button>{#if restorePath}<span class="path mono">{restorePath}</span><button type="button" class="btn ghost sm" onclick={() => { restoreNote = null; restoring = true; }}>Restore this one</button>{/if}</div>
           {#if restoreNote?.text}<div class="notice" class:good={restoreNote.ok} class:bad={!restoreNote.ok} role={restoreNote.ok ? "status" : "alert"}>{restoreNote.text}</div>{/if}
         </section>
       {:else if tab === "import"}
@@ -240,6 +226,7 @@
     </div>
   </div>
 </Modal>
+{#if restoring}<RestoreBackup path={restorePath} encrypted={needsPass} onrestored={restored} onclose={() => (restoring = false)} />{/if}
 
 <style>
   .layout { flex: 1; min-height: 0; display: flex; }
@@ -255,7 +242,6 @@
   .actions { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
   .head .actions { flex: none; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
-  .field.one { max-width: 50%; }
   .path { font-size: var(--t-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .rows { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r-sm); }
   .rows li { display: flex; align-items: center; gap: var(--s3); min-height: 36px; padding: var(--s2) var(--s3); border-top: 1px solid var(--line); }
