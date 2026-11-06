@@ -88,6 +88,9 @@ func StartRdpTunnel(p paths.Paths, jumpAlias, host string, port int) (*RdpTunnel
 		return nil, fmt.Errorf("starting ssh tunnel: %w", err)
 	}
 
+	ledger := ledgerFor(p)
+	ledger.add(cmd.Process.Pid, forwardSpec)
+
 	tunnel := &RdpTunnel{
 		LocalPort: freePort,
 		JumpAlias: jumpAlias,
@@ -101,6 +104,7 @@ func StartRdpTunnel(p paths.Paths, jumpAlias, host string, port int) (*RdpTunnel
 	// Background monitor for child process exit
 	go func() {
 		werr := cmd.Wait()
+		ledger.remove(cmd.Process.Pid) // it ended, so there is nothing left to clean up
 		tunnel.mu.Lock()
 		tunnel.err = werr
 		tunnel.mu.Unlock()
@@ -140,16 +144,21 @@ func StartRdpTunnel(p paths.Paths, jumpAlias, host string, port int) (*RdpTunnel
 	return tunnel, nil
 }
 
-// Close terminates the ssh tunnel process and cleans up resources.
+// Close terminates the ssh tunnel process and waits (briefly) for it to be gone and its record cleared, so
+// nothing is left running or half written behind it.
 func (t *RdpTunnel) Close() error {
 	t.mu.Lock()
-	defer t.mu.Unlock()
-
 	if t.cancel != nil {
 		t.cancel()
 	}
 	if t.cmd != nil && t.cmd.Process != nil {
 		_ = t.cmd.Process.Kill()
+	}
+	t.mu.Unlock() // not held while waiting: the goroutine that notices the exit takes it
+
+	select {
+	case <-t.done:
+	case <-time.After(3 * time.Second):
 	}
 	return nil
 }

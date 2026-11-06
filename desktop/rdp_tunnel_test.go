@@ -148,3 +148,41 @@ func TestRdpTunnelArgumentSafety(t *testing.T) {
 		}
 	}
 }
+
+// Close returns only once the ssh process has ended and its record is gone, so nothing is left running or half
+// written behind it (and a test's temp folder can be removed straight away).
+func TestTunnelCloseWaitsForTheProcessToEnd(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("RELAY_SSH_HOME", root)
+	fake := t.TempDir()
+	script := "#!/bin/sh\nfor a in \"$@\"; do case \"$a\" in 127.0.0.1:*:*) port=$(echo \"$a\" | cut -d: -f2);; esac; done\nexec python3 -c 'import socket,sys,time\ns=socket.socket();s.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1);s.bind((\"127.0.0.1\",int(sys.argv[1])));s.listen(1)\nwhile True: time.sleep(1)' \"$port\"\n"
+	if err := os.WriteFile(filepath.Join(fake, "ssh"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", fake+":"+os.Getenv("PATH"))
+
+	p := paths.New(root)
+	if err := paths.EnsureDirs(p); err != nil {
+		t.Fatal(err)
+	}
+	tun, err := StartRdpTunnel(p, "jump", "10.0.0.5", 3389)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recs := ledgerFor(p).read(); len(recs) != 1 {
+		t.Fatalf("a running tunnel must be recorded, ledger has %v", recs)
+	}
+	pid := tun.cmd.Process.Pid
+	tun.Close()
+	select {
+	case <-tun.done:
+	default:
+		t.Fatal("Close returned while the ssh process was still running")
+	}
+	if _, running := processCommand(pid); running {
+		t.Errorf("ssh process %d still running after Close", pid)
+	}
+	if recs := ledgerFor(p).read(); len(recs) != 0 {
+		t.Errorf("a closed tunnel must leave no record, ledger has %v", recs)
+	}
+}

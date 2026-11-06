@@ -43,6 +43,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	ReapOrphanTunnels() // end ssh tunnels a crashed or force-quit earlier run left behind
 	rdpGw, err := NewRdpGateway(certStore, func(ev RdpCertEvent) {
 		if app != nil {
 			app.Event.Emit("rdp:cert", ev)
