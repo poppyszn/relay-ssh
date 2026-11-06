@@ -10,10 +10,13 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"io"
+	"log"
 	"math/big"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -571,4 +574,40 @@ func TestGatewayDisconnects(t *testing.T) {
 			t.Fatal("expected read to fail after server disconnect, got nil error")
 		}
 	})
+}
+
+// A refused socket used to be silent: the client only reports "WebSocket is Closed". The gateway now logs why,
+// without ever writing a token to the log.
+func TestGatewayLogsWhyItRefusedAConnection(t *testing.T) {
+	var logged bytes.Buffer
+	log.SetOutput(&logged)
+	defer log.SetOutput(os.Stderr)
+
+	gw, _, stopGw := setupGateway(t)
+	defer stopGw()
+	token, wsURL, err := gw.RegisterSession("sess-log", "127.0.0.1:1", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	dial := func(q, origin string) {
+		websocket.Dial(ctx, wsURL+q, &websocket.DialOptions{HTTPHeader: http.Header{"Origin": []string{origin}}})
+	}
+
+	dial("?token="+token, "null")
+	dial("", "wails://localhost")
+	dial("?token=not-a-token", "wails://localhost")
+	gw.UnregisterSession("sess-log")
+	dial("?token="+token, "wails://localhost")
+
+	out := logged.String()
+	for _, want := range []string{`origin "null" is not allowed`, "no token", "token not recognised", "token not recognised"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("log missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, token) || strings.Contains(out, "not-a-token") {
+		t.Errorf("a token was written to the log:\n%s", out)
+	}
 }

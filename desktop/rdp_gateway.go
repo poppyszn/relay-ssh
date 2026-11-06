@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -153,27 +154,39 @@ func (g *RdpGateway) Close() error {
 	return g.server.Close()
 }
 
+// refuse answers 403 and logs why. The client only ever sees "WebSocket is Closed", so this is where a
+// refused connection can be told apart. A token is never logged.
+func refuse(w http.ResponseWriter, why string) {
+	log.Printf("rdp gateway: refused a connection: %s", why)
+	http.Error(w, why, http.StatusForbidden)
+}
+
 func (g *RdpGateway) handle(w http.ResponseWriter, r *http.Request) {
 	// Origin allow-list check
 	origin := r.Header.Get("Origin")
 	if !allowedOrigin(origin) {
-		http.Error(w, "bad origin", http.StatusForbidden)
+		refuse(w, fmt.Sprintf("origin %q is not allowed", origin))
 		return
 	}
 
 	// Single-use token check
 	token := r.URL.Query().Get("token")
 	if token == "" {
-		http.Error(w, "token required", http.StatusForbidden)
+		refuse(w, "no token")
 		return
 	}
 
 	g.mu.Lock()
 	reg, exists := g.tokens[token]
-	if !exists || reg.Used || time.Now().After(reg.ExpiresAt) {
+	switch {
+	case !exists:
+		g.mu.Unlock()
+		refuse(w, "token not recognised (already used, or its session was closed)")
+		return
+	case reg.Used || time.Now().After(reg.ExpiresAt):
 		delete(g.tokens, token)
 		g.mu.Unlock()
-		http.Error(w, "invalid or expired token", http.StatusForbidden)
+		refuse(w, "token already used or expired")
 		return
 	}
 	reg.Used = true
