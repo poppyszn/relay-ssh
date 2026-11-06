@@ -27,6 +27,7 @@ interface Saved {
   copyOnSelect: boolean;
   cursorBlink: boolean;
   autoBlocks: boolean;
+  rdpClipboard?: boolean;
   vaultTimeout?: number;
 }
 const KEY = "relay.settings.v1";
@@ -48,6 +49,8 @@ class Settings {
   cursorBlink = $state(true);
   /** Set up command blocks by itself in ssh sessions (a connection can override this). */
   autoBlocks = $state(false);
+  /** Share the clipboard with remote desktops (RDP): what you copy is sent to the server, and what it copies replaces yours. Each tab can switch it for itself. */
+  rdpClipboard = $state(true);
   /** Inactivity timeout in minutes before auto-locking the secret vault (0 = lock on quit). */
   vaultTimeout = $state(15);
   private sentVaultTimeout = -1;
@@ -61,6 +64,7 @@ class Settings {
     if (typeof s.copyOnSelect === "boolean") this.copyOnSelect = s.copyOnSelect;
     if (typeof s.cursorBlink === "boolean") this.cursorBlink = s.cursorBlink;
     if (typeof s.autoBlocks === "boolean") this.autoBlocks = s.autoBlocks;
+    if (typeof s.rdpClipboard === "boolean") this.rdpClipboard = s.rdpClipboard;
     if (typeof s.vaultTimeout === "number" && s.vaultTimeout >= 0) this.vaultTimeout = s.vaultTimeout;
   }
 
@@ -101,6 +105,7 @@ class Settings {
       copyOnSelect: this.copyOnSelect,
       cursorBlink: this.cursorBlink,
       autoBlocks: this.autoBlocks,
+      rdpClipboard: this.rdpClipboard,
       vaultTimeout: this.vaultTimeout,
     };
     try {

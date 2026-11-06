@@ -3,7 +3,9 @@
   import { Events } from "@wailsio/runtime";
   import { RdpService, type Profile, type RdpSessionInfo } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import { formatRdpError } from "../lib/rdp_errors";
-  import { buildConfig, loadRdpClient, mountClient, needsResize, type RdpUi, type Size } from "../lib/rdp_client";
+  import { buildConfig, loadRdpClient, mountClient, needsResize, setClipboardShared, type RdpUi, type Size } from "../lib/rdp_client";
+  import { settings } from "../state/settings.svelte";
+  import { copyText } from "../lib/clipboard";
   import { useNativeClipboard } from "../lib/native_clipboard";
   import Icon from "./Icon.svelte";
   import Modal from "./Modal.svelte";
@@ -40,6 +42,12 @@
   // The gateway token lives 5 minutes (rdpTokenLifetime in Go); start over a little before it runs out.
   const TOKEN_LIFETIME_MS = 4 * 60_000;
   let restoreClipboard: (() => void) | null = null;
+  // Whether this tab shares the clipboard with the remote desktop: the setting at the start, switchable here.
+  let clipboardShared = $state(settings.rdpClipboard);
+  function toggleClipboard() {
+    clipboardShared = !clipboardShared;
+    if (ui) setClipboardShared(ui, clipboardShared);
+  }
   // Reports a stage to the app log with the time since the session opened, to explain slow or failed connections.
   const note = (stage: string) => { if (sessionId) RdpService.Note(sessionId, stage).catch(() => {}); };
 
@@ -120,8 +128,8 @@
       restoreClipboard ??= useNativeClipboard();
       ui = await mountClient(host!, client);
       note("client ready");
-      ui.setEnableClipboard(true);
-      ui.setEnableAutoClipboard(true);
+      clipboardShared = settings.rdpClipboard;
+      setClipboardShared(ui, clipboardShared);
       const rect = host!.getBoundingClientRect();
       applied = { width: Math.max(640, Math.floor(rect.width)), height: Math.max(480, Math.floor(rect.height)) };
       const config = buildConfig(ui, client, {
@@ -263,7 +271,7 @@
         {#if certEvent.isMismatch}
           <div class="notice bad" role="alert">
             <strong>Warning: Certificate mismatch detected!</strong>
-            <p>The TLS certificate presented by <code>{certEvent.endpoint}</code> does not match the stored fingerprint. This could indicate a man-in-the-middle attack or a server reinstallation.</p>
+            <p>The TLS certificate presented by <code>{certEvent.endpoint}</code> does not match the one Relay remembered. This could be a man-in-the-middle attack, or the server may have been reinstalled or given a new certificate. Do not trust the new certificate unless you know that is what happened.</p>
           </div>
           <div class="fp-box">
             <span class="label">Stored fingerprint:</span>
@@ -276,10 +284,12 @@
             <button type="button" class="btn primary" onclick={() => acceptCert(false)}>Disconnect</button>
           </div>
         {:else}
-          <p>This is the first time connecting to <code>{certEvent.endpoint}</code>. Trust on first use?</p>
+          <p>Relay has not connected to this server before (<code>{certEvent.endpoint}</code>). If you trust it, Relay remembers the certificate it shows now and warns you if it ever changes.</p>
+          <p class="note">The first connection is only as safe as the network it happens on. If this is not a network you trust, compare the fingerprint below with the server's before continuing.</p>
           <div class="fp-box">
             <span class="label">SHA-256 fingerprint:</span>
             <code class="fp mono">{certEvent.fingerprint}</code>
+            <button type="button" class="btn ghost sm copy" onclick={() => copyText(certEvent!.fingerprint)}>Copy fingerprint</button>
           </div>
           <div class="modal-acts">
             <button type="button" class="btn primary" onclick={() => acceptCert(true)}>Trust &amp; Connect</button>
@@ -292,6 +302,7 @@
     <div class="bar" role="toolbar" aria-label="Remote desktop">
       <span class="dot ok" aria-hidden="true"></span>
       <span class="mono who">{prof?.user}@{prof?.host}</span>
+      <button type="button" class="btn ghost sm" data-clipboard aria-pressed={clipboardShared} title={clipboardShared ? "Your clipboard and this remote desktop's are shared both ways. Click to stop sharing." : "The clipboard is not shared with this remote desktop. Click to share it."} onclick={toggleClipboard}>Clipboard: {clipboardShared ? "shared" : "off"}</button>
       <button type="button" class="btn ghost sm" title="Send Ctrl+Alt+Delete to the remote desktop" onclick={() => ui?.ctrlAltDel()}>Ctrl+Alt+Del</button>
       <button type="button" class="btn ghost sm" onclick={cancel}>Disconnect</button>
     </div>
@@ -320,6 +331,8 @@
   .cert-modal { display: flex; flex-direction: column; gap: var(--s4); }
   .fp-box { display: flex; flex-direction: column; gap: var(--s1); padding: var(--s3); background: var(--field); border: 1px solid var(--fieldline); border-radius: var(--r-sm); font-size: var(--t-xs); }
   .fp { word-break: break-all; color: var(--strong); font-size: var(--t-xs); }
+  .note { margin: 0; font-size: var(--t-sm); color: var(--muted); line-height: 1.5; }
+  .copy { align-self: flex-start; margin-top: var(--s1); }
   .modal-acts { display: flex; justify-content: flex-end; gap: var(--s2); }
   /* Hidden (not removed) until the session is up; the prompts and cards above it are positioned over it. */
   .stage { position: absolute; inset: 0; visibility: hidden; }

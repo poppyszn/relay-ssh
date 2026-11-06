@@ -145,6 +145,14 @@
     </div>
   </section>
 
+  <section id="settings-rdp" aria-labelledby="set-rdp">
+    <h3 class="label" id="set-rdp">Remote desktop</h3>
+    <div class="opt">
+      <div class="txt"><span id="set-rdpclip">Share the clipboard with remote desktops</span><span class="hint">While a remote desktop is focused, what you copy on this Mac is sent to it, and what it copies replaces your clipboard. Turn this off for servers you do not fully trust. Each remote desktop tab also has its own switch.</span></div>
+      <button type="button" class="switch" role="switch" aria-checked={settings.rdpClipboard} aria-labelledby="set-rdpclip" onclick={() => (settings.rdpClipboard = !settings.rdpClipboard)}></button>
+    </div>
+  </section>
+
   <section id="settings-vault" aria-labelledby="set-vault" bind:this={vaultEl}>
     <div class="head">
       <h3 class="label" id="set-vault">Vault</h3>

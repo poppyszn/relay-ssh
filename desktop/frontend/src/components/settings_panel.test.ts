@@ -3,6 +3,7 @@ import { flushSync, mount, unmount } from "svelte";
 import { afterEach, describe, expect, it } from "vitest";
 import SettingsPanel from "./SettingsPanel.svelte";
 import { vault } from "../state/vault.svelte";
+import { settings } from "../state/settings.svelte";
 
 let c: ReturnType<typeof mount> | null = null;
 afterEach(() => {
@@ -21,13 +22,13 @@ const click = (el: Element | null | undefined) => { (el as HTMLElement).click();
 const button = (t: HTMLElement, text: string) => [...t.querySelectorAll("button")].find((b) => b.textContent?.trim() === text);
 
 describe("SettingsPanel", () => {
-  it("is a Settings dialog with Appearance, Terminal and Vault sections", () => {
+  it("is a Settings dialog with Appearance, Terminal, Remote desktop and Vault sections", () => {
     vault.exists = false;
     vault.unlocked = false;
     const t = show();
     expect(t.querySelector("h2")?.textContent).toBe("Settings");
     const labels = [...t.querySelectorAll("h3.label")].map((h) => h.textContent);
-    expect(labels).toEqual(["Appearance", "Terminal", "Vault"]);
+    expect(labels).toEqual(["Appearance", "Terminal", "Remote desktop", "Vault"]);
     expect(t.querySelector("#settings-vault .chip")?.textContent).toBe("Not set up");
     expect(button(t, "Create vault")).toBeTruthy();
   });
@@ -77,5 +78,17 @@ describe("SettingsPanel", () => {
     click(sw);
     expect(sw.getAttribute("aria-checked")).not.toBe(before);
     click(sw);
+  });
+
+  it("lets the clipboard sharing with remote desktops be switched off, and says what it does", () => {
+    settings.rdpClipboard = true;
+    const t = show();
+    const sw = t.querySelector<HTMLElement>('[aria-labelledby="set-rdpclip"]')!;
+    expect(sw.getAttribute("aria-checked")).toBe("true");
+    expect(t.querySelector("#set-rdpclip")?.textContent).toBe("Share the clipboard with remote desktops");
+    expect(t.textContent).toMatch(/replaces your clipboard/i);
+    click(sw);
+    expect(settings.rdpClipboard).toBe(false);
+    expect(sw.getAttribute("aria-checked")).toBe("false");
   });
 });

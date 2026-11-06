@@ -108,3 +108,9 @@ export function needsResize(applied: Size, next: Size): boolean {
   if (w <= 0 || h <= 0) return false;
   return w !== Math.floor(applied.width) || h !== Math.floor(applied.height);
 }
+
+/** Turns clipboard sharing with the remote desktop on or off, both directions together. */
+export function setClipboardShared(ui: RdpUi, on: boolean): void {
+  ui.setEnableClipboard(on);
+  ui.setEnableAutoClipboard(on);
+}

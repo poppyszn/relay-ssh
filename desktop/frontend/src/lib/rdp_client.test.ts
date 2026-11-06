@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
-import { buildConfig, loadRdpClient, mountClient, needsResize, type RdpClientModule } from "./rdp_client";
+import { buildConfig, loadRdpClient, mountClient, needsResize, setClipboardShared, type RdpClientModule } from "./rdp_client";
 
 // A stand-in for the IronRDP web component: a custom element that announces itself with `ready`.
 function fakeElementClass(ui: object) {
@@ -81,5 +81,15 @@ describe("following the tab's size", () => {
   it("never asks for a size the server would reject", () => {
     expect(needsResize({ width: 1000, height: 640 }, { width: 0, height: 600 })).toBe(false);
     expect(needsResize({ width: 1000, height: 640 }, { width: 600, height: 0 })).toBe(false);
+  });
+});
+
+describe("sharing the clipboard with the remote desktop", () => {
+  it("switches both directions together", () => {
+    const calls: [string, boolean][] = [];
+    const ui = { setEnableClipboard: (v: boolean) => calls.push(["clipboard", v]), setEnableAutoClipboard: (v: boolean) => calls.push(["auto", v]) } as never;
+    setClipboardShared(ui, false);
+    setClipboardShared(ui, true);
+    expect(calls).toEqual([["clipboard", false], ["auto", false], ["clipboard", true], ["auto", true]]);
   });
 });
