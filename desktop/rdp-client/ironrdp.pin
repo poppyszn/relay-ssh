@@ -1,0 +1,7 @@
+# The IronRDP release Relay's remote desktop client is built from (see desktop/scripts/build-ironrdp.sh).
+# tag:    a release tag of github.com/Devolutions/IronRDP for the iron-remote-desktop-rdp web package.
+# commit: the full commit that tag must point to. The build refuses a tag that has moved.
+# rust:   the toolchain that release pins in its own rust-toolchain.toml.
+tag=npm-iron-remote-desktop-rdp-v0.7.0
+commit=e45f68c7e52297ca50d33b44c0ace36c9940fbe6
+rust=1.89.0

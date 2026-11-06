@@ -129,14 +129,16 @@ tools, files, forwards          ssh / sftp / ssh-keygen         ~/.ssh/relay-ssh
 
 ## Remote Desktop (RDP)
 
-Relay provides embedded RDP client support in the desktop application alongside SSH:
+Relay has embedded RDP client support in the desktop application alongside SSH. **It is experimental**: the pieces are tested, but it has not yet been proven against a real Windows host, and it is only in builds that include the client (below).
+
+- **Building the client:** the remote desktop client is IronRDP's official browser client, built from the release pinned in `desktop/rdp-client/ironrdp.pin`. Run `make rdp-client` (needs `git`, `node`, `rustup` and `wasm-pack`) before building the app; without it the RDP tab says so instead of connecting.
 
 - **Saved profiles:** Remote desktop connections are saved in `connections.toml` with `protocol = "rdp"`, an optional `domain`, and port defaulting to 3389. The `relay-ssh` CLI ignores RDP profiles so OpenSSH configuration remains clean.
 - **Pure relay:** Relay relays RDP bytes directly between the server and an in-browser WebAssembly client ([IronRDP](https://github.com/Devolutions/IronRDP)) over a loopback WebSocket. Go does no RDP decoding or rendering.
 - **TOFU host certificates:** Server TLS certificates are pinned on first use in `~/.config/relay-ssh/rdp_hosts.toml`. If a certificate fingerprint changes, Relay displays a clear security warning and requires explicit user confirmation.
 - **Jump hosts:** RDP connections can tunnel through any saved SSH jump host via a local port forward (`ssh -L`), automatically torn down when the session closes.
 - **Credentials:** Passwords can be stored encrypted in Relay's age vault (`~/.config/relay-ssh/vault.age`) or prompted in-memory per session. Relay never writes passwords to disk or logs unencrypted.
-- **Clipboard & shortcuts:** Text clipboard synchronization is supported up to 1 MiB while the remote canvas has focus. Keyboard shortcuts using `⌘` stay with Relay so window and tab controls always work.
+- **Clipboard & shortcuts:** the client synchronises the clipboard with the remote desktop, and a toolbar sends Ctrl+Alt+Delete. Keyboard shortcuts using `⌘` stay with Relay so window and tab controls always work.
 
 ## Example `connections.toml`
 
@@ -182,7 +184,7 @@ jump = "bastion"
 - [ ] DevOps: environment tags with coloured tabs; AWS SSM (SSH over SSM and EC2 import); Kubernetes contexts
   pinned per tab with port forwards; a host-key manager for `known_hosts`
 - [x] Encrypted vault for opt-in SSH and RDP password auto-fill
-- [x] Embedded Remote Desktop (RDP) tabs with WebAssembly IronRDP, TOFU cert pinning and SSH jump tunnels
+- [ ] Embedded Remote Desktop (RDP) tabs with WebAssembly IronRDP, TOFU cert pinning and SSH jump tunnels (built; being proven against a real Windows host)
 - [x] Per-block menu: copy command, output, or both
 - [x] Light theme (Daylight) and System, which follows the OS
 - [x] Block header: directory and git branch on every block
