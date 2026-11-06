@@ -129,4 +129,20 @@ describe("RdpView component", () => {
 
     unmount(c);
   });
+
+  it("never pretends to be connected when the RDP client is not built into the app", async () => {
+    vi.spyOn(RdpService, "Open").mockResolvedValue({ sessionId: "s-nowasm", wsUrl: "ws://127.0.0.1:1/rdp", token: "t", host: "win-test", user: "u", domain: "", port: 3389, hasSavedPassword: true });
+    vi.spyOn(RdpService, "Credentials").mockResolvedValue("pw");
+    const close = vi.spyOn(RdpService, "Close").mockResolvedValue(undefined as never);
+    const target = document.createElement("div");
+    const c = mount(RdpView, { target, props: { target: "win-box", prof: { name: "win-box", protocol: "rdp", host: "win-test", user: "u", port: 3389, auth: "", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } } });
+    flushSync();
+    await new Promise((r) => setTimeout(r, 50));
+    flushSync();
+    expect(target.querySelector("canvas")).toBeNull();
+    expect(target.textContent).not.toContain("RDP Connected");
+    expect(target.textContent).toContain("Remote desktop is not built into this version");
+    expect(close).toHaveBeenCalledWith("s-nowasm");
+    unmount(c);
+  });
 });

@@ -72,10 +72,11 @@
       const ironrdp = await import(/* @vite-ignore */ wasmPath).catch(() => null);
 
       if (!ironrdp) {
-        // Fallback stub for environments where WASM binary is not pre-compiled
-        viewState = "connected";
-        await tick();
-        initCanvasMock();
+        // Never draw a "connected" screen without a real client: say so, and free the tunnel and gateway session.
+        RdpService.Close(info.sessionId).catch(() => {});
+        errorMessage = "Remote desktop is not built into this version";
+        errorHint = "This copy of Relay was built without its RDP client, so it cannot open remote desktops. Build it with the IronRDP client (see desktop/README.md), or use an SSH connection.";
+        viewState = "error";
         return;
       }
 
@@ -96,22 +97,6 @@
       errorHint = formatted.hint;
       viewState = "error";
     }
-  }
-
-  function initCanvasMock() {
-    if (!canvas || !canvasContainer) return;
-    const rect = canvasContainer.getBoundingClientRect();
-    canvas.width = Math.max(800, Math.floor(rect.width));
-    canvas.height = Math.max(600, Math.floor(rect.height));
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "14px monospace";
-      ctx.fillText(`RDP Connected: ${prof?.user ?? "admin"}@${prof?.host ?? target}`, 24, 36);
-    }
-    setupResizeObserver();
   }
 
   function setupResizeObserver() {
