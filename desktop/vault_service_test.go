@@ -88,23 +88,24 @@ func TestProfilesServiceKeepsSecretsConsistent(t *testing.T) {
 	if err := ps.SaveWithPassword("", prof, "alpha-web-pass"); err != nil {
 		t.Fatalf("SaveWithPassword failed: %v", err)
 	}
-	if !v.Has("web-server") {
+	id := idOf(t, "web-server")
+	if !v.Has(id) {
 		t.Fatalf("expected web-server to have secret")
 	}
 
 	// 2. Rename connection: secret should follow
 	profRenamed := prof
 	profRenamed.Name = "web-production"
-	if err := ps.Save("web-server", profRenamed); err != nil {
+	if err := ps.Save(id, profRenamed); err != nil {
 		t.Fatalf("Save rename failed: %v", err)
 	}
-	if v.Has("web-server") {
-		t.Fatalf("expected old name web-server to be gone")
+	if idOf(t, "web-production") != id {
+		t.Fatalf("a rename must keep the connection's id")
 	}
-	if !v.Has("web-production") {
+	if !v.Has(id) {
 		t.Fatalf("expected new name web-production to have secret")
 	}
-	sec, ok, _ := v.Get("web-production", bindingOf(fromProfile(profRenamed)))
+	sec, ok, _ := v.Get(id, bindingOf(fromProfile(profRenamed)))
 	if !ok || sec != "alpha-web-pass" {
 		t.Fatalf("expected secret alpha-web-pass, got %q", sec)
 	}
@@ -112,10 +113,10 @@ func TestProfilesServiceKeepsSecretsConsistent(t *testing.T) {
 	// 3. Change auth away from password: secret should be forgotten
 	profKeyAuth := profRenamed
 	profKeyAuth.Auth = "agent"
-	if err := ps.Save("web-production", profKeyAuth); err != nil {
+	if err := ps.Save(id, profKeyAuth); err != nil {
 		t.Fatalf("Save auth change failed: %v", err)
 	}
-	if v.Has("web-production") {
+	if v.Has(id) {
 		t.Fatalf("expected secret to be forgotten after auth changed to agent")
 	}
 
@@ -130,13 +131,14 @@ func TestProfilesServiceKeepsSecretsConsistent(t *testing.T) {
 	if err := ps.SaveWithPassword("", prof2, "db-secret-pass"); err != nil {
 		t.Fatalf("Save db-server failed: %v", err)
 	}
-	if !v.Has("db-server") {
+	dbID := idOf(t, "db-server")
+	if !v.Has(dbID) {
 		t.Fatalf("expected db-server to have secret")
 	}
-	if err := ps.Delete("db-server"); err != nil {
+	if err := ps.Delete(dbID); err != nil {
 		t.Fatalf("Delete db-server failed: %v", err)
 	}
-	if v.Has("db-server") {
+	if v.Has(dbID) {
 		t.Fatalf("expected secret to be forgotten after Delete")
 	}
 
@@ -276,12 +278,13 @@ func TestSavedPasswordFollowsEditsMadeInTheAppOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	id := idOf(t, "web")
 	moved := prof
 	moved.Host = "10.0.0.6"
-	if err := ps.Save("web", moved); err != nil {
+	if err := ps.Save(id, moved); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok, err := v.Get("web", bindingOf(fromProfile(moved))); err != nil || !ok {
+	if _, ok, err := v.Get(id, bindingOf(fromProfile(moved))); err != nil || !ok {
 		t.Fatalf("an edit made in the app should keep the password usable: %v %v", ok, err)
 	}
 
@@ -294,10 +297,10 @@ func TestSavedPasswordFollowsEditsMadeInTheAppOnly(t *testing.T) {
 	tampered := moved
 	tampered.Host = "evil.example"
 	tampered.Tags = []string{"touched"}
-	if err := ps.Save("web", tampered); err != nil { // the user opens the form and presses Save
+	if err := ps.Save(id, tampered); err != nil { // the user opens the form and presses Save
 		t.Fatal(err)
 	}
-	if _, _, err := v.Get("web", bindingOf(fromProfile(tampered))); !errors.Is(err, vault.ErrBindingChanged) {
+	if _, _, err := v.Get(id, bindingOf(fromProfile(tampered))); !errors.Is(err, vault.ErrBindingChanged) {
 		t.Fatalf("saving a tampered connection must not release its password to the new host, got %v", err)
 	}
 }
@@ -332,14 +335,14 @@ func TestRevealSecretNeedsTheMasterPassword(t *testing.T) {
 		t.Fatal(err)
 	}
 	vs := VaultService{}
-	if sec, err := vs.RevealSecret("web", "wrong-master-password"); err == nil || sec != "" {
+	if sec, err := vs.RevealSecret(idOf(t, "web"), "wrong-master-password"); err == nil || sec != "" {
 		t.Fatalf("a wrong master revealed %q (%v)", sec, err)
 	}
-	if sec, err := vs.RevealSecret("web", "correct-horse-battery-staple"); err != nil || sec != "alpha-web-pass" {
+	if sec, err := vs.RevealSecret(idOf(t, "web"), "correct-horse-battery-staple"); err != nil || sec != "alpha-web-pass" {
 		t.Fatalf("%q %v", sec, err)
 	}
 	v.Lock()
-	if sec, err := vs.RevealSecret("web", "correct-horse-battery-staple"); err != nil || sec != "alpha-web-pass" {
+	if sec, err := vs.RevealSecret(idOf(t, "web"), "correct-horse-battery-staple"); err != nil || sec != "alpha-web-pass" {
 		t.Fatalf("while locked: %q %v", sec, err)
 	}
 }

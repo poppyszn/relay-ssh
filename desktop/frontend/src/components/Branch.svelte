@@ -63,8 +63,8 @@
     {#each node.children as c (c.path)}
       <Branch node={c} depth={depth + 1} {searching} {open} {current} {onconnect} {onedit} {onduplicate} />
     {/each}
-    {#each node.profiles as p (p.name)}
-      <ConnRow profile={p} depth={depth + 1} live={open.has(p.name)} current={current === p.name} {onconnect} {onedit} {onduplicate} />
+    {#each node.profiles as p (p.id)}
+      <ConnRow profile={p} depth={depth + 1} live={open.has(p.id)} current={current === p.id} {onconnect} {onedit} {onduplicate} />
     {/each}
   {/if}
 </div>

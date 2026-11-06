@@ -35,7 +35,7 @@
   let filesTarget = $state("");
   let forwardsTarget = $state("");
   let snippetsOpen = $state(false);
-  let form = $state<{ initial: Profile; oldName: string } | null>(null);
+  let form = $state<{ initial: Profile; oldId: string } | null>(null);
   // Loaded the first time the form opens; the {#if} keeps `form` non-null while it renders.
   let ProfileForm = $state<typeof import("./components/ProfileForm.svelte").default | null>(null);
   $effect(() => { if (form && !ProfileForm) import("./components/ProfileForm.svelte").then((m) => (ProfileForm = m.default)); });
@@ -85,7 +85,7 @@
   async function connect(p: Profile, split = false) {
     palette = false;
     banner = "";
-    if ((p.auth === "password" || p.protocol === "rdp") && vault.exists && !vault.unlocked && vault.hasRemembered(p.name)) {
+    if ((p.auth === "password" || p.protocol === "rdp") && vault.exists && !vault.unlocked && vault.hasRemembered(p.id, p.name)) {
       unlockConnect = { profile: p, split };
       return;
     }
@@ -98,8 +98,8 @@
   }
 
   async function doConnect(p: Profile, split = false) {
-    if (split && ws.active) await ws.split("row", p.name);
-    else await ws.openTab(p.name);
+    if (split && ws.active) await ws.split("row", p.id);
+    else await ws.openTab(p.id);
   }
 
   function run(id: string) {
@@ -143,7 +143,7 @@
 
   // The file browser works on a saved connection (it reuses that tab's login).
   // Files and port forwards work over ssh, which a remote desktop (RDP) connection does not have.
-  const focusedIsRdp = $derived(profiles.find((p) => p.name === ws.panes[ws.focusedPane]?.target)?.protocol === "rdp");
+  const focusedIsRdp = $derived(profiles.find((p) => p.id === ws.panes[ws.focusedPane]?.target)?.protocol === "rdp");
 
   function openFiles() {
     const t = ws.panes[ws.focusedPane]?.target;
@@ -157,12 +157,12 @@
   // panel, a restore or an import may have changed it since the list was loaded.
   // Opens the new-connection form prefilled with a copy; nothing is saved until the form is.
   function duplicate(p: Profile) {
-    form = { initial: duplicateProfile(p, profiles.map((x) => x.name)), oldName: "" };
+    form = { initial: duplicateProfile(p, profiles.map((x) => x.name)), oldId: "" };
   }
 
   async function edit(p: Profile) {
     await refresh();
-    form = { initial: profiles.find((x) => x.name === p.name) ?? p, oldName: p.name };
+    form = { initial: profiles.find((x) => x.id === p.id) ?? p, oldId: p.id };
   }
 
   // Forwards are managed on a saved connection's live login.
@@ -176,14 +176,18 @@
 
   // A new connection starts in the selected folder, if there is one.
   function newConnection(folder: string) {
-    form = { initial: { ...blankProfile(), folder }, oldName: "" };
+    form = { initial: { ...blankProfile(), folder }, oldId: "" };
   }
 
-  async function save(prof: Profile, password = "") {
-    if (password) await ProfilesService.SaveWithPassword(form!.oldName, prof, password);
-    else await ProfilesService.Save(form!.oldName, prof);
+  /** Saves the connection and returns its id (a new connection gets one on save). */
+  async function save(prof: Profile, password = ""): Promise<string> {
+    let id = form!.oldId;
+    if (password) await ProfilesService.SaveWithPassword(id, prof, password);
+    else await ProfilesService.Save(id, prof);
     form = null;
     await refresh();
+    if (!id) id = profiles.find((x) => x.name === prof.name && x.folder === prof.folder)?.id ?? "";
+    return id;
   }
   async function deleted() {
     confirmDelete = null;
@@ -209,9 +213,10 @@
 
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
-    ws.blocksMode = (name) => profiles.find((p) => p.name === name)?.blocks;
-    ws.profileAuth = (name) => profiles.find((p) => p.name === name)?.auth;
-    ws.profileProtocol = (name) => profiles.find((p) => p.name === name)?.protocol;
+    ws.blocksMode = (id) => profiles.find((p) => p.id === id)?.blocks;
+    ws.profileAuth = (id) => profiles.find((p) => p.id === id)?.auth;
+    ws.profileProtocol = (id) => profiles.find((p) => p.id === id)?.protocol;
+    ws.labelOf = (id) => profiles.find((p) => p.id === id)?.name ?? id;
     sb.onFocusConnection = (name) => {
       const ids = ws.tabs.flatMap((t) => leaves(t.root)).filter((id) => ws.panes[id]?.target === name);
       const id = nextSession(ids, ws.focusedPane);
@@ -239,7 +244,9 @@
   // RELAY_BENCH=smoke: drive the real UI path (profiles, open a local tab,
   // split it, run a command in each pane) and report, so a build can be
   // verified without clicking.
-  async function smoke(box = "", dir = "", sshdPort = "", localPort = "") {
+  async function smoke(boxName = "", dir = "", sshdPort = "", localPort = "") {
+    await refresh();
+    const box = profiles.find((p) => p.name === boxName)?.id ?? boxName; // connections are identified by id
     const out: Record<string, unknown> = { origin: location.origin };
     const enc = new TextEncoder();
     const jsErrors: string[] = [];
@@ -543,13 +550,13 @@
       // edit form shows a forward saved elsewhere (regression: it used a stale cached profile)
       if (profiles.length) {
         const target0 = profiles[0];
-        const fresh = (await ProfilesService.List())!.find((x) => x.name === target0.name)!;
-        await ProfilesService.Save(target0.name, { ...fresh, tunnels: [...(fresh.tunnels ?? []), { type: "local", listen: "7777", target: "localhost:7" }] });
+        const fresh = (await ProfilesService.List())!.find((x) => x.id === target0.id)!;
+        await ProfilesService.Save(target0.id, { ...fresh, tunnels: [...(fresh.tunnels ?? []), { type: "local", listen: "7777", target: "localhost:7" }] });
         await edit(target0); // the sidebar list was NOT refreshed by the save above
         await tick();
         out.editShowsSavedForward = [...document.querySelectorAll(".tun input")].some((i) => (i as HTMLInputElement).value === "7777");
         form = null;
-        await ProfilesService.Save(target0.name, fresh); // restore
+        await ProfilesService.Save(target0.id, fresh); // restore
         await refresh();
       }
       // window chrome: frameless means no native title bar, and our buttons sit centred in the strip
@@ -609,7 +616,7 @@
         const created = await ProfilesService.Folders();
         await drag(rowOf(victim.name), folderOf("smoke-a"));
         const sawConfirm = await confirmMove();
-        const movedTo = (await ProfilesService.List())!.find((p) => p.name === victim.name)!.folder;
+        const movedTo = (await ProfilesService.List())!.find((p) => p.id === victim.id)!.folder;
         await drag(folderOf("smoke-b"), folderOf("smoke-a"));
         const sawFolderConfirm = await confirmMove();
         const nested = await ProfilesService.Folders();
@@ -619,7 +626,7 @@
         sb.cancelDrag();
         out.sidebar = { created, sawConfirm, movedTo, sawFolderConfirm, nested, selfDropCard };
         // clean up
-        await ProfilesService.MoveProfile(victim.name, originalFolder);
+        await ProfilesService.MoveProfile(victim.id, originalFolder);
         for (const f of ["smoke-a/smoke-b", "smoke-a", "smoke-b"]) await ProfilesService.DeleteFolder(f).catch(() => {});
         await refresh();
       }
@@ -736,7 +743,7 @@
         await release(lastTab.right - 4, first.top + 10);
         const after = order();
         out.tabDrag = { before, after, movedFirstToEnd: after.at(-1) === before[0] && after.length === before.length, slotShown, indicatorGone: !document.querySelector(".tabs .slot") };
-        const rowBtn = [...document.querySelectorAll<HTMLElement>(".row .name")].find((n) => n.textContent === box)?.closest(".row")?.querySelector<HTMLElement>(".main");
+        const rowBtn = [...document.querySelectorAll<HTMLElement>(".row .name")].find((n) => n.textContent === boxName)?.closest(".row")?.querySelector<HTMLElement>(".main");
         const paneEl = document.querySelector<HTMLElement>(".tabview.on [data-pane]");
         if (rowBtn && paneEl) {
           const rr = rowBtn.getBoundingClientRect();
@@ -906,6 +913,7 @@
       {
         const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const rdpSmokeProf: Profile = {
+          id: "",
           name: "smoke-rdp-profile",
           protocol: "rdp",
           host: "127.0.0.1",
@@ -983,15 +991,15 @@
   <StatusBar {profiles} themeName={settings.label} onvault={() => openSettings("vault")} />
 </div>
 
-{#if snippetsOpen}{#await import("./components/SnippetsPanel.svelte") then { default: SnippetsPanel }}<SnippetsPanel into={ws.panes[ws.focusedPane] ? (ws.panes[ws.focusedPane].target ?? "Local shell") : ""} onuse={(c, run) => ws.typeSnippet(c, run)} onclose={() => (snippetsOpen = false)} />{/await}{/if}
-{#if forwardsTarget}{#await import("./components/ForwardsPanel.svelte") then { default: ForwardsPanel }}<ForwardsPanel target={forwardsTarget} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/await}{/if}
-{#if filesTarget}{#await import("./components/FilesPanel.svelte") then { default: FilesPanel }}<FilesPanel target={filesTarget} onclose={() => (filesTarget = "")} />{/await}{/if}
+{#if snippetsOpen}{#await import("./components/SnippetsPanel.svelte") then { default: SnippetsPanel }}<SnippetsPanel into={ws.panes[ws.focusedPane] ? (ws.panes[ws.focusedPane].target ? ws.labelOf(ws.panes[ws.focusedPane].target!) : "Local shell") : ""} onuse={(c, run) => ws.typeSnippet(c, run)} onclose={() => (snippetsOpen = false)} />{/await}{/if}
+{#if forwardsTarget}{#await import("./components/ForwardsPanel.svelte") then { default: ForwardsPanel }}<ForwardsPanel target={forwardsTarget} name={ws.labelOf(forwardsTarget)} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/await}{/if}
+{#if filesTarget}{#await import("./components/FilesPanel.svelte") then { default: FilesPanel }}<FilesPanel target={filesTarget} name={ws.labelOf(filesTarget)} onclose={() => (filesTarget = "")} />{/await}{/if}
 {#if toolsOpen}{#await import("./components/ToolsPanel.svelte") then { default: ToolsPanel }}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/await}{/if}
 {#if ws.blockMenu}<BlockMenu block={ws.blockMenu.block} rect={ws.blockMenu.rect} oncopy={copied} onclose={() => (ws.blockMenu = null)} />{/if}
 {#if toast}<div class="toast" role="status"><Icon name="check" />{toast}</div>{/if}
 {#if settingsOpen}{#await import("./components/SettingsPanel.svelte") then { default: SettingsPanel }}<SettingsPanel section={settingsSection} onclose={() => { settingsOpen = false; settingsSection = undefined; }} />{/await}{/if}
 <DragGhost />
-{#if palette}{#await import("./components/Palette.svelte") then { default: Palette }}<Palette {profiles} active={open} {actions} onconnect={connect} onnew={(t) => { palette = false; form = { initial: { ...blankProfile(), name: t.host, ...t }, oldName: "" }; }} onaction={run} onclose={() => (palette = false)} />{/await}{/if}
+{#if palette}{#await import("./components/Palette.svelte") then { default: Palette }}<Palette {profiles} active={open} {actions} onconnect={connect} onnew={(t) => { palette = false; form = { initial: { ...blankProfile(), name: t.host, ...t }, oldId: "" }; }} onaction={run} onclose={() => (palette = false)} />{/await}{/if}
 {#if unlockConnect && VaultPanel}
   <VaultPanel
     mode="unlock-connect"
@@ -1012,7 +1020,7 @@
   />
 {/if}
 {#if form && ProfileForm}
-  <ProfileForm initial={formShown!.initial} oldName={formShown!.oldName} {profiles} {folders} onsave={save} ondelete={() => (confirmDelete = profiles.find((p) => p.name === form!.oldName) ?? null)} oncancel={() => (form = null)} />
+  <ProfileForm initial={formShown!.initial} oldId={formShown!.oldId} {profiles} {folders} onsave={save} ondelete={() => (confirmDelete = profiles.find((p) => p.id === form!.oldId) ?? null)} oncancel={() => (form = null)} />
 {/if}
 {#if confirmDelete}
   <DeleteConnection profile={deleting!} {profiles} ondeleted={deleted} onclose={() => (confirmDelete = null)} />

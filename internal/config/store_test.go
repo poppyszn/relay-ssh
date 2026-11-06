@@ -53,7 +53,7 @@ func TestSaveThenLoadRoundTrips(t *testing.T) {
 	if p.Auth != AuthKey || p.Key != "prod-web" {
 		t.Errorf("auth/key = %s/%s", p.Auth, p.Key)
 	}
-	if p.Folder != "work/prod" || p.Jump != "bastion" || !p.ForwardAgent {
+	if bj, _ := got.Find("bastion"); p.Folder != "work/prod" || p.Jump != bj.ID || !p.ForwardAgent {
 		t.Errorf("folder/jump/forwardagent = %s/%s/%v", p.Folder, p.Jump, p.ForwardAgent)
 	}
 	if p.Blocks != "on" {
@@ -201,8 +201,8 @@ func TestSaveThenLoadRoundTripsRdp(t *testing.T) {
 	if p.Port != 3389 {
 		t.Errorf("port = %d, want 3389", p.Port)
 	}
-	if p.Jump != "bastion" {
-		t.Errorf("jump = %q, want bastion", p.Jump)
+	if bj, _ := got.Find("bastion"); p.Jump != bj.ID {
+		t.Errorf("jump = %q, want the bastion id %q", p.Jump, bj.ID)
 	}
 	if p.Folder != "windows" {
 		t.Errorf("folder = %q, want windows", p.Folder)

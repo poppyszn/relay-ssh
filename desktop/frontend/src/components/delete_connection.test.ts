@@ -5,7 +5,7 @@ import DeleteConnection from "./DeleteConnection.svelte";
 import { ProfilesService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 import { blankProfile } from "../lib/lib";
 
-const mk = (o: object) => ({ ...blankProfile(), host: "h", user: "u", ...o }) as ReturnType<typeof blankProfile>;
+const mk = (o: { name: string; [k: string]: unknown }) => ({ ...blankProfile(), id: o.name, host: "h", user: "u", ...o }) as ReturnType<typeof blankProfile>;
 const bastion = mk({ name: "bastion" });
 const profiles = [bastion, mk({ name: "dev-app-server", jump: "bastion" }), mk({ name: "win-build", protocol: "rdp", jump: "bastion" }), mk({ name: "homelab" })];
 

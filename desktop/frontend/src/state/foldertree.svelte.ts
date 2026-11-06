@@ -205,7 +205,7 @@ class SidebarState {
     if (d && pane) return d.kind === "pane" ? this.onPaneMove(d.id, pane.id, pane.edge) : this.onPaneDrop(d.id, pane.id, pane.edge);
     if (!d || target === null || !ok) return;
     const where = target || "the top level";
-    const from = d.kind === "profile" ? this.data.profiles.find((p) => p.name === d.id)?.folder : folderParent(d.id);
+    const from = d.kind === "profile" ? this.data.profiles.find((p) => p.id === d.id)?.folder : folderParent(d.id);
     this.pending = {
       kind: d.kind,
       id: d.id,

@@ -32,8 +32,9 @@ class VaultStore {
     }
   }
 
-  hasRemembered(name: string): boolean {
-    return this.remembered.includes(name);
+  /** Whether a password is known to be saved; older entries were kept under the connection's name. */
+  hasRemembered(id: string, legacyName = ""): boolean {
+    return this.remembered.includes(id) || (legacyName !== "" && this.remembered.includes(legacyName));
   }
 
   remember(name: string) {

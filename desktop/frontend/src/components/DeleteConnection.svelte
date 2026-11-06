@@ -6,7 +6,7 @@
    * deleted, so the dialog says which ones and offers no Delete, instead of failing on save. */
   let { profile, profiles, ondeleted, onclose }: { profile: Profile; profiles: Profile[]; ondeleted: () => void; onclose: () => void } = $props();
 
-  const users = $derived(profiles.filter((p) => p.jump === profile.name).map((p) => p.name));
+  const users = $derived(profiles.filter((p) => p.jump === profile.id).map((p) => p.name));
   let error = $state("");
   let busy = $state(false);
 
@@ -14,7 +14,7 @@
     busy = true;
     error = "";
     try {
-      await ProfilesService.Delete(profile.name);
+      await ProfilesService.Delete(profile.id);
       ondeleted();
     } catch (e) {
       error = (e as Error)?.message ?? String(e);

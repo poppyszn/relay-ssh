@@ -18,6 +18,7 @@ import (
 	"github.com/poppyszn/relay-ssh/internal/config"
 	"github.com/poppyszn/relay-ssh/internal/core"
 	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 )
 
 // allowedOrigins are the only pages permitted to open a terminal socket: the
@@ -161,7 +162,7 @@ func argvFor(target string) (argv, env []string, err error) {
 		// generated config is read alone (-F), so the user's own ~/.ssh/config settings do not apply here.
 		argv = append(argv, "-o", "IgnoreUnknown=UseKeychain", "-o", "UseKeychain=yes", "-o", "AddKeysToAgent=yes")
 	}
-	return append(argv, strings.TrimSpace(prof.Name)), nil, nil
+	return append(argv, strings.TrimSpace(sshconfig.Alias(store, prof))), nil, nil
 }
 
 // loginMarker is the LocalCommand that prints a private escape sequence (OSC 7771) into

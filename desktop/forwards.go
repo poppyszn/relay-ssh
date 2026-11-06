@@ -16,6 +16,7 @@ import (
 	"github.com/poppyszn/relay-ssh/internal/config"
 	"github.com/poppyszn/relay-ssh/internal/core"
 	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 )
 
 // ForwardsService starts and stops port forwards on a live connection using
@@ -104,7 +105,7 @@ func (f *ForwardsService) ssh(target string, args ...string) (string, error) {
 	full = append(full, muxOptions(false)...)
 	full = append(full, f.extraOpts...)
 	full = append(full, args...)
-	full = append(full, prof.Name)
+	full = append(full, sshconfig.Alias(store, prof))
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -180,7 +181,7 @@ func (f *ForwardsService) Status(target string) (ForwardStatus, error) {
 			return
 		}
 		seen[key] = true
-		fi.Listening = f.listening(prof.Name, fi.Type, fi.Listen, fi.Target)
+		fi.Listening = f.listening(target, fi.Type, fi.Listen, fi.Target)
 		out.Forwards = append(out.Forwards, fi)
 	}
 	for _, t := range prof.Tunnels {
@@ -188,7 +189,7 @@ func (f *ForwardsService) Status(target string) (ForwardStatus, error) {
 	}
 	// Copy under the lock, probe outside it: listening() takes the lock itself.
 	f.mu.Lock()
-	runtime := append([]ForwardInfo(nil), f.added[prof.Name]...)
+	runtime := append([]ForwardInfo(nil), f.added[target]...)
 	f.mu.Unlock()
 	for _, fi := range runtime {
 		add(fi)

@@ -19,10 +19,10 @@ describe("ProfileForm vault password integration", () => {
       target,
       props: {
         initial: prof,
-        oldName: "",
+        oldId: "",
         profiles: [],
         folders: [],
-        onsave: async () => {},
+        onsave: async () => "id",
         ondelete: () => {},
         oncancel: () => {},
       },
@@ -43,10 +43,10 @@ describe("ProfileForm vault password integration", () => {
       target,
       props: {
         initial: prof,
-        oldName: "srv-saved",
+        oldId: "srv-saved",
         profiles: [],
         folders: [],
-        onsave: async () => {},
+        onsave: async () => "id",
         ondelete: () => {},
         oncancel: () => {},
       },
@@ -75,10 +75,10 @@ describe("ProfileForm vault password integration", () => {
       target,
       props: {
         initial: prof,
-        oldName: "srv-forget",
+        oldId: "srv-forget",
         profiles: [],
         folders: [],
-        onsave: async () => {},
+        onsave: async () => "id",
         ondelete: () => {},
         oncancel: () => {},
       },
@@ -100,15 +100,21 @@ describe("ProfileForm vault password integration", () => {
   });
 
   // The form hands the typed password to onsave so the backend saves and binds it in one step.
-  async function submitted(opts: { oldName: string; name: string; unlocked: boolean; exists?: boolean; typed?: string; remembered?: string[] }) {
+  async function submitted(opts: { oldId: string; name: string; unlocked: boolean; exists?: boolean; typed?: string; remembered?: string[]; newHost?: string }) {
     vault.remembered = opts.remembered ?? [];
     vi.spyOn(vault, "refresh").mockResolvedValue({ exists: opts.exists ?? true, unlocked: opts.unlocked });
-    const onsave = vi.fn(async () => {});
+    const onsave = vi.fn(async () => "id");
     const target = document.createElement("div");
     document.body.append(target);
     const prof = { ...blankProfile(), name: opts.name, host: "h", user: "u", auth: "password" as const };
-    const c = mount(ProfileForm, { target, props: { initial: prof, oldName: opts.oldName, profiles: [], folders: [], onsave, ondelete: () => {}, oncancel: () => {} } });
+    const c = mount(ProfileForm, { target, props: { initial: prof, oldId: opts.oldId, profiles: [], folders: [], onsave, ondelete: () => {}, oncancel: () => {} } });
     flushSync();
+    if (opts.newHost) {
+      const host = [...target.querySelectorAll<HTMLInputElement>("input.mono")].find((i) => i.value === "h")!;
+      host.value = opts.newHost;
+      host.dispatchEvent(new Event("input", { bubbles: true }));
+      flushSync();
+    }
     if (opts.typed) {
       const input = target.querySelector<HTMLInputElement>('input[type="password"][aria-label="Password"]')!;
       input.value = opts.typed;
@@ -122,28 +128,34 @@ describe("ProfileForm vault password integration", () => {
   }
 
   it("passes a typed password to onsave when the vault is open", async () => {
-    const r = await submitted({ oldName: "", name: "srv", unlocked: true, typed: "s3cret-pass" });
+    const r = await submitted({ oldId: "", name: "srv", unlocked: true, typed: "s3cret-pass" });
     expect(r.onsave).toHaveBeenCalledTimes(1);
     expect((r.onsave.mock.calls[0] as unknown[])[1]).toBe("s3cret-pass");
     r.done();
   });
 
   it("asks to unlock instead of saving when a typed password has nowhere to go", async () => {
-    const r = await submitted({ oldName: "", name: "srv", unlocked: false, typed: "s3cret-pass" });
+    const r = await submitted({ oldId: "", name: "srv", unlocked: false, typed: "s3cret-pass" });
     expect(r.onsave).not.toHaveBeenCalled();
     expect(document.body.textContent).toContain("Unlock vault");
     r.done();
   });
 
-  it("asks to unlock before renaming a connection whose password is saved", async () => {
-    const r = await submitted({ oldName: "old", name: "new", unlocked: false, remembered: ["old"] });
+  it("asks to unlock before changing the host of a connection whose password is saved", async () => {
+    const r = await submitted({ oldId: "old", name: "new", unlocked: false, remembered: ["old"], newHost: "other-host" });
     expect(r.onsave).not.toHaveBeenCalled();
     expect(document.body.textContent).toContain("Unlock vault");
+    r.done();
+  });
+
+  it("does not ask to unlock for a rename alone: the password follows the connection's id", async () => {
+    const r = await submitted({ oldId: "old", name: "new", unlocked: false, remembered: ["old"] });
+    expect(r.onsave).toHaveBeenCalledTimes(1);
     r.done();
   });
 
   it("saves without a password when nothing needs the vault", async () => {
-    const r = await submitted({ oldName: "srv", name: "srv", unlocked: false, remembered: ["srv"] });
+    const r = await submitted({ oldId: "srv", name: "srv", unlocked: false, remembered: ["srv"] });
     expect(r.onsave).toHaveBeenCalledTimes(1);
     expect((r.onsave.mock.calls[0] as unknown[])[1]).toBe("");
     r.done();
@@ -156,7 +168,7 @@ describe("ProfileForm vault password integration", () => {
     const target = document.createElement("div");
     document.body.append(target);
     const prof = { ...blankProfile(), name: "srv-saved", host: "h", user: "u", auth: "password" as const };
-    const c = mount(ProfileForm, { target, props: { initial: prof, oldName: "srv-saved", profiles: [], folders: [], onsave: async () => {}, ondelete: () => {}, oncancel: () => {} } });
+    const c = mount(ProfileForm, { target, props: { initial: prof, oldId: "srv-saved", profiles: [], folders: [], onsave: async () => "id", ondelete: () => {}, oncancel: () => {} } });
     flushSync();
     const show = Array.from(target.querySelectorAll("button")).find((b) => b.textContent === "Show")!;
     show.click();
@@ -194,10 +206,10 @@ describe("ProfileForm vault password integration", () => {
       target,
       props: {
         initial: prof,
-        oldName: "",
+        oldId: "",
         profiles: [],
         folders: [],
-        onsave: async () => {},
+        onsave: async () => "id",
         ondelete: () => {},
         oncancel: () => {},
       },

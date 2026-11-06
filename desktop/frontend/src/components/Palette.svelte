@@ -66,17 +66,17 @@
         </div>
       {/if}
       {#if conns.length}<div class="label sect">Connections</div>{/if}
-      {#each conns as p, k (p.name)}
+      {#each conns as p, k (p.id)}
         {@const i = off + k}
         <!-- svelte-ignore a11y_click_events_have_key_events (keys are handled on the dialog) -->
         <div class="row" role="option" tabindex="-1" aria-selected={i === sel} class:row-hl={i === sel} onmouseenter={() => (sel = i)} onclick={() => pick(i)}>
-          <span class="dot" class:ok={active.has(p.name)}></span>
+          <span class="dot" class:ok={active.has(p.id)}></span>
           <span class="col">
             <span class="name">
               {#if p.protocol === "rdp"}<span class="rdp-icon" title="RDP connection"><Icon name="rdp" size={14} /></span>{/if}
               {p.name}
             </span>
-            <span class="sub mono">{p.folder ? p.folder + " · " : ""}{p.protocol === "rdp" ? "rdp · " : ""}{p.user}@{p.host}{p.port !== 22 && p.port !== 3389 ? ":" + p.port : ""}{p.jump ? " · via " + p.jump : ""}</span>
+            <span class="sub mono">{p.folder ? p.folder + " · " : ""}{p.protocol === "rdp" ? "rdp · " : ""}{p.user}@{p.host}{p.port !== 22 && p.port !== 3389 ? ":" + p.port : ""}{p.jump ? " · via " + (profiles.find((x) => x.id === p.jump)?.name ?? p.jump) : ""}</span>
           </span>
           <span class="tags">{#each p.tags ?? [] as t}<span class="chip">{t}</span>{/each}{#if i === sel}<span class="kbd">↵</span>{/if}</span>
         </div>

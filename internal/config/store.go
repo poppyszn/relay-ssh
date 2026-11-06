@@ -41,6 +41,7 @@ func Parse(data []byte) (Store, error) {
 	if _, err := toml.Decode(string(data), &s); err != nil {
 		return Store{}, fmt.Errorf("parsing: %w", err)
 	}
+	s.Normalize(false)
 	return s, s.Validate()
 }
 
@@ -52,9 +53,20 @@ func Parse(data []byte) (Store, error) {
 // because Load would then refuse to read it back.
 func Save(path string, s Store) error {
 	s.Version = Version
+	s.Profiles = slices.Clone(s.Profiles)
+	s.Normalize(true)
 	sorted := make([]Profile, len(s.Profiles))
 	copy(sorted, s.Profiles)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
+	sort.Slice(sorted, func(i, j int) bool {
+		a, b := sorted[i], sorted[j]
+		if a.Name != b.Name {
+			return a.Name < b.Name
+		}
+		if a.Folder != b.Folder {
+			return a.Folder < b.Folder
+		}
+		return a.ID < b.ID
+	})
 	s.Profiles = sorted
 	s.Folders = tidyFolders(s.Folders)
 

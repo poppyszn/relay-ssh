@@ -34,7 +34,7 @@ async function connected() {
   ui.connect.mockResolvedValue({ run: () => new Promise(() => {}) }); // a session that stays up
   const target = document.createElement("div");
   document.body.append(target);
-  c = mount(RdpView, { target, props: { target: "win", prof: { name: "win", protocol: "rdp", host: "h", user: "u", port: 3389, auth: "", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } } });
+  c = mount(RdpView, { target, props: { target: "win", prof: { id: "win", name: "win", protocol: "rdp", host: "h", user: "u", port: 3389, auth: "", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } } });
   flushSync();
   await new Promise((r) => setTimeout(r, 30));
   flushSync();

@@ -38,13 +38,13 @@ func bindingOf(p config.Profile) string {
 // the target last. A loop or a missing jump profile ends the chain.
 func jumpChain(store config.Store, target config.Profile) []config.Profile {
 	chain := []config.Profile{target}
-	seen := map[string]bool{target.Name: true}
+	seen := map[string]bool{target.ID: true}
 	for cur := target; cur.Jump != "" && len(chain) < 8; {
 		next, ok := core.ResolveProfile(store, cur.Jump)
-		if !ok || seen[next.Name] {
+		if !ok || seen[next.ID] {
 			break
 		}
-		seen[next.Name] = true
+		seen[next.ID] = true
 		chain = append([]config.Profile{next}, chain...)
 		cur = next
 	}
@@ -125,11 +125,11 @@ func (s *session) handleFill(ctx context.Context, c *websocket.Conn, m control) 
 	}
 	prof := chain[hop]
 
-	if !s.mayFill(prof.Name, hop, len(chain)) {
+	if !s.mayFill(prof.ID, hop, len(chain)) {
 		s.refuseFill(ctx, c, "")
 		return
 	}
-	secret, has, err := v.Get(prof.Name, bindingOf(prof))
+	secret, has, err := v.Get(prof.ID, bindingOf(prof))
 	if err != nil || !has {
 		why := ""
 		if errors.Is(err, vault.ErrBindingChanged) {
@@ -140,7 +140,7 @@ func (s *session) handleFill(ctx context.Context, c *websocket.Conn, m control) 
 	}
 
 	// Re-check and claim the slot together: another prompt may have been answered meanwhile.
-	if !s.claimFill(prof.Name, hop, len(chain)) {
+	if !s.claimFill(prof.ID, hop, len(chain)) {
 		s.refuseFill(ctx, c, "")
 		return
 	}
@@ -166,7 +166,7 @@ func matchHop(chain []config.Profile, m control, v *vault.Vault) int {
 		if u == "" {
 			u = currentUser()
 		}
-		if prof.Auth != config.AuthPassword || !strings.EqualFold(prof.Host, m.Host) || u != m.User || !v.Has(prof.Name) {
+		if prof.Auth != config.AuthPassword || !strings.EqualFold(prof.Host, m.Host) || u != m.User || !v.Has(prof.ID) {
 			continue
 		}
 		if found >= 0 {

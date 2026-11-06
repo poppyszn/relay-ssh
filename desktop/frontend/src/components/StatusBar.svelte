@@ -8,7 +8,7 @@
 
   let { profiles, themeName, onvault }: { profiles: Profile[]; themeName: string; onvault?: () => void } = $props();
   const info = $derived(ws.panes[ws.focusedPane]);
-  const prof = $derived(info?.target ? profiles.find((p) => p.name === info.target) : undefined);
+  const prof = $derived(info?.target ? profiles.find((p) => p.id === info.target) : undefined);
   // Which build this is (the commit it was made from), so "is this the right copy?" has an answer.
   let version = $state("");
   onMount(() => { ToolsService.Version().then((v) => (version = v), () => {}); });

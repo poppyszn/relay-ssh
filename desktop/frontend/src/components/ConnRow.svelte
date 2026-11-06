@@ -20,10 +20,10 @@
   const address = $derived(`${rdp && profile.domain ? `${profile.domain}\\` : ""}${profile.user}@${profile.host}${rdp ? `:${profile.port || 3389}` : profile.port !== 22 ? `:${profile.port}` : ""}`);
 </script>
 
-<div class="row" class:current class:selected={sb.selectedConn === profile.name} class:dragging={sb.drag?.kind === "profile" && sb.drag.id === profile.name} style="padding-left: {14 + 14 * depth + 8}px" use:dragSource={{ kind: "profile", id: profile.name, label: profile.name }}>
+<div class="row" class:current class:selected={sb.selectedConn === profile.id} class:dragging={sb.drag?.kind === "profile" && sb.drag.id === profile.id} style="padding-left: {14 + 14 * depth + 8}px" use:dragSource={{ kind: "profile", id: profile.id, label: profile.name }}>
   {#each Array(Math.max(0, depth)) as _, i}<span class="guide" style="left: {18 + 14 * i}px"></span>{/each}
   <!-- One click selects the row and shows its open session (if any); a double-click (or Enter on the focused row, which arrives with detail 0) opens a new session. -->
-  <button type="button" class="main" onclick={(e) => { if (sb.justDragged) return; if (e.detail === 0) onconnect(profile); else { sb.selectedConn = profile.name; sb.onFocusConnection(profile.name); } }}
+  <button type="button" class="main" onclick={(e) => { if (sb.justDragged) return; if (e.detail === 0) onconnect(profile); else { sb.selectedConn = profile.id; sb.onFocusConnection(profile.id); } }}
           ondblclick={() => { if (sb.justDragged) return; sb.learnOpen(); onconnect(profile); }} title={live ? `Click to show ${profile.name}. Double-click to open another tab.` : `Double-click to open ${profile.name} in a new tab`}>
     <span class="lead">
       {#if rdp}<span class="rdp-icon" class:ok={live} title="Remote desktop (RDP)"><Icon name="rdp" size={14} /></span>{:else}<span class="dot" class:ok={live} class:live class:idle={!live}></span>{/if}

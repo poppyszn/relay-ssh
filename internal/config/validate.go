@@ -195,18 +195,29 @@ func (s Store) Validate() error {
 			return err
 		}
 	}
-	seen := make(map[string]bool, len(s.Profiles))
+	seenName, seenID := map[string]bool{}, map[string]bool{}
 	for i := range s.Profiles {
-		if s.Profiles[i].IsRDP() && s.Profiles[i].Port == 0 {
-			s.Profiles[i].Port = 3389
+		p := &s.Profiles[i]
+		if p.IsRDP() && p.Port == 0 {
+			p.Port = 3389
 		}
-		if err := s.Profiles[i].Validate(); err != nil {
+		if err := p.Validate(); err != nil {
 			return err
 		}
-		if seen[s.Profiles[i].Name] {
-			return fmt.Errorf("duplicate profile name %q", s.Profiles[i].Name)
+		if k := p.Address(); seenName[k] {
+			return fmt.Errorf("duplicate profile name %q in the same folder", k)
+		} else {
+			seenName[k] = true
 		}
-		seen[s.Profiles[i].Name] = true
+		if p.ID != "" {
+			if !validID(p.ID) {
+				return fmt.Errorf("profile %q: malformed id %q", p.Name, p.ID)
+			}
+			if seenID[p.ID] {
+				return fmt.Errorf("profile %q: duplicate id %q", p.Name, p.ID)
+			}
+			seenID[p.ID] = true
+		}
 	}
 	for _, p := range s.Profiles {
 		if p.Jump != "" {
@@ -223,15 +234,17 @@ func (s Store) Validate() error {
 // ssh recurse until it exhausts file descriptors, with an error that points
 // nowhere near the real cause.
 func (s Store) checkJumpCycles() error {
-	jump := make(map[string]string, len(s.Profiles))
-	for _, p := range s.Profiles {
-		jump[p.Name] = p.Jump
+	next := func(i int) int {
+		if s.Profiles[i].Jump == "" {
+			return -1
+		}
+		return s.index(s.Profiles[i].Jump)
 	}
-	for _, p := range s.Profiles {
-		visited := map[string]bool{p.Name: true}
-		for cur := p.Jump; cur != ""; cur = jump[cur] {
+	for i, p := range s.Profiles {
+		visited := map[int]bool{i: true}
+		for cur := next(i); cur >= 0; cur = next(cur) {
 			if visited[cur] {
-				return fmt.Errorf("profile %q: jump chain forms a cycle through %q", p.Name, cur)
+				return fmt.Errorf("profile %q: jump chain forms a cycle through %q", p.Name, s.Profiles[cur].Name)
 			}
 			visited[cur] = true
 		}

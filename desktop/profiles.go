@@ -24,6 +24,7 @@ type TunnelDTO struct {
 }
 
 type Profile struct {
+	ID           string      `json:"id"`
 	Name         string      `json:"name"`
 	Host         string      `json:"host"`
 	User         string      `json:"user"`
@@ -46,7 +47,7 @@ type ProfilesService struct{}
 
 func toProfile(c config.Profile) Profile {
 	p := Profile{
-		Protocol: c.Protocol, Domain: c.Domain,
+		ID: c.ID, Protocol: c.Protocol, Domain: c.Domain,
 		Name: c.Name, Host: c.Host, User: c.User, Port: c.Port, Auth: string(c.Auth),
 		Key: c.Key, Folder: c.Folder, Tags: c.Tags, Jump: c.Jump, ForwardAgent: c.ForwardAgent, Blocks: c.Blocks,
 		Tunnels: []TunnelDTO{},
@@ -62,7 +63,7 @@ func toProfile(c config.Profile) Profile {
 
 func fromProfile(p Profile) config.Profile {
 	c := config.Profile{
-		Protocol: p.Protocol, Domain: p.Domain,
+		ID: p.ID, Protocol: p.Protocol, Domain: p.Domain,
 		Name: p.Name, Host: p.Host, User: p.User, Port: p.Port, Auth: config.AuthType(p.Auth),
 		Key: p.Key, Folder: p.Folder, Tags: p.Tags, Jump: p.Jump, ForwardAgent: p.ForwardAgent, Blocks: p.Blocks,
 	}
@@ -89,15 +90,15 @@ func (ProfilesService) List() ([]Profile, error) {
 	return out, nil
 }
 
-// Save adds a profile (oldName == "") or updates and possibly renames one.
-func (ps ProfilesService) Save(oldName string, prof Profile) error {
-	return ps.save(oldName, prof, "")
+// Save adds a profile (id == "") or updates the one with that id, possibly renaming or moving it.
+func (ps ProfilesService) Save(id string, prof Profile) error {
+	return ps.save(id, prof, "")
 }
 
 // SaveWithPassword saves the profile and keeps its password in the vault, bound to the
 // connection's host, user and port. It checks the password and the vault first, so a refusal
 // leaves nothing half-saved.
-func (ps ProfilesService) SaveWithPassword(oldName string, prof Profile, password string) error {
+func (ps ProfilesService) SaveWithPassword(id string, prof Profile, password string) error {
 	if prof.Protocol != config.ProtocolRDP && prof.Auth != "password" {
 		return errors.New("passwords are only kept for connections that use password auth")
 	}
@@ -107,10 +108,10 @@ func (ps ProfilesService) SaveWithPassword(oldName string, prof Profile, passwor
 	if !getVault().Status().Unlocked {
 		return vault.ErrVaultLocked
 	}
-	return ps.save(oldName, prof, password)
+	return ps.save(id, prof, password)
 }
 
-func (ProfilesService) save(oldName string, prof Profile, password string) error {
+func (ProfilesService) save(id string, prof Profile, password string) error {
 	p, err := paths.Default()
 	if err != nil {
 		return err
@@ -118,53 +119,58 @@ func (ProfilesService) save(oldName string, prof Profile, password string) error
 	if err := paths.EnsureDirs(p); err != nil {
 		return err
 	}
-	if msg := keyProblem(p, oldName, prof); msg != "" {
+	if msg := keyProblem(p, id, prof); msg != "" {
 		return errors.New(msg)
 	}
 	oldBinding := ""
-	if oldName != "" {
+	if id != "" {
 		if store, err := config.Load(p.StoreFile); err == nil {
-			if old, ok := core.ResolveProfile(store, oldName); ok {
-				oldBinding = bindingOf(old)
+			if old, ok := core.ResolveProfile(store, id); ok {
+				id, oldBinding = old.ID, bindingOf(old)
 			}
 		}
 	}
-	if err := core.SaveProfile(p, oldName, fromProfile(prof)); err != nil {
+	if err := core.SaveProfile(p, id, fromProfile(prof)); err != nil {
 		return err
+	}
+	if id == "" { // a new connection: its id was made on save
+		if store, err := config.Load(p.StoreFile); err == nil {
+			if saved, ok := store.Find(fromProfile(prof).Address()); ok {
+				id = saved.ID
+			}
+		}
 	}
 
 	// Keep the vault in step. A locked vault cannot be touched, so these are best effort
-	// (the form asks to unlock before a rename); an entry left behind is inert, because it is
+	// (the form asks to unlock before a change); an entry left behind is inert, because it is
 	// only released for the connection details it was saved with.
 	v := getVault()
 	newBinding := bindingOf(fromProfile(prof))
 	if prof.Protocol != config.ProtocolRDP && prof.Auth != "password" {
-		_ = v.Forget(prof.Name)
-		if oldName != "" {
-			_ = v.Forget(oldName)
-		}
-	} else if oldName != "" {
+		_ = v.Forget(id)
+	} else {
 		// An edit made here moves the binding along only if it was intact; see Vault.Rename.
-		_ = v.Rename(oldName, prof.Name, oldBinding, newBinding)
+		_ = v.Rename(id, id, oldBinding, newBinding)
 	}
 	if password != "" {
-		if err := v.Set(prof.Name, password, newBinding); err != nil {
+		if err := v.Set(id, password, newBinding); err != nil {
 			return fmt.Errorf("the connection was saved but its password was not stored: %w", err)
 		}
 	}
 	return nil
 }
 
-// Delete removes a profile by name.
-func (ProfilesService) Delete(name string) error {
+// Delete removes a profile by id.
+func (ProfilesService) Delete(id string) error {
 	p, err := paths.Default()
 	if err != nil {
 		return err
 	}
-	if _, err := core.RemoveProfile(p, name); err != nil {
+	removed, err := core.RemoveProfile(p, id)
+	if err != nil {
 		return err
 	}
-	_ = getVault().Forget(name)
+	_ = getVault().Forget(removed.ID)
 	return nil
 }
 
@@ -176,20 +182,12 @@ type PreviewResult struct {
 }
 
 // Preview renders the generated SSH config for prof (replacing oldName, or
-// added when oldName is empty) without writing anything.
-func (ProfilesService) Preview(oldName string, prof Profile) PreviewResult {
+// added when id is empty) without writing anything.
+func (ProfilesService) Preview(id string, prof Profile) PreviewResult {
 	cand := fromProfile(prof)
 	// Generate has no validation of its own, so the preview renders even
 	// while the form is half filled in; Problem says what blocks saving.
 	var res PreviewResult
-	if !cand.IsRDP() {
-		block := sshconfig.Generate(config.Store{Version: config.Version, Profiles: []config.Profile{cand}})
-		if i := strings.Index(block, "Host "); i >= 0 {
-			block = block[i:]
-		}
-		res.Config = strings.TrimRight(block, "\n")
-	}
-
 	p, err := paths.Default()
 	if err != nil {
 		res.Problem = err.Error()
@@ -201,15 +199,23 @@ func (ProfilesService) Preview(oldName string, prof Profile) PreviewResult {
 		return res
 	}
 	var profiles []config.Profile
+	old, _ := s.Find(id)
 	for _, cur := range s.Profiles {
-		if cur.Name != oldName {
+		if id == "" || cur.ID != old.ID {
 			profiles = append(profiles, cur)
 		}
 	}
+	cand.ID = old.ID
+	if cand.ID == "" {
+		cand.ID = "@0000000000ff" // only so the preview can tell the candidate from its neighbours
+	}
 	s.Profiles = append(profiles, cand)
+	if !cand.IsRDP() {
+		res.Config = hostBlock(sshconfig.Generate(s), sshconfig.Alias(s, cand))
+	}
 	if err := s.Validate(); err != nil {
 		res.Problem = err.Error()
-	} else if msg := keyProblem(p, oldName, prof); msg != "" {
+	} else if msg := keyProblem(p, id, prof); msg != "" {
 		res.Problem = msg
 	}
 	return res
@@ -218,13 +224,13 @@ func (ProfilesService) Preview(oldName string, prof Profile) PreviewResult {
 // keyProblem explains a key setting that ssh cannot use. A bare key name means a key adopted into
 // Relay's vault; if that file is not there ssh fails with "no such identity". Only a new profile or a
 // changed key is checked, so a connection already saved that way can still be edited.
-func keyProblem(p paths.Paths, oldName string, prof Profile) string {
+func keyProblem(p paths.Paths, id string, prof Profile) string {
 	key := prof.Key
 	if prof.Auth != "key" || key == "" || filepath.IsAbs(key) || strings.HasPrefix(key, "~") {
 		return ""
 	}
 	if s, err := config.Load(p.StoreFile); err == nil {
-		if old, ok := s.Find(oldName); ok && oldName != "" && old.Key == key {
+		if old, ok := s.Find(id); ok && id != "" && old.Key == key {
 			return ""
 		}
 	}
@@ -254,4 +260,17 @@ func (ProfilesService) PickKeyFile() (string, error) {
 		path = "~" + path[len(home):]
 	}
 	return path, nil
+}
+
+// hostBlock cuts one Host block out of generated ssh config text.
+func hostBlock(all, alias string) string {
+	start := strings.Index(all, "Host "+alias+"\n")
+	if start < 0 {
+		return ""
+	}
+	block := all[start:]
+	if end := strings.Index(block[1:], "\nHost "); end >= 0 {
+		block = block[:end+1]
+	}
+	return strings.TrimRight(block, "\n")
 }

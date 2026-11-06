@@ -24,7 +24,7 @@ async function promptFor(event: Record<string, unknown>) {
   vi.spyOn(RdpService, "Note").mockResolvedValue(undefined as never);
   const target = document.createElement("div");
   document.body.append(target);
-  c = mount(RdpView, { target, props: { target: "win", prof: { name: "win", protocol: "rdp", host: "h", user: "u", port: 3389, auth: "", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } } });
+  c = mount(RdpView, { target, props: { target: "win", prof: { id: "win", name: "win", protocol: "rdp", host: "h", user: "u", port: 3389, auth: "", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } } });
   flushSync();
   await new Promise((r) => setTimeout(r, 20));
   handlers.cert!({ data: { sessionId: "s1", endpoint: "10.0.0.5:3389", fingerprint: "SHA256:AA:BB:CC", storedFingerprint: "", isMismatch: false, ...event } });

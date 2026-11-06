@@ -76,7 +76,11 @@ func (VaultService) Create(master string) error {
 }
 
 func (VaultService) Unlock(master string) error {
-	return getVault().Unlock(master)
+	if err := getVault().Unlock(master); err != nil {
+		return err
+	}
+	migrateVaultKeys()
+	return nil
 }
 
 func (VaultService) Lock() {

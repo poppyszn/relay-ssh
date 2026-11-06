@@ -13,6 +13,7 @@ import (
 	"github.com/poppyszn/relay-ssh/desktop/vault"
 	"github.com/poppyszn/relay-ssh/internal/config"
 	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 )
 
 // RdpSessionInfo provides the frontend with the loopback gateway connection details
@@ -82,7 +83,11 @@ func (s *RdpService) Open(connection string) (RdpSessionInfo, error) {
 	tunnelPort := 0
 	if prof.Jump != "" {
 		var err error
-		tunnel, err = StartRdpTunnel(p, prof.Jump, prof.Host, port)
+		jump, ok := store.Find(prof.Jump)
+		if !ok {
+			return RdpSessionInfo{}, fmt.Errorf("jump host of %q not found", connection)
+		}
+		tunnel, err = StartRdpTunnel(p, sshconfig.Alias(store, jump), prof.Host, port)
 		if err != nil {
 			return RdpSessionInfo{}, err
 		}
@@ -108,12 +113,12 @@ func (s *RdpService) Open(connection string) (RdpSessionInfo, error) {
 	}
 
 	v := getVault()
-	hasSavedPassword := v.Status().Unlocked && v.Has(prof.Name)
+	hasSavedPassword := v.Status().Unlocked && v.Has(prof.ID)
 
 	s.mu.Lock()
 	s.sessions[sessionID] = &rdpActiveSession{
 		id:          sessionID,
-		connection:  prof.Name,
+		connection:  prof.ID,
 		profile:     prof,
 		tunnel:      tunnel,
 		credClaimed: false,
@@ -164,7 +169,7 @@ func (s *RdpService) Credentials(sessionID string) (string, error) {
 	}
 
 	binding := bindingOf(prof)
-	secret, has, err := v.Get(prof.Name, binding)
+	secret, has, err := v.Get(prof.ID, binding)
 	if err != nil {
 		return "", err
 	}

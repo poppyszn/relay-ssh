@@ -17,6 +17,7 @@ import (
 	"github.com/poppyszn/relay-ssh/internal/config"
 	"github.com/poppyszn/relay-ssh/internal/core"
 	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -155,7 +156,7 @@ func (f *FilesService) run(target, script string, timeout time.Duration) (string
 	args := []string{"-F", p.GenConfig, "-o", "BatchMode=yes"}
 	args = append(args, muxOptions(false)...)
 	args = append(args, f.extraOpts...)
-	args = append(args, "-b", "-", prof.Name)
+	args = append(args, "-b", "-", sshconfig.Alias(store, prof))
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()

@@ -4,30 +4,15 @@
 package core
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/poppyszn/relay-ssh/internal/config"
 	"github.com/poppyszn/relay-ssh/internal/paths"
 	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 )
 
-// ResolveProfile finds a profile by name, also accepting the "folder/name"
-// form `relay-ssh ls --tree` prints. Profile names are already globally unique
-// (Store.Validate enforces it) regardless of folder, so the folder segment
-// is a display convention, not part of the stored identifier -- this just
-// lets a name pasted straight out of `ls --tree` actually work.
+// ResolveProfile finds a profile by id, "Folder/name" (what `relay-ssh ls --tree`
+// prints), or a bare name that only one profile has.
 func ResolveProfile(s config.Store, target string) (config.Profile, bool) {
-	if prof, ok := s.Find(target); ok {
-		return prof, true
-	}
-	if idx := strings.LastIndex(target, "/"); idx >= 0 {
-		folder, name := target[:idx], target[idx+1:]
-		if prof, ok := s.Find(name); ok && prof.Folder == folder {
-			return prof, true
-		}
-	}
-	return config.Profile{}, false
+	return s.Find(target)
 }
 
 // Regenerate writes the generated SSH config and ensures the managed
@@ -49,13 +34,13 @@ func RemoveProfile(p paths.Paths, name string) (config.Profile, error) {
 	if err != nil {
 		return config.Profile{}, err
 	}
-	target, ok := ResolveProfile(s, name)
-	if !ok {
-		return config.Profile{}, fmt.Errorf("profile %q not found", name)
+	target, err := s.Resolve(name)
+	if err != nil {
+		return config.Profile{}, err
 	}
 	var kept []config.Profile
 	for _, prof := range s.Profiles {
-		if prof.Name != target.Name {
+		if prof.ID != target.ID {
 			kept = append(kept, prof)
 		}
 	}
@@ -67,44 +52,32 @@ func RemoveProfile(p paths.Paths, name string) (config.Profile, error) {
 	return target, Regenerate(p, s)
 }
 
-// SaveProfile adds a profile (oldName == "") or replaces the one called
-// oldName, renaming it if prof.Name differs. A rename also repoints every other
-// profile's Jump at the new name. The store is validated before anything is
-// written, so a rejected change leaves connections.toml untouched.
-func SaveProfile(p paths.Paths, oldName string, prof config.Profile) error {
+// SaveProfile adds a profile (key == "") or replaces the one key names (an id,
+// "Folder/name" or unique name), keeping its id so jumps and saved passwords follow a
+// rename or move. Two profiles may share a name in different folders. The store is
+// validated before anything is written, so a rejected change leaves connections.toml
+// untouched.
+func SaveProfile(p paths.Paths, key string, prof config.Profile) error {
 	s, err := config.Load(p.StoreFile)
 	if err != nil {
 		return err
 	}
-	if oldName == "" {
-		if _, taken := s.Find(prof.Name); taken {
-			return fmt.Errorf("profile %q already exists", prof.Name)
-		}
+	if key == "" {
+		prof.ID = ""
 		s.Profiles = append(s.Profiles, prof)
 	} else {
-		if _, ok := s.Find(oldName); !ok {
-			return fmt.Errorf("profile %q not found", oldName)
+		old, err := s.Resolve(key)
+		if err != nil {
+			return err
 		}
-		if _, taken := s.Find(prof.Name); taken && prof.Name != oldName {
-			return fmt.Errorf("profile %q already exists", prof.Name)
-		}
-		profiles := make([]config.Profile, len(s.Profiles))
-		leftFolder := ""
-		for i, cur := range s.Profiles {
-			switch {
-			case cur.Name == oldName:
-				profiles[i] = prof
-				leftFolder = cur.Folder
-			case cur.Jump == oldName:
-				cur.Jump = prof.Name
-				profiles[i] = cur
-			default:
-				profiles[i] = cur
+		prof.ID = old.ID
+		for i := range s.Profiles {
+			if s.Profiles[i].ID == old.ID {
+				s.Profiles[i] = prof
 			}
 		}
-		s.Profiles = profiles
-		if leftFolder != prof.Folder {
-			KeepFolder(&s, leftFolder)
+		if old.Folder != prof.Folder {
+			KeepFolder(&s, old.Folder)
 		}
 	}
 	if err := config.Save(p.StoreFile, s); err != nil {

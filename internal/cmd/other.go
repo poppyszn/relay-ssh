@@ -8,6 +8,7 @@ import (
 	"github.com/poppyszn/relay-ssh/internal/core"
 	"github.com/poppyszn/relay-ssh/internal/launch"
 	"github.com/poppyszn/relay-ssh/internal/paths"
+	"github.com/poppyszn/relay-ssh/internal/sshconfig"
 	"github.com/poppyszn/relay-ssh/internal/style"
 )
 
@@ -17,9 +18,9 @@ func Connect(p paths.Paths, name string) error {
 	if err != nil {
 		return err
 	}
-	prof, ok := core.ResolveProfile(s, name)
-	if !ok {
-		return fmt.Errorf("profile %q not found", name)
+	prof, err := s.Resolve(name)
+	if err != nil {
+		return err
 	}
 	if prof.IsRDP() {
 		return fmt.Errorf("profile %q is an rdp connection; open it in the Relay desktop app", name)
@@ -28,6 +29,7 @@ func Connect(p paths.Paths, name string) error {
 		return err
 	}
 	fmt.Printf("%s %s (%s@%s)\n", style.Dim("→ connecting to"), style.Bold(prof.Name), prof.User, prof.Host)
+	prof.Name = sshconfig.Alias(s, prof) // the Host name ssh knows it by
 	return launch.SSH(p, prof)
 }
 
@@ -73,9 +75,9 @@ func CpCmd(p paths.Paths, args []string) error {
 	if err != nil {
 		return err
 	}
-	prof, ok := core.ResolveProfile(s, profName)
-	if !ok {
-		return fmt.Errorf("profile %q not found", profName)
+	prof, err := s.Resolve(profName)
+	if err != nil {
+		return err
 	}
 	if prof.IsRDP() {
 		return fmt.Errorf("profile %q is an rdp connection; scp is not supported for rdp", profName)
@@ -86,6 +88,6 @@ func CpCmd(p paths.Paths, args []string) error {
 	}
 
 	// Build the scp path: profile:remotePath becomes host:remotePath for scp
-	scpSrc := prof.Name + ":" + remotePath
+	scpSrc := sshconfig.Alias(s, prof) + ":" + remotePath
 	return launch.SCP(p, prof, scpSrc, localPath, false)
 }

@@ -59,8 +59,8 @@ func containsTag(tags []string, target string) bool {
 }
 
 func lsFlat(s config.Store) error {
-	for _, name := range s.Names() {
-		p, _ := s.Find(name)
+	for _, p := range s.Profiles {
+		name := p.Name
 		if p.Folder == "" {
 			fmt.Println(name)
 		} else {
@@ -77,8 +77,8 @@ func lsFlat(s config.Store) error {
 func lsTree(s config.Store) error {
 	groups := make(map[string][]string)
 	var root, folders []string
-	for _, name := range s.Names() {
-		p, _ := s.Find(name)
+	for _, p := range s.Profiles {
+		name := p.Name
 		if p.Folder == "" {
 			root = append(root, name)
 			continue

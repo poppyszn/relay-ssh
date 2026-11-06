@@ -23,9 +23,9 @@ func EditCmd(p paths.Paths, args []string) error {
 		return err
 	}
 	name := args[0]
-	prof, ok := core.ResolveProfile(s, name)
-	if !ok {
-		return fmt.Errorf("profile %q not found", name)
+	prof, err := s.Resolve(name)
+	if err != nil {
+		return err
 	}
 	if prof.IsRDP() {
 		return fmt.Errorf("profile %q is an rdp connection; edit it in the Relay desktop app", name)
@@ -69,7 +69,7 @@ func EditCmd(p paths.Paths, args []string) error {
 	// the user is renaming, newName doesn't exist as an entry in s yet, so
 	// excluding it would fail to exclude the profile actually being edited --
 	// its old name would slip through as a valid (but wrong) jump option.
-	newJump, err := PickJump(in, s, prof.Name, prof.Jump)
+	newJump, err := PickJump(in, s, prof.ID, prof.Jump)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func EditCmd(p paths.Paths, args []string) error {
 		candidateStore := s
 		var updatedProfiles []config.Profile
 		for _, p := range candidateStore.Profiles {
-			if p.Name == prof.Name {
+			if p.ID == prof.ID {
 				updatedProfiles = append(updatedProfiles, edited)
 			} else {
 				updatedProfiles = append(updatedProfiles, p)
@@ -117,7 +117,7 @@ func EditCmd(p paths.Paths, args []string) error {
 			// shouldn't be re-offered as "Keep current" -- that would put a
 			// menu option right next to the failure message inviting the
 			// user to re-select the exact thing that was just rejected.
-			reJump, err := PickJump(in, s, prof.Name, "")
+			reJump, err := PickJump(in, s, prof.ID, "")
 			if err != nil {
 				return err
 			}

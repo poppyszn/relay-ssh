@@ -244,8 +244,8 @@ func TestAddWithJumpHostAndForwardAgent(t *testing.T) {
 	if !ok {
 		t.Fatal("target profile not found")
 	}
-	if prof.Jump != "bastion" {
-		t.Errorf("jump = %q, want bastion", prof.Jump)
+	if bj, _ := got.Find("bastion"); prof.Jump != bj.ID {
+		t.Errorf("jump = %q, want the bastion id %q", prof.Jump, bj.ID)
 	}
 	if !prof.ForwardAgent {
 		t.Error("forward_agent should be true")
@@ -283,8 +283,8 @@ func TestAddJumpPickerNeverOffersAnInvalidTarget(t *testing.T) {
 	}
 	got, _ := config.Load(p.StoreFile)
 	prof, _ := got.Find("target")
-	if prof.Jump != "real-bastion" {
-		t.Errorf("jump = %q, want real-bastion", prof.Jump)
+	if rb, _ := got.Find("real-bastion"); prof.Jump != rb.ID {
+		t.Errorf("jump = %q, want the real-bastion id %q", prof.Jump, rb.ID)
 	}
 }
 

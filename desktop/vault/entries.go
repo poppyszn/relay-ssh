@@ -175,3 +175,42 @@ func (v *Vault) Reveal(connection, master string) (string, error) {
 	}
 	return e.Password, nil
 }
+
+// Remap re-keys saved passwords in one atomic save. For each entry, f is given its key and
+// binding and returns the key and binding to store instead; ok=false leaves it alone. It
+// exists to move passwords saved under a connection's name to the connection's id.
+func (v *Vault) Remap(f func(key, binding string) (newKey, newBinding string, ok bool)) error {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	if v.master == nil {
+		return ErrVaultLocked
+	}
+	next := make(map[string]*secretEntry, len(v.secrets))
+	changed := false
+	for k, e := range v.secrets {
+		nk, nb, ok := f(k, e.binding)
+		if !ok || (nk == k && nb == e.binding) {
+			if _, taken := next[k]; !taken {
+				next[k] = e
+			}
+			continue
+		}
+		if _, taken := next[nk]; taken || v.secrets[nk] != nil && nk != k {
+			next[k] = e // never overwrite another entry: keep this one where it was
+			continue
+		}
+		next[nk] = &secretEntry{password: e.password, binding: nb}
+		changed = true
+	}
+	if !changed {
+		return nil
+	}
+	old := v.secrets
+	v.secrets = next
+	if err := v.saveLocked(); err != nil {
+		v.secrets = old
+		return err
+	}
+	return nil
+}

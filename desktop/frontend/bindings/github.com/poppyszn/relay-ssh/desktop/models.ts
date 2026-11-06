@@ -99,6 +99,7 @@ export interface PreviewResult {
 }
 
 export interface Profile {
+    "id": string;
     "name": string;
     "host": string;
     "user": string;

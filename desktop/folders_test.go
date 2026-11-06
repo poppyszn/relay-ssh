@@ -53,7 +53,7 @@ func TestFolderLifecycle(t *testing.T) {
 	}
 
 	// moving a connection out of a folder keeps that folder, even though it is now empty
-	if err := svc.MoveProfile("web", "staging/us"); err != nil {
+	if err := svc.MoveProfile(idOf(t, "web"), "staging/us"); err != nil {
 		t.Fatal(err)
 	}
 	if got := folderList(t, svc); !strings.Contains(got, "prod/eu") {
@@ -87,7 +87,7 @@ func TestFolderLifecycle(t *testing.T) {
 	if err := svc.DeleteFolder("archive"); err == nil || !strings.Contains(err.Error(), "web") {
 		t.Errorf("deleting a folder with a connection should fail naming it, got %v", err)
 	}
-	if err := svc.MoveProfile("web", ""); err != nil {
+	if err := svc.MoveProfile(idOf(t, "web"), ""); err != nil {
 		t.Fatal(err)
 	}
 	if err := svc.DeleteFolder("archive"); err != nil {

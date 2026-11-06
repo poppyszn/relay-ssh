@@ -23,10 +23,10 @@ export function CreateFolder(path: string): $CancellablePromise<void> {
 }
 
 /**
- * Delete removes a profile by name.
+ * Delete removes a profile by id.
  */
-export function Delete(name: string): $CancellablePromise<void> {
-    return $Call.ByID(524502936, name);
+export function Delete(id: string): $CancellablePromise<void> {
+    return $Call.ByID(524502936, id);
 }
 
 /**
@@ -54,8 +54,8 @@ export function List(): $CancellablePromise<$models.Profile[] | null> {
 /**
  * MoveProfile puts a connection in a folder ("" for the top level).
  */
-export function MoveProfile(name: string, folder: string): $CancellablePromise<void> {
-    return $Call.ByID(2194345455, name, folder);
+export function MoveProfile(id: string, folder: string): $CancellablePromise<void> {
+    return $Call.ByID(2194345455, id, folder);
 }
 
 /**
@@ -68,10 +68,10 @@ export function PickKeyFile(): $CancellablePromise<string> {
 
 /**
  * Preview renders the generated SSH config for prof (replacing oldName, or
- * added when oldName is empty) without writing anything.
+ * added when id is empty) without writing anything.
  */
-export function Preview(oldName: string, prof: $models.Profile): $CancellablePromise<$models.PreviewResult> {
-    return $Call.ByID(2053742877, oldName, prof);
+export function Preview(id: string, prof: $models.Profile): $CancellablePromise<$models.PreviewResult> {
+    return $Call.ByID(2053742877, id, prof);
 }
 
 /**
@@ -83,10 +83,10 @@ export function RenameFolder($from: string, to: string): $CancellablePromise<voi
 }
 
 /**
- * Save adds a profile (oldName == "") or updates and possibly renames one.
+ * Save adds a profile (id == "") or updates the one with that id, possibly renaming or moving it.
  */
-export function Save(oldName: string, prof: $models.Profile): $CancellablePromise<void> {
-    return $Call.ByID(3186380550, oldName, prof);
+export function Save(id: string, prof: $models.Profile): $CancellablePromise<void> {
+    return $Call.ByID(3186380550, id, prof);
 }
 
 /**
@@ -94,6 +94,6 @@ export function Save(oldName: string, prof: $models.Profile): $CancellablePromis
  * connection's host, user and port. It checks the password and the vault first, so a refusal
  * leaves nothing half-saved.
  */
-export function SaveWithPassword(oldName: string, prof: $models.Profile, password: string): $CancellablePromise<void> {
-    return $Call.ByID(4126889167, oldName, prof, password);
+export function SaveWithPassword(id: string, prof: $models.Profile, password: string): $CancellablePromise<void> {
+    return $Call.ByID(4126889167, id, prof, password);
 }

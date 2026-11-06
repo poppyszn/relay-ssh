@@ -52,7 +52,7 @@ func TestEditPressingEnterKeepsAllFields(t *testing.T) {
 		t.Fatal("profile mybox not found after edit")
 	}
 	if got.Name != original.Name || got.Host != original.Host || got.User != original.User ||
-		got.Port != original.Port || got.Auth != original.Auth || got.Jump != original.Jump ||
+		got.Port != original.Port || got.Auth != original.Auth || got.Jump != jumpID(after, original.Jump) ||
 		got.ForwardAgent != original.ForwardAgent || got.Folder != original.Folder ||
 		len(got.Tags) != 2 || got.Tags[0] != "primary" || got.Tags[1] != "dc1" {
 		t.Errorf("profile changed when all prompts received enter: got %+v, want %+v", got, original)
@@ -192,7 +192,7 @@ func TestEditJumpPickerExcludesSelfEvenWhileRenaming(t *testing.T) {
 	if !ok {
 		t.Fatal("renamed not found")
 	}
-	if got.Jump != "other" {
+	if o, _ := after.Find("other"); got.Jump != o.ID {
 		t.Errorf("jump = %q, want other (menu option 2 in a 2-option list: no-jump, other)", got.Jump)
 	}
 }
@@ -313,4 +313,12 @@ func TestEditJumpThreeHopCycleRejectedAtSaveAndRepromptsJump(t *testing.T) {
 	if prof.Jump != "" {
 		t.Errorf("hop-c jump should have been cleared, got %q", prof.Jump)
 	}
+}
+
+// jumpID is the id a jump written as a name is stored under after a save.
+func jumpID(s config.Store, jump string) string {
+	if p, ok := s.Find(jump); ok {
+		return p.ID
+	}
+	return jump
 }

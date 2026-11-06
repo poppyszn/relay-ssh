@@ -55,6 +55,10 @@ type Tunnel struct {
 // Jump names another profile, never a free-text host, so a jump host gets the
 // same key and port handling as any other connection.
 type Profile struct {
+	// ID is permanent and unique across the store ("@" plus 12 hex digits; '@' cannot
+	// appear in a name). Names only need to be unique within a folder; the id is what
+	// jumps, the vault and the desktop app use to refer to a profile.
+	ID           string   `toml:"id,omitempty"`
 	Protocol     string   `toml:"protocol,omitempty"`
 	Name         string   `toml:"name"`
 	Host         string   `toml:"host"`
@@ -90,12 +94,12 @@ type Store struct {
 	Profiles []Profile `toml:"profile"`
 }
 
-// Find returns the profile with the given name.
-func (s Store) Find(name string) (Profile, bool) {
-	for _, p := range s.Profiles {
-		if p.Name == name {
-			return p, true
-		}
+// Find returns the profile a key names: an id, "Folder/name", or a bare name that
+// only one profile has. A bare name shared by several profiles finds none; use
+// Resolve to learn why.
+func (s Store) Find(key string) (Profile, bool) {
+	if i := s.index(key); i >= 0 {
+		return s.Profiles[i], true
 	}
 	return Profile{}, false
 }

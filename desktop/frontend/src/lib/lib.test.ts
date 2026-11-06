@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { blankProfile, blocksWanted, nextSession, parsePasswordPrompt, snippetPreview, snippetText, connectingHint, loginQuiet, formatElapsed, groupByFolder, matches, paneEdge, parseTags, PromptTracker, reorder, slotAt } from "./lib";
 
-const mk = (o: object) => ({ ...blankProfile(), host: "h", user: "u", ...o }) as ReturnType<typeof blankProfile>;
+const mk = (o: { name: string; [k: string]: unknown }) => ({ ...blankProfile(), id: o.name, host: "h", user: "u", ...o }) as ReturnType<typeof blankProfile>;
 
 describe("matches", () => {
   const p = mk({ name: "web-1", host: "10.0.0.5", folder: "prod/eu", tags: ["db", "Critical"] });

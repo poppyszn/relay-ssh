@@ -38,12 +38,13 @@
 
 {#if isLeaf(node)}
   {@const info = ws.panes[node.id]}
-  {@const prof = profiles.find((p) => p.name === info?.target)}
+  {@const prof = profiles.find((p) => p.id === info?.target)}
+  {@const label = prof?.name ?? (info?.target ? ws.labelOf(info.target) : "Local")}
   <section class="leaf" data-pane={node.id} class:focused={multi && tab?.focus === node.id} onpointerdowncapture={() => ws.focus(node.id)}>
     {#if multi}
-      <header use:dragSource={{ kind: "pane", id: node.id, label: info?.target ?? "Local" }} title="Drag to move this pane">
+      <header use:dragSource={{ kind: "pane", id: node.id, label }} title="Drag to move this pane">
         <span class="dot" class:ok={info && !info.ended && !info.connecting} class:warn={info?.connecting} class:err={info?.ended}></span>
-        <strong>{info?.target ?? "Local"}</strong>
+        <strong>{label}</strong>
         {#if prof}<span class="sub">{prof.user}@{prof.host}</span>{/if}
         {#if info?.filled}<span class="filled-note">password filled</span>{/if}
         {#if info?.connecting}<span class="wait">connecting…</span>{/if}
@@ -70,7 +71,7 @@
       {#if ws.searchPane === node.id && ws.session(node.id)}<SearchBar session={ws.session(node.id)!} onclose={() => ws.closeSearch()} />{/if}
       {#if info?.ended && !info.bannerHidden}
         <div class="ended" class:below-header={multi} role="alert">
-          <div><strong>{info.error ? "Could not connect" : "Session ended"}</strong><span>{info.error || `Press Enter to reconnect to ${info.target ?? "local shell"}`}</span></div>
+          <div><strong>{info.error ? "Could not connect" : "Session ended"}</strong><span>{info.error || `Press Enter to reconnect to ${info.target ? label : "local shell"}`}</span></div>
           <button type="button" class="btn sm primary" onclick={() => ws.reconnect(node.id)}>Reconnect</button>
           <button type="button" class="icon-btn dense" aria-label="Dismiss" title="Dismiss (press Enter in the terminal to reconnect)" onclick={() => { if (ws.panes[node.id]) ws.panes[node.id].bannerHidden = true; }}><Icon name="x" size={14} /></button>
         </div>

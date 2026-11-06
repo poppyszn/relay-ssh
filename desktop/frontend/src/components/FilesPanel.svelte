@@ -5,7 +5,7 @@
   import Icon from "./Icon.svelte";
   import Modal from "./Modal.svelte";
 
-  let { target, onclose }: { target: string; onclose: () => void } = $props();
+  let { target, name = "", onclose }: { target: string; name?: string; onclose: () => void } = $props();
 
   let path = $state("");
   let pathInput = $state("");
@@ -120,7 +120,7 @@
   $effect(() => { load(""); });
 </script>
 
-<Modal title="Files" subtitle={target} size="lg" tall flush {onclose}>
+<Modal title="Files" subtitle={name || target} size="lg" tall flush {onclose}>
   <div class="bar">
     <button type="button" class="icon-btn" aria-label="Up one folder" title="Up one folder" onclick={() => load(parent(path))} disabled={path === "/" || !!busy}><Icon name="arrow-up" /></button>
     <button type="button" class="icon-btn" aria-label="Refresh" title="Refresh" onclick={() => load()} disabled={!!busy}><Icon name="refresh" /></button>
@@ -179,7 +179,7 @@
   {@const c = confirm}
   <Modal title={c.kind === "delete" ? `Delete ${sel?.dir ? "folder" : "file"}?` : "Replace file?"} subtitle={c.name} size="sm" role="alertdialog" onclose={() => (confirm = null)}>
     {#if c.kind === "delete"}
-      <p class="ask">This removes it from {target}. {sel?.dir ? "Only an empty folder can be deleted." : "It cannot be undone."}</p>
+      <p class="ask">This removes it from {name || target}. {sel?.dir ? "Only an empty folder can be deleted." : "It cannot be undone."}</p>
     {:else}
       <p class="ask">A file with this name already exists in {path}. Uploading replaces it.</p>
     {/if}

@@ -6,12 +6,12 @@
   import VaultPanel from "./VaultPanel.svelte";
   import RevealPassword from "./RevealPassword.svelte";
 
-  let { initial, oldName, profiles, folders, onsave, ondelete, oncancel }: {
+  let { initial, oldId, profiles, folders, onsave, ondelete, oncancel }: {
     initial: Profile;
-    oldName: string;
+    oldId: string;
     profiles: Profile[];
     folders: string[];
-    onsave: (p: Profile, password: string) => Promise<void>;
+    onsave: (p: Profile, password: string) => Promise<string>;
     ondelete: () => void;
     oncancel: () => void;
   } = $props();
@@ -19,7 +19,7 @@
   // The form always edits real arrays, even though the generated type allows null.
   type Editable = Profile & { tags: string[]; tunnels: NonNullable<Profile["tunnels"]> };
   // svelte-ignore state_referenced_locally
-  const isNew = oldName === "";
+  const isNew = oldId === "";
   // The form edits its own copy; `initial` is only read once.
   // svelte-ignore state_referenced_locally
   let p = $state<Editable>({ ...structuredClone($state.snapshot(initial)), tags: [...(initial.tags ?? [])], tunnels: [...(initial.tunnels ?? [])] });
@@ -28,13 +28,14 @@
   let busy = $state(false);
   let preview = $state({ config: "", problem: "" });
 
-  const others = $derived(profiles.filter((x) => x.protocol !== "rdp").map((x) => x.name).filter((n) => n !== oldName && n !== p.name));
+  const addressOf = (x: Profile) => (x.folder ? `${x.folder}/${x.name}` : x.name);
+  const others = $derived(profiles.filter((x) => x.protocol !== "rdp" && x.id !== oldId).map((x) => ({ id: x.id, label: addressOf(x) })));
   const chain = $derived.by(() => {
     const out: string[] = [];
     let cur = p.jump;
     while (cur && !out.includes(cur) && out.length < 8) {
       out.push(cur);
-      cur = profiles.find((x) => x.name === cur)?.jump ?? "";
+      cur = profiles.find((x) => x.id === cur)?.jump ?? "";
     }
     return out;
   });
@@ -43,7 +44,7 @@
   $effect(() => {
     const snap = $state.snapshot(p) as Profile;
     snap.port = Number(snap.port);
-    const t = setTimeout(async () => { preview = await ProfilesService.Preview(oldName, snap); }, 120);
+    const t = setTimeout(async () => { preview = await ProfilesService.Preview(oldId, snap); }, 120);
     return () => clearTimeout(t);
   });
 
@@ -76,7 +77,7 @@
   }
 
   // svelte-ignore state_referenced_locally
-  let hasSaved = $state(Boolean(oldName && vault.hasRemembered(oldName)));
+  let hasSaved = $state(Boolean(oldId && vault.hasRemembered(oldId, initial.name)));
   let changingPassword = $state(false);
   let revealing = $state(false);
   let passwordInput = $state("");
@@ -84,21 +85,21 @@
   let vaultPromptMode = $state<"create" | "unlock" | null>(null);
 
   // svelte-ignore state_referenced_locally
-  if (oldName) {
-    VaultService.HasSecret(oldName).then((has) => {
+  if (oldId) {
+    VaultService.HasSecret(oldId).then((has) => {
       if (has) {
         hasSaved = true;
-        vault.remember(oldName);
+        vault.remember(oldId);
       }
     }).catch(() => {});
   }
 
   async function forgetSavedPassword() {
-    if (oldName) {
+    if (oldId) {
       try {
-        await VaultService.ForgetSecret(oldName);
+        await VaultService.ForgetSecret(oldId);
       } catch {}
-      vault.forget(oldName);
+      vault.forget(oldId);
     }
     hasSaved = false;
     changingPassword = false;
@@ -113,7 +114,9 @@
     // A typed password, or a saved one that has to follow a rename, needs the vault open.
     const hasPassword = p.protocol === "rdp" || p.auth === "password";
     const typed = hasPassword ? passwordInput : "";
-    const carrying = hasPassword && hasSaved && oldName !== "" && oldName !== p.name;
+    // A saved password is bound to host, user, port and jump host; changing one needs the vault open to re-bind it.
+    const rebinds = p.host !== initial.host || p.user !== initial.user || Number(p.port) !== initial.port || p.jump !== initial.jump || (p.domain ?? "") !== (initial.domain ?? "");
+    const carrying = hasPassword && hasSaved && oldId !== "" && rebinds;
     if (typed || carrying) {
       const st = await vault.refresh();
       if (!st.unlocked && (st.exists || typed)) {
@@ -139,11 +142,10 @@
         forwardAgent: p.protocol === "rdp" ? false : p.forwardAgent,
         tunnels: p.protocol === "rdp" ? [] : p.tunnels,
       };
-      await onsave(finalProfile, password);
+      const id = await onsave(finalProfile, password);
       // The form is closed by now; keep the "has a saved password" hints in step.
-      if (p.protocol !== "rdp" && p.auth !== "password" && oldName) vault.forget(oldName);
-      else if (oldName && oldName !== p.name && hasSaved) vault.rename(oldName, p.name);
-      if (password) vault.remember(p.name);
+      if (p.protocol !== "rdp" && p.auth !== "password" && oldId) vault.forget(oldId);
+      if (password) vault.remember(id);
     } catch (err) {
       error = (err as Error).message ?? String(err);
     } finally {
@@ -172,7 +174,7 @@
   const started = $derived(Boolean(p.name.trim() || p.host.trim()));
 </script>
 
-<Modal title={isNew ? "New connection" : "Edit connection"} subtitle={isNew ? "" : oldName} size="lg" flush dismissOnScrim={false} onclose={oncancel}>
+<Modal title={isNew ? "New connection" : "Edit connection"} subtitle={isNew ? "" : initial.name} size="lg" flush dismissOnScrim={false} onclose={oncancel}>
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <form id={formId} class="cols" onsubmit={submit} onkeydown={keydown}>
     <div class="left">
@@ -280,7 +282,7 @@
         <div class="g2">
           <label class="field">
             <span>Jump host</span>
-            <select bind:value={p.jump}><option value="">None</option>{#each others as o}<option value={o}>{o}</option>{/each}</select>
+            <select bind:value={p.jump}><option value="">None</option>{#each others as o}<option value={o.id}>{o.label}</option>{/each}</select>
           </label>
           <div class="field">
             <span class="field-label">Tags</span>
@@ -294,7 +296,7 @@
         </div>
         <div class="route mono" role="group" aria-label="Route">
           <span class="chip">this machine</span>
-          {#each chain as h}<Icon name="arrow-right" size={14} /><span class="chip">{h}</span>{/each}
+          {#each chain as h}<Icon name="arrow-right" size={14} /><span class="chip">{profiles.find((x) => x.id === h)?.name ?? h}</span>{/each}
           <Icon name="arrow-right" size={14} /><span class="chip accent">{p.name || "new"}</span>
         </div>
         {#if p.protocol !== "rdp"}
@@ -341,7 +343,7 @@
           <p><strong>Host:</strong> {p.host || "—"}:{p.port || 3389}</p>
           <p><strong>User:</strong> {p.user || "—"}</p>
           {#if p.domain}<p><strong>Domain:</strong> {p.domain}</p>{/if}
-          {#if p.jump}<p><strong>Jump host:</strong> {p.jump}</p>{/if}
+          {#if p.jump}<p><strong>Jump host:</strong> {profiles.find((x) => x.id === p.jump)?.name ?? p.jump}</p>{/if}
         </div>
       {:else}
         <pre class="mono">{#each preview.config.split("\n") as line}{@const m = line.match(/^(\s*)(\S+)(.*)$/)}{#if m}{m[1]}<span class={m[1] ? "k2" : "k1"}>{m[2]}</span>{m[3]}{"\n"}{/if}{/each}</pre>
@@ -362,7 +364,7 @@
   {/snippet}
 </Modal>
 {#if revealing}
-  <RevealPassword connection={oldName} onclose={() => (revealing = false)} />
+  <RevealPassword connection={oldId} onclose={() => (revealing = false)} />
 {/if}
 {#if vaultPromptMode}
   <VaultPanel

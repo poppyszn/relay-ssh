@@ -27,7 +27,7 @@ export function groupByFolder(profiles: Profile[]): FolderNode[] {
 }
 
 export function blankProfile(): Profile {
-  return { name: "", host: "", user: "", port: 22, auth: "agent", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } as Profile;
+  return { id: "", name: "", host: "", user: "", port: 22, auth: "agent", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } as Profile;
 }
 
 /** A host someone pasted into quick open: `ssh [-p N] [user@]host [-p N]`, `ssh://user@host:port`
@@ -53,7 +53,7 @@ export function duplicateProfile(p: Profile, existing: string[]): Profile {
   const taken = new Set(existing);
   let name = `${root}-copy`;
   for (let n = 2; taken.has(name); n++) name = `${root}-copy-${n}`;
-  return { ...p, name, tags: [...(p.tags ?? [])], tunnels: (p.tunnels ?? []).map((t) => ({ ...t })) } as Profile;
+  return { ...p, id: "", name, tags: [...(p.tags ?? [])], tunnels: (p.tunnels ?? []).map((t) => ({ ...t })) } as Profile;
 }
 
 export function parseTags(s: string): string[] {
@@ -111,7 +111,7 @@ export function buildTree(profiles: Profile[], folders: string[], query: string)
 /** Whether dropping an item on a folder ("" is the top level) is allowed, and why not. */
 export function canDrop(kind: "profile" | "folder", id: string, target: string, profiles: Profile[], folders: string[]): { ok: boolean; reason?: string } {
   if (kind === "profile") {
-    const p = profiles.find((x) => x.name === id);
+    const p = profiles.find((x) => x.id === id);
     return p && p.folder !== target ? { ok: true } : { ok: false, reason: "Already there" };
   }
   if (within(target, id)) return { ok: false, reason: "A folder cannot go inside itself" };

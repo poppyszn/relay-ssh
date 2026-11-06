@@ -69,7 +69,7 @@ describe("RdpView component", () => {
       props: {
         target: "win-box",
         prof: {
-          name: "win-box",
+          id: "x", name: "win-box",
           protocol: "rdp",
           host: "win-test",
           user: "Administrator",
@@ -106,7 +106,7 @@ describe("RdpView component", () => {
       props: {
         target: "win-box-err",
         prof: {
-          name: "win-box-err",
+          id: "x", name: "win-box-err",
           protocol: "rdp",
           host: "10.0.0.5",
           user: "admin",
@@ -138,7 +138,7 @@ describe("RdpView component", () => {
     vi.spyOn(RdpService, "Credentials").mockResolvedValue("pw");
     const close = vi.spyOn(RdpService, "Close").mockResolvedValue(undefined as never);
     const target = document.createElement("div");
-    const c = mount(RdpView, { target, props: { target: "win-box", prof: { name: "win-box", protocol: "rdp", host: "win-test", user: "u", port: 3389, auth: "", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } } });
+    const c = mount(RdpView, { target, props: { target: "win-box", prof: { id: "x", name: "win-box", protocol: "rdp", host: "win-test", user: "u", port: 3389, auth: "", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } } });
     flushSync();
     await new Promise((r) => setTimeout(r, 50));
     flushSync();
@@ -152,7 +152,7 @@ describe("RdpView component", () => {
   it("keeps the original error text under the friendly summary so a failure can be diagnosed", async () => {
     vi.spyOn(RdpService, "Open").mockRejectedValue(new Error("dial tcp 10.0.0.5:3389: connect: connection refused"));
     const target = document.createElement("div");
-    const c = mount(RdpView, { target, props: { target: "win-box-raw", prof: { name: "win-box-raw", protocol: "rdp", host: "10.0.0.5", user: "admin", port: 3389, auth: "", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } } });
+    const c = mount(RdpView, { target, props: { target: "win-box-raw", prof: { id: "x", name: "win-box-raw", protocol: "rdp", host: "10.0.0.5", user: "admin", port: 3389, auth: "", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } } });
     flushSync();
     await new Promise((r) => setTimeout(r, 20));
     flushSync();

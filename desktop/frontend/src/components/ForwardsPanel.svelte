@@ -4,7 +4,7 @@
   import Modal from "./Modal.svelte";
   import { ForwardsService, ProfilesService, type ForwardInfo } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 
-  let { target, onclose, onopen, onchanged }: { target: string; onclose: () => void; onopen: () => void; onchanged: () => void } = $props();
+  let { target, name = "", onclose, onopen, onchanged }: { target: string; name?: string; onclose: () => void; onopen: () => void; onchanged: () => void } = $props();
 
   let connected = $state(false);
   let message = $state("");
@@ -40,7 +40,7 @@
   const start = (f: ForwardInfo) => run(() => ForwardsService.Add(target, f.type, f.listen, f.target), "Forward started.");
   // Makes a runtime forward part of the saved connection, so it starts with every login.
   const save = (f: ForwardInfo) => run(async () => {
-    const p = (await ProfilesService.List())?.find((x) => x.name === target);
+    const p = (await ProfilesService.List())?.find((x) => x.id === target);
     if (!p) throw new Error("Connection not found.");
     p.tunnels = [...(p.tunnels ?? []), { type: f.type, listen: f.listen, target: f.target }];
     await ProfilesService.Save(target, p);
@@ -54,14 +54,14 @@
   });
 </script>
 
-<Modal title="Port forwards" subtitle={target} size="lg" flush {onclose}>
+<Modal title="Port forwards" subtitle={name || target} size="lg" flush {onclose}>
   {#snippet extra()}
     {#if loaded}<span class="state"><span class="dot" class:ok={connected} class:live={connected}></span>{connected ? "Connected" : "Not connected"}</span>{/if}
   {/snippet}
 
   {#if loaded && !connected}
     <EmptyState icon="forwards" title="This connection is not open" text={`${message ? message + " " : ""}Forwards ride on the connection of its terminal tab, so open it first.`}>
-      <button type="button" class="btn primary" data-autofocus onclick={onopen}>Open {target} in a tab</button>
+      <button type="button" class="btn primary" data-autofocus onclick={onopen}>Open {name || target} in a tab</button>
     </EmptyState>
   {:else}
     <div class="grid" role="grid" aria-label="Forwards">
@@ -90,7 +90,7 @@
     {#if note && !error}<div class="strip"><div class="notice good">{note}</div></div>{/if}
 
     <form class="add" onsubmit={(e) => { e.preventDefault(); add(); }}>
-      <ForwardDiagram kind={shown.type as "local" | "remote" | "dynamic"} listen={shown.listen} dest={shown.target} server={target} />
+      <ForwardDiagram kind={shown.type as "local" | "remote" | "dynamic"} listen={shown.listen} dest={shown.target} server={name || target} />
       <h3 class="label">Add a forward</h3>
       <div class="fields">
         <label class="field"><span>Type</span><select bind:value={kind} onchange={() => (viewing = null)}><option value="local">Local</option><option value="remote">Remote</option><option value="dynamic">SOCKS</option></select></label>

@@ -4,7 +4,28 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/poppyszn/relay-ssh/internal/config"
+	"github.com/poppyszn/relay-ssh/internal/paths"
 )
+
+// idOf is the id the saved connection with this name (or Folder/name) got.
+func idOf(t *testing.T, name string) string {
+	t.Helper()
+	p, err := paths.Default()
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := config.Load(p.StoreFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prof, err := s.Resolve(name)
+	if err != nil {
+		t.Fatalf("idOf(%q): %v", name, err)
+	}
+	return prof.ID
+}
 
 func TestProfilesServiceRoundTrip(t *testing.T) {
 	home := t.TempDir()
@@ -24,7 +45,7 @@ func TestProfilesServiceRoundTrip(t *testing.T) {
 	if err != nil || len(got) != 2 {
 		t.Fatalf("List = %v, %v", got, err)
 	}
-	if w := got[1]; w.Name != "web" || w.Jump != "bastion" || len(w.Tunnels) != 1 || w.Tags == nil {
+	if w := got[1]; w.Name != "web" || w.Jump != got[0].ID || len(w.Tunnels) != 1 || w.Tags == nil {
 		t.Errorf("web round-tripped as %+v", w)
 	}
 

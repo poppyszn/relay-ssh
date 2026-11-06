@@ -242,7 +242,7 @@ func TestRdpServiceCredentials_SSHBindingDoesNotFillRDP(t *testing.T) {
 
 	// Try to get credentials with RDP binding for "shared-host"
 	rdpBinding := fmt.Sprintf("rdp|10.0.0.50|admin|22||")
-	if _, _, err := v.Get("shared-host", rdpBinding); !errors.Is(err, vault.ErrBindingChanged) {
+	if _, _, err := v.Get(idOf(t, "shared-host"), rdpBinding); !errors.Is(err, vault.ErrBindingChanged) {
 		t.Fatalf("expected ErrBindingChanged when looking up SSH password with RDP binding, got %v", err)
 	}
 

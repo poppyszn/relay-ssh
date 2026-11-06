@@ -50,6 +50,8 @@ class Workspace {
   profileAuth: (target: string) => string | undefined = () => undefined;
   /** A connection's protocol ("ssh" or "rdp"), supplied by the app. */
   profileProtocol: (target: string) => string | undefined = () => undefined;
+  /** The name shown for a pane's target, which is the connection's id. */
+  labelOf: (target: string) => string = (t) => t;
   private els = new Map<string, HTMLElement>();
   private sessions = new Map<string, Session>();
 
@@ -77,7 +79,7 @@ class Workspace {
   }
 
   tabTitle(t: Tab): string {
-    const names = [...new Set(P.leaves(t.root).map((id) => this.panes[id]?.target ?? "Local"))];
+    const names = [...new Set(P.leaves(t.root).map((id) => this.labelOf(this.panes[id]?.target ?? "") || "Local"))];
     return names.length > 2 ? `${names[0]} +${names.length - 1}` : names.join(" + ");
   }
 

@@ -61,9 +61,14 @@ func setupTestStoreAndVault(t *testing.T) (paths.Paths, *vault.Vault) {
 // setBound saves a password the way the app does: bound to the profile as it is in the store.
 func setBound(t *testing.T, v *vault.Vault, store config.Store, name, secret string) {
 	t.Helper()
+	if path, err := paths.Default(); err == nil { // the saved copy is the one that has ids
+		if saved, err := config.Load(path.StoreFile); err == nil {
+			store = saved
+		}
+	}
 	for _, p := range store.Profiles {
 		if p.Name == name {
-			if err := v.Set(name, secret, bindingOf(p)); err != nil {
+			if err := v.Set(p.ID, secret, bindingOf(p)); err != nil {
 				t.Fatalf("Set(%s): %v", name, err)
 			}
 			return

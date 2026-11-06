@@ -232,3 +232,22 @@ func TestGenerateKeepsIdleConnectionsAlive(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateGivesSharedNamesTheirFolderAndJumpsUseTheAlias(t *testing.T) {
+	mk := func(id, name, folder, jump string) config.Profile {
+		return config.Profile{ID: id, Name: name, Folder: folder, Jump: jump, Host: "h", User: "u", Port: 22, Auth: config.AuthAgent}
+	}
+	s := config.Store{Version: config.Version, Profiles: []config.Profile{
+		mk("@000000000001", "db", "prod", ""),
+		mk("@000000000002", "db", "stage", ""),
+		mk("@000000000003", "db", "", ""),
+		mk("@000000000004", "app", "prod", "@000000000002"),
+		mk("@000000000005", "solo", "prod", ""),
+	}}
+	out := Generate(s)
+	for _, want := range []string{"Host prod/db\n", "Host stage/db\n", "Host db\n", "Host app\n", "Host solo\n", "ProxyJump stage/db\n"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("generated config lacks %q:\n%s", want, out)
+		}
+	}
+}

@@ -9,7 +9,7 @@ import { blankProfile } from "../lib/lib";
 // The sidebar's "Open now" list renders rows at depth -1 (flush left, no indent guides).
 // Array(-1) throws, which broke the whole sidebar the moment a connection was opened.
 describe("ConnRow", () => {
-  const props = (depth: number) => ({ profile: { ...blankProfile(), name: "web", host: "h", user: "u" }, depth, live: true, current: false, onconnect: () => {}, onedit: () => {} });
+  const props = (depth: number) => ({ profile: { ...blankProfile(), id: "web", name: "web", host: "h", user: "u" }, depth, live: true, current: false, onconnect: () => {}, onedit: () => {} });
 
   it.each([-1, 0, 2])("renders at depth %i with one guide per level", (depth) => {
     const target = document.createElement("div");
@@ -22,7 +22,7 @@ describe("ConnRow", () => {
   it("offers Duplicate next to Edit, and does not connect when it is used", () => {
     const target = document.createElement("div");
     let duplicated = "", connected = 0;
-    const profile = { ...blankProfile(), name: "web", host: "h", user: "u" };
+    const profile = { ...blankProfile(), id: "web", name: "web", host: "h", user: "u" };
     const c = mount(ConnRow, { target, props: { ...props(0), profile, onconnect: () => connected++, onduplicate: (p: typeof profile) => (duplicated = p.name) } });
     const btn = target.querySelector<HTMLButtonElement>('button[aria-label="Duplicate web"]')!;
     expect(btn).not.toBeNull();
@@ -35,7 +35,7 @@ describe("ConnRow", () => {
   // The name line used to carry tags, the jump host and the edit button, so names truncated to a letter.
   it("keeps the name line to the name and one tag, and puts the jump host with the address", () => {
     const target = document.createElement("div");
-    const profile = { ...blankProfile(), name: "dev-app-server", host: "10.0.2.15", user: "deploy", port: 2222, jump: "bastion", tags: ["dev", "eu", "web"] };
+    const profile = { ...blankProfile(), id: "dev-app-server", name: "dev-app-server", host: "10.0.2.15", user: "deploy", port: 2222, jump: "bastion", tags: ["dev", "eu", "web"] };
     const c = mount(ConnRow, { target, props: { ...props(0), profile } });
     expect([...target.querySelectorAll(".tags .chip")].map((e) => e.textContent)).toEqual(["dev"]);
     expect(target.querySelector(".more")?.textContent).toBe("+2");
@@ -53,7 +53,7 @@ describe("dragging from the buttons a mouse actually hits", () => {
 
   it("starts from a connection row's name button, not from its edit button", () => {
     const target = document.createElement("div");
-    const c = mount(ConnRow, { target, props: { profile: { ...blankProfile(), name: "web", host: "h", user: "u" }, depth: 0, live: false, current: false, onconnect: () => {}, onedit: () => {} } });
+    const c = mount(ConnRow, { target, props: { profile: { ...blankProfile(), id: "web", name: "web", host: "h", user: "u" }, depth: 0, live: false, current: false, onconnect: () => {}, onedit: () => {} } });
     flushSync(); // actions attach in an effect
     press(target.querySelector(".edit")!); pull();
     expect(sb.drag).toBeNull();
@@ -83,7 +83,7 @@ describe("opening a connection", () => {
   const mk = () => {
     const opened: string[] = [];
     const target = document.createElement("div");
-    const c = mount(ConnRow, { target, props: { profile: { ...blankProfile(), name: "web", host: "h", user: "u" }, depth: 0, live: false, current: false, onconnect: (p: { name: string }) => opened.push(p.name), onedit: () => {} } });
+    const c = mount(ConnRow, { target, props: { profile: { ...blankProfile(), id: "web", name: "web", host: "h", user: "u" }, depth: 0, live: false, current: false, onconnect: (p: { name: string }) => opened.push(p.name), onedit: () => {} } });
     flushSync();
     sb.justDragged = false; // an earlier drag test may have left it set
     return { opened, target, c, main: target.querySelector<HTMLElement>(".main")! };
@@ -128,7 +128,7 @@ describe("opening a connection", () => {
 describe("Duplicate in the sidebar tree", () => {
   it("is on connections inside folders too", () => {
     const target = document.createElement("div");
-    const web = { ...blankProfile(), name: "web", host: "h", user: "u", folder: "Acme" };
+    const web = { ...blankProfile(), id: "web", name: "web", host: "h", user: "u", folder: "Acme" };
     const node = { name: "Acme", path: "Acme", children: [], profiles: [web], count: 1 };
     const c = mount(Branch, { target, props: { node, depth: 0, searching: false, open: new Set<string>(), current: "", onconnect: () => {}, onedit: () => {}, onduplicate: () => {} } as never });
     flushSync();

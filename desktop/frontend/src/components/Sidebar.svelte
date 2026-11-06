@@ -74,8 +74,8 @@
   <nav aria-label="Connections" data-scroll>
     {#if tree.unfiled.length}
       <div data-drop="">
-        {#each tree.unfiled as p (p.name)}
-          <ConnRow profile={p} depth={0} live={open.has(p.name)} current={current === p.name} {onconnect} {onedit} {onduplicate} />
+        {#each tree.unfiled as p (p.id)}
+          <ConnRow profile={p} depth={0} live={open.has(p.id)} current={current === p.id} {onconnect} {onedit} {onduplicate} />
         {/each}
       </div>
     {/if}

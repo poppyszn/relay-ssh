@@ -59,7 +59,7 @@ that structurally impossible. Do not weaken it.
 | --- | --- |
 | Direct dependencies | 2 |
 | Lines per `.go` file | 400 |
-| Non-test Go lines, whole repo | 3230 |
+| Non-test Go lines, whole repo | 3370 |
 | `syscall.Exec` call sites | 1, in `internal/launch` |
 | TUI / SSH-protocol / PTY imports | 0 |
 
@@ -118,6 +118,17 @@ one), repoints the old block, and regenerates the generated config; the old `SSS
 migration once nobody has a tree under the old name.
 
 **3170 -> 3230, 2026-10-30.** RDP profile support and CLI skip. RDP profiles live in `connections.toml` (optional `protocol = "rdp"` and `domain` fields), with validation for host, user, port (default 3389), domain, and cross-profile jump rules (RDP can jump through SSH profiles, but no profile may jump through an RDP profile; key, tunnels, forward_agent, and blocks rejected for RDP). The CLI tools (`ls`, picker, jump picker, completion, ssh config generation, doctor, connect, cp, edit) safely skip or reject RDP profiles. About 61 lines added across `internal/config`, `internal/sshconfig`, and `internal/cmd`, each covered by tests that fail without it.
+
+**3230 -> 3370, 2026-11-06.** Connections have permanent ids so two of them can share a name in different
+folders (the owner asked for it: `Prod/db` and `Stage/db`). Each profile gets `id = "@" + 12 hex digits`;
+profiles written before ids get a stable one derived from folder and name, and a `jump = "name"` is
+rewritten to the jump profile's id on the next save. Names must now be unique per folder rather than
+globally; `ssh <name>` keeps working while a name is unique, and a shared name becomes `Folder/name` in the
+generated config (`sshconfig.Alias`). The CLI accepts an id, `Folder/name`, or a bare name only one
+connection has, and says which `Folder/name` forms fit when a bare name is ambiguous. About 140 lines in
+`internal/config` (ids, `Normalize`, `Resolve`, per-folder uniqueness, id-based jump cycles),
+`internal/sshconfig`, `internal/core` and `internal/cmd`, each covered by a test that fails without it.
+The desktop app keys saved passwords by id, so a rename or move never loses one (outside this count).
 
 ## How to work
 

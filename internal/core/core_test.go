@@ -179,8 +179,8 @@ func TestSaveProfileAddsUpdatesAndRenames(t *testing.T) {
 	}
 	s, _ := config.Load(p.StoreFile)
 	got, _ := s.Find("web")
-	if got.Host != "new-host" || got.Jump != "gateway" {
-		t.Errorf("web = %+v, want host new-host and jump gateway", got)
+	if gw, _ := s.Find("gateway"); got.Host != "new-host" || got.Jump != gw.ID {
+		t.Errorf("web = %+v, want host new-host and jump gateway (%s)", got, gw.ID)
 	}
 	if _, ok := s.Find("bastion"); ok {
 		t.Error("old name should be gone after rename")
@@ -230,5 +230,38 @@ func TestImportHandlesAdjacentHostsDefaultsAndSkipsBadEntries(t *testing.T) {
 	n, err := ImportSSHConfig(newStore(t), strings.NewReader("Host x\n  HostName 9.9.9.9\n  User u\n"))
 	if err != nil || n != 1 {
 		t.Errorf("ImportSSHConfig = %d, %v", n, err)
+	}
+}
+
+func TestSaveProfileAllowsTheSameNameInAnotherFolderAndEditsByID(t *testing.T) {
+	p := newStore(t, agentProfile("db", "prod"))
+	if err := SaveProfile(p, "", agentProfile("db", "stage")); err != nil {
+		t.Fatalf("same name in another folder: %v", err)
+	}
+	if err := SaveProfile(p, "", agentProfile("db", "stage")); err == nil {
+		t.Error("same name in the same folder should fail")
+	}
+	s, _ := config.Load(p.StoreFile)
+	if _, err := s.Resolve("db"); err == nil {
+		t.Fatal("bare db should be ambiguous")
+	}
+	stage, _ := s.Find("stage/db")
+	moved := stage
+	moved.Host = "moved-host"
+	moved.Folder = "qa"
+	if err := SaveProfile(p, stage.ID, moved); err != nil {
+		t.Fatal(err)
+	}
+	s, _ = config.Load(p.StoreFile)
+	got, ok := s.Find(stage.ID)
+	if !ok || got.Host != "moved-host" || got.Folder != "qa" {
+		t.Errorf("edit by id: %+v, %v", got, ok)
+	}
+	if _, err := RemoveProfile(p, "prod/db"); err != nil {
+		t.Fatal(err)
+	}
+	s, _ = config.Load(p.StoreFile)
+	if len(s.Profiles) != 1 || s.Profiles[0].ID != stage.ID {
+		t.Errorf("removed the wrong one: %+v", s.Profiles)
 	}
 }

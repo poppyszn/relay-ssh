@@ -104,13 +104,13 @@ func (ProfilesService) CreateFolder(path string) error {
 }
 
 // MoveProfile puts a connection in a folder ("" for the top level).
-func (ProfilesService) MoveProfile(name, folder string) error {
+func (ProfilesService) MoveProfile(id, folder string) error {
 	if err := config.ValidateFolder(folder); err != nil {
 		return err
 	}
 	return mutate(func(s *config.Store) error {
 		for i := range s.Profiles {
-			if s.Profiles[i].Name != name {
+			if s.Profiles[i].ID != id {
 				continue
 			}
 			old := s.Profiles[i].Folder
@@ -120,7 +120,7 @@ func (ProfilesService) MoveProfile(name, folder string) error {
 			}
 			return nil
 		}
-		return fmt.Errorf("profile %q not found", name)
+		return fmt.Errorf("profile %q not found", id)
 	})
 }
 

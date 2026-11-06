@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/poppyszn/relay-ssh/internal/config"
 	"github.com/poppyszn/relay-ssh/internal/fsutil"
@@ -35,11 +36,37 @@ func KeyRef(key string) string {
 	return "~/.ssh/relay-ssh.d/keys/" + key
 }
 
+// Alias is the Host name `ssh <alias>` uses for a profile: its name while no other ssh
+// profile shares it, otherwise "Folder/name" (whitespace becomes '_'). A shared name
+// at the top level keeps the bare name, so existing aliases keep working.
+func Alias(s config.Store, p config.Profile) string {
+	if p.Folder == "" {
+		return p.Name
+	}
+	for _, o := range s.Profiles {
+		if o.ID != p.ID && o.Name == p.Name && !o.IsRDP() {
+			return strings.Map(func(r rune) rune {
+				if unicode.IsSpace(r) {
+					return '_'
+				}
+				return r
+			}, p.Address())
+		}
+	}
+	return p.Name
+}
+
 // Generate renders the entire store as ssh config text. It performs no I/O.
 func Generate(s config.Store) string {
 	profiles := make([]config.Profile, len(s.Profiles))
 	copy(profiles, s.Profiles)
-	sort.Slice(profiles, func(i, j int) bool { return profiles[i].Name < profiles[j].Name })
+	sort.Slice(profiles, func(i, j int) bool {
+		a, b := profiles[i], profiles[j]
+		if a.Name != b.Name {
+			return a.Name < b.Name
+		}
+		return a.Folder < b.Folder || (a.Folder == b.Folder && a.ID < b.ID)
+	})
 
 	var b strings.Builder
 	b.WriteString(header)
@@ -47,7 +74,7 @@ func Generate(s config.Store) string {
 		if p.IsRDP() {
 			continue
 		}
-		fmt.Fprintf(&b, "\nHost %s\n", p.Name)
+		fmt.Fprintf(&b, "\nHost %s\n", Alias(s, p))
 		fmt.Fprintf(&b, "    HostName %s\n", p.Host)
 		fmt.Fprintf(&b, "    User %s\n", p.User)
 		fmt.Fprintf(&b, "    Port %d\n", p.Port)
@@ -67,8 +94,8 @@ func Generate(s config.Store) string {
 			// Nothing: ssh finds the agent through SSH_AUTH_SOCK by default.
 		}
 
-		if p.Jump != "" {
-			b.WriteString("    ProxyJump " + p.Jump + "\n")
+		if j, ok := s.Find(p.Jump); ok {
+			b.WriteString("    ProxyJump " + Alias(s, j) + "\n")
 		}
 		if p.ForwardAgent {
 			b.WriteString("    ForwardAgent yes\n")
