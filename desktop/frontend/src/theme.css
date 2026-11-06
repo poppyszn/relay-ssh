@@ -163,6 +163,9 @@ input[type="checkbox"] { width: 15px; height: 15px; padding: 0; accent-color: va
 .relay-block.err { background: color-mix(in srgb, var(--err) 12%, transparent); border-top-color: var(--err-edge); border-bottom: 1px solid var(--err-edge); box-shadow: inset 3px 0 var(--err); }
 /* Full-screen programs (vim, less, htop) run on the alternate screen: no block overlays over them (see blocks.ts). */
 .xterm.relay-alt .relay-block, .xterm.relay-alt .relay-head, .xterm.relay-alt .relay-badge { display: none !important; }
+/* xterm hides a decoration whose row has scrolled out of view with an inline display:none. The !important flex
+   rules below would override that and leave the header and badge pinned to the top, over later output. */
+.xterm .relay-head[style*="display: none"], .xterm .relay-badge[style*="display: none"], .xterm .relay-block[style*="display: none"] { display: none !important; }
 /* The block header: directory and git branch on the block's blank first row. */
 .relay-head { pointer-events: none; display: flex !important; align-items: center; gap: 12px; overflow: hidden; white-space: nowrap; font: 500 11px var(--sans); color: var(--dim); }
 .relay-head .head-path { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
