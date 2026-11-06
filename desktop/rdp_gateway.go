@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -82,7 +83,12 @@ func NewRdpGateway(certStore *RdpCertStore, onCert func(RdpCertEvent)) (*RdpGate
 	return gw, nil
 }
 
-// RegisterSession registers an allowed RDP destination and generates a single-use token expiring in 60s.
+// rdpTokenLifetime is how long a session's single-use token stays valid. It has to outlast a slow first start
+// (loading the client, the certificate prompt, typing a password); the token still works only once, from the
+// app's own origin, on loopback, so a longer life adds little. It was 60s, and first connections ran out of it.
+var rdpTokenLifetime = 5 * time.Minute
+
+// RegisterSession registers an allowed RDP destination and generates a single-use token (see rdpTokenLifetime).
 func (g *RdpGateway) RegisterSession(sessionID, dest string, tunnelPort int) (string, string, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -98,7 +104,7 @@ func (g *RdpGateway) RegisterSession(sessionID, dest string, tunnelPort int) (st
 		Destination: dest,
 		TunnelPort:  tunnelPort,
 		Token:       token,
-		ExpiresAt:   time.Now().Add(60 * time.Second),
+		ExpiresAt:   time.Now().Add(rdpTokenLifetime),
 		certCh:      make(chan bool, 1),
 	}
 
@@ -153,6 +159,19 @@ func (g *RdpGateway) Close() error {
 	g.mu.Unlock()
 
 	return g.server.Close()
+}
+
+// rdpHandshakeTimeout bounds each step before the byte relay starts (the server's negotiation reply, the TLS
+// handshake). A server that accepts the connection and then goes quiet fails fast instead of hanging the tab.
+var rdpHandshakeTimeout = 20 * time.Second
+
+// stepError names the handshake step that failed; a timeout reads as "timed out" rather than "i/o timeout".
+func stepError(step string, err error) error {
+	var ne net.Error
+	if errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &ne) && ne.Timeout()) {
+		return fmt.Errorf("%s: timed out after %s", step, rdpHandshakeTimeout)
+	}
+	return fmt.Errorf("%s: %w", step, err)
 }
 
 // rdpClientTLSConfig is how the gateway speaks TLS to an RDP host. Capped at TLS 1.2: some Windows servers drop the
@@ -239,7 +258,10 @@ func (g *RdpGateway) handle(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close(websocket.StatusInternalError, "gateway error")
 
-	_ = g.handshakeAndRelay(r.Context(), c, reg)
+	started := time.Now()
+	if err := g.handshakeAndRelay(r.Context(), c, reg); err != nil {
+		log.Printf("rdp gateway: %s: handshake failed after %s: %v", reg.Destination, time.Since(started).Round(time.Millisecond), err)
+	}
 }
 
 func (g *RdpGateway) handshakeAndRelay(ctx context.Context, c *websocket.Conn, reg *rdpSessionRegistration) error {
@@ -269,43 +291,49 @@ func (g *RdpGateway) handshakeAndRelay(ctx context.Context, c *websocket.Conn, r
 		target = fmt.Sprintf("127.0.0.1:%d", reg.TunnelPort)
 	}
 
-	tcpConn, err := net.DialTimeout("tcp", target, 10*time.Second)
-	if err != nil {
-		errPdu := NewRDCleanPathErrorPdu(TargetUnreachableErrorCode)
-		b, _ := EncodeRDCleanPath(errPdu)
+	// failWith tells the client why (an RDCleanPath error) before the connection closes, so it fails at once
+	// with a reason instead of a bare "closed" or "not enough bytes".
+	failWith := func(code int, err error) error {
+		b, _ := EncodeRDCleanPath(NewRDCleanPathErrorPdu(code))
 		_ = c.Write(ctx, websocket.MessageBinary, b)
 		return err
 	}
+
+	tcpConn, err := net.DialTimeout("tcp", target, 10*time.Second)
+	if err != nil {
+		return failWith(TargetUnreachableErrorCode, stepError("could not connect to "+reg.Destination, err))
+	}
 	defer tcpConn.Close()
 
+	_ = tcpConn.SetDeadline(time.Now().Add(rdpHandshakeTimeout))
 	if _, err := tcpConn.Write(pdu.X224ConnectionPdu); err != nil {
-		return err
+		return failWith(GeneralErrorCode, stepError("sending the negotiation request", err))
 	}
 
 	hdr := make([]byte, 4)
 	if _, err := io.ReadFull(tcpConn, hdr); err != nil {
-		return err
+		return failWith(GeneralErrorCode, stepError("waiting for the server's negotiation reply", err))
 	}
 	totalLen := int(hdr[2])<<8 | int(hdr[3])
 	if totalLen < 4 || totalLen > 65535 {
-		return fmt.Errorf("invalid x224 tpkt length: %d", totalLen)
+		return failWith(GeneralErrorCode, fmt.Errorf("invalid x224 tpkt length: %d", totalLen))
 	}
 
 	serverX224 := make([]byte, totalLen)
 	copy(serverX224[:4], hdr)
 	if _, err := io.ReadFull(tcpConn, serverX224[4:]); err != nil {
-		return err
+		return failWith(GeneralErrorCode, stepError("reading the server's negotiation reply", err))
 	}
 
 	log.Printf("rdp gateway: %s: server selected %s", reg.Destination, selectedProtocol(serverX224))
 
+	tlsCtx, cancelTLS := context.WithTimeout(ctx, rdpHandshakeTimeout)
+	defer cancelTLS()
 	tlsConn := tls.Client(tcpConn, rdpClientTLSConfig())
-	if err := tlsConn.HandshakeContext(ctx); err != nil {
-		errPdu := NewRDCleanPathErrorPdu(TLSHandshakeFailedErrorCode)
-		b, _ := EncodeRDCleanPath(errPdu)
-		_ = c.Write(ctx, websocket.MessageBinary, b)
-		return err
+	if err := tlsConn.HandshakeContext(tlsCtx); err != nil {
+		return failWith(TLSHandshakeFailedErrorCode, stepError("TLS handshake", err))
 	}
+	_ = tcpConn.SetDeadline(time.Time{}) // the relay below has no deadline
 	defer tlsConn.Close()
 
 	state := tlsConn.ConnectionState()
@@ -332,6 +360,7 @@ func (g *RdpGateway) handshakeAndRelay(ctx context.Context, c *websocket.Conn, r
 			})
 		}
 
+		log.Printf("rdp gateway: %s: waiting for a decision on the certificate (up to 60s)", reg.Destination)
 		select {
 		case accept := <-reg.certCh:
 			if !accept {

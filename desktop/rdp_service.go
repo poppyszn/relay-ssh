@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -179,6 +181,29 @@ func (s *RdpService) TrustCert(sessionID string, accept bool) bool {
 		return false
 	}
 	return s.gateway.TrustCert(sessionID, accept)
+}
+
+// Note records a stage of a connection in the log ("client loaded", "connecting", how it ended) with the time since
+// the session was opened, so a slow or failed first connection can be explained. Bound to the frontend. The text is
+// cut to one short line, and a note for a session that does not exist is ignored.
+func (s *RdpService) Note(sessionID, stage string) {
+	s.mu.Lock()
+	sess, ok := s.sessions[sessionID]
+	s.mu.Unlock()
+	if !ok {
+		return
+	}
+	if i := strings.IndexAny(stage, "\r\n"); i >= 0 {
+		stage = stage[:i]
+	}
+	if len(stage) > 300 {
+		stage = stage[:300] + "…"
+	}
+	id := sessionID
+	if len(id) > 8 {
+		id = id[:8]
+	}
+	log.Printf("rdp session %s (%s, +%s): %s", id, sess.connection, time.Since(sess.createdAt).Round(time.Second), stage)
 }
 
 // Close terminates any active tunnel, unregisters the gateway session, and frees session state.

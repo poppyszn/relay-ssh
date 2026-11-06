@@ -39,6 +39,15 @@ export function Credentials(sessionID: string): $CancellablePromise<string> {
 }
 
 /**
+ * Note records a stage of a connection in the log ("client loaded", "connecting", how it ended) with the time since
+ * the session was opened, so a slow or failed first connection can be explained. Bound to the frontend. The text is
+ * cut to one short line, and a note for a session that does not exist is ignored.
+ */
+export function Note(sessionID: string, stage: string): $CancellablePromise<void> {
+    return $Call.ByID(1081284459, sessionID, stage);
+}
+
+/**
  * Open initiates an RDP session for connection. If Jump is set, an SSH tunnel is established.
  * The session is registered with the gateway and returns connection metadata with NO secret.
  */

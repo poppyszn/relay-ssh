@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/poppyszn/relay-ssh/desktop/vault"
 	"github.com/poppyszn/relay-ssh/internal/config"
@@ -362,5 +365,39 @@ exec sleep 10
 	// Close session cleans up tunnel
 	if err := svc.Close(info.SessionID); err != nil {
 		t.Fatalf("Close failed: %v", err)
+	}
+}
+
+// The tab reports where it is in a connection (client loaded, connecting, how it ended) so the log can show where
+// time goes. It carries stage names and error text only, is bounded, and an unknown session is ignored.
+func TestRdpServiceNoteLogsStagesWithoutTrustingTheText(t *testing.T) {
+	svc, _, _ := setupRdpTestEnv(t)
+	var logged bytes.Buffer
+	log.SetOutput(&logged)
+	defer log.SetOutput(os.Stderr)
+
+	svc.mu.Lock()
+	svc.sessions["abcdef0123456789"] = &rdpActiveSession{id: "abcdef0123456789", connection: "win-dev", createdAt: time.Now().Add(-3 * time.Second)}
+	svc.mu.Unlock()
+
+	svc.Note("abcdef0123456789", "client loaded")
+	svc.Note("abcdef0123456789", strings.Repeat("x", 5000)+"\nforged log line")
+	svc.Note("no-such-session", "ignored")
+
+	out := logged.String()
+	if !strings.Contains(out, "rdp session abcdef01 (win-dev, +3s): client loaded") {
+		t.Errorf("stage not logged with its elapsed time:\n%s", out)
+	}
+	if strings.Contains(out, "forged log line") || strings.Contains(out, "\nforged") {
+		t.Errorf("an over-long or multi-line note was not cut:\n%s", out)
+	}
+	if strings.Contains(out, "no-such-session") || strings.Contains(out, "ignored") {
+		t.Errorf("a note for an unknown session was logged:\n%s", out)
+	}
+}
+
+func TestRdpTokenOutlivesASlowStart(t *testing.T) {
+	if rdpTokenLifetime < 3*time.Minute {
+		t.Fatalf("a gateway token must survive a slow first start (client load, certificate and password prompts); lifetime is %s", rdpTokenLifetime)
 	}
 }

@@ -142,8 +142,12 @@
   }
 
   // The file browser works on a saved connection (it reuses that tab's login).
+  // Files and port forwards work over ssh, which a remote desktop (RDP) connection does not have.
+  const focusedIsRdp = $derived(profiles.find((p) => p.name === ws.panes[ws.focusedPane]?.target)?.protocol === "rdp");
+
   function openFiles() {
     const t = ws.panes[ws.focusedPane]?.target;
+    if (focusedIsRdp) return (banner = "The file browser works over SSH, so it is not available on a remote desktop connection.");
     if (!t) return (banner = "Open a saved connection in this pane to browse its files.");
     banner = "";
     filesTarget = t;
@@ -159,6 +163,7 @@
   // Forwards are managed on a saved connection's live login.
   function openForwards() {
     const t = ws.panes[ws.focusedPane]?.target;
+    if (focusedIsRdp) return (banner = "Port forwards are an SSH feature, so they are not available on a remote desktop connection.");
     if (!t) return (banner = "Open a saved connection in this pane to manage its port forwards.");
     banner = "";
     forwardsTarget = t;
@@ -936,7 +941,7 @@
 <svelte:window onkeydown={keydown} />
 
 <div class="app">
-  <TabBar custom={customChrome} connected={!!ws.panes[ws.focusedPane]?.target} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsplit={(d) => ws.split(d)} onsettings={() => openSettings()} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} onsnippets={() => (snippetsOpen = !snippetsOpen)} />
+  <TabBar custom={customChrome} connected={!!ws.panes[ws.focusedPane]?.target && !focusedIsRdp} remoteDesktop={focusedIsRdp} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsplit={(d) => ws.split(d)} onsettings={() => openSettings()} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} onsnippets={() => (snippetsOpen = !snippetsOpen)} />
   <div class="body">
     {#if sidebar}
       <Sidebar {profiles} {folders} {open} current={ws.panes[ws.focusedPane]?.target ?? ""} onconnect={(p) => connect(p)} onnew={newConnection} onedit={edit} ontools={(t) => { toolsTab = t; toolsOpen = true; }} onchanged={refresh} />

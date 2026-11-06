@@ -8,7 +8,7 @@
   import { sb } from "../state/foldertree.svelte";
   import Icon from "./Icon.svelte";
 
-  let { custom, connected, onsidebar, onsearch, onpalette, onsplit, onsettings, ontools, onfiles, onforwards, onsnippets }: { custom: boolean; /** The focused pane is a saved connection, so Files and Forwards have something to act on. */ connected: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsplit: (dir: "row" | "col") => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void; onsnippets: () => void } = $props();
+  let { custom, connected, remoteDesktop = false, onsidebar, onsearch, onpalette, onsplit, onsettings, ontools, onfiles, onforwards, onsnippets }: { custom: boolean; /** The focused pane is a saved connection, so Files and Forwards have something to act on. */ connected: boolean; /** The focused pane is a remote desktop (RDP) connection: no SSH file browser or port forwards. */ remoteDesktop?: boolean; onsidebar: () => void; onsearch: () => void; onpalette: () => void; onsplit: (dir: "row" | "col") => void; onsettings: () => void; ontools: () => void; onfiles: () => void; onforwards: () => void; onsnippets: () => void } = $props();
   const mac = navigator.userAgent.includes("Mac");
 
   // Reordering tabs by dragging (pointer events, like the sidebar: native drag and drop is avoided).
@@ -98,8 +98,8 @@
     <button type="button" class="icon-btn" aria-label="Split right" title={mac ? "Split pane right (⌘D)" : "Split pane right (Ctrl+Shift+D)"} onclick={() => onsplit("row")}><Icon name="split-right" /></button>
     <button type="button" class="icon-btn" aria-label="Split down" title={mac ? "Split pane down (⇧⌘D)" : "Split pane down (Ctrl+Alt+D)"} onclick={() => onsplit("col")}><Icon name="split-down" /></button>
     <span class="rule" aria-hidden="true"></span>
-    <button type="button" class="icon-btn" aria-label="Files" title={connected ? "Browse files on this connection" : "Open a saved connection to browse its files"} disabled={!connected} onclick={onfiles}><Icon name="files" /></button>
-    <button type="button" class="icon-btn" aria-label="Port forwards" title={connected ? "Port forwards on this connection" : "Open a saved connection to manage its port forwards"} disabled={!connected} onclick={onforwards}><Icon name="forwards" /></button>
+    <button type="button" class="icon-btn" aria-label="Files" title={remoteDesktop ? "Not available on remote desktop connections (no SSH file browser)" : connected ? "Browse files on this connection" : "Open a saved connection to browse its files"} disabled={!connected} onclick={onfiles}><Icon name="files" /></button>
+    <button type="button" class="icon-btn" aria-label="Port forwards" title={remoteDesktop ? "Not available on remote desktop connections (port forwards are an SSH feature)" : connected ? "Port forwards on this connection" : "Open a saved connection to manage its port forwards"} disabled={!connected} onclick={onforwards}><Icon name="forwards" /></button>
     <button type="button" class="icon-btn" aria-label="Snippets" title={mac ? "Snippets (⇧⌘S)" : "Snippets (Ctrl+Shift+S)"} onclick={onsnippets}><Icon name="snippets" /></button>
     <span class="rule" aria-hidden="true"></span>
     <button type="button" class="icon-btn" aria-label="Tools" title="Tools: health, backup, import, keys" onclick={ontools}><Icon name="tools" /></button>

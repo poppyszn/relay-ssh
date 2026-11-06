@@ -7,6 +7,7 @@ export interface RdpUi {
   connect(config: unknown): Promise<{ run(): Promise<{ reason(): string }> }>;
   setVisibility(visible: boolean): void;
   setEnableClipboard(enable: boolean): void;
+  setEnableAutoClipboard(enable: boolean): void;
   resize(width: number, height: number, scale?: number): void;
   ctrlAltDel(): void;
   shutdown(): void;

@@ -742,3 +742,97 @@ func TestGatewayDoesNotNegotiateTLS13(t *testing.T) {
 		t.Fatalf("expected an RDCleanPath error for a TLS 1.3-only server, got %+v (%v)", pdu, err)
 	}
 }
+
+// dialGateway connects like the browser client would and sends its RDCleanPath request.
+func dialGateway(t *testing.T, gw *RdpGateway, id, dest string) (*websocket.Conn, context.Context) {
+	t.Helper()
+	token, wsURL, err := gw.RegisterSession(id, dest, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	t.Cleanup(cancel)
+	c, _, err := websocket.Dial(ctx, wsURL+"?token="+token, &websocket.DialOptions{HTTPHeader: http.Header{"Origin": []string{"wails://localhost"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, _ := EncodeRDCleanPath(RDCleanPathPdu{Destination: dest, ProxyAuth: token, X224ConnectionPdu: []byte{3, 0, 0, 11, 6, 0xe0, 0, 0, 0, 0, 0}})
+	c.Write(ctx, websocket.MessageBinary, req)
+	return c, ctx
+}
+
+// A handshake that fails or stalls used to leave no trace at all (only "server selected" lines for the ones
+// that got that far), so a connection that "times out" could not be explained. Every way out is logged now.
+func TestGatewayLogsHandshakeFailuresAndStalls(t *testing.T) {
+	var logged bytes.Buffer
+	log.SetOutput(&logged)
+	defer log.SetOutput(os.Stderr)
+	old := rdpHandshakeTimeout
+	rdpHandshakeTimeout = 400 * time.Millisecond
+	defer func() { rdpHandshakeTimeout = old }()
+
+	serve := func(handle func(net.Conn)) string {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { ln.Close() })
+		go func() {
+			for {
+				c, err := ln.Accept()
+				if err != nil {
+					return
+				}
+				go func() { defer c.Close(); handle(c) }()
+			}
+		}()
+		return ln.Addr().String()
+	}
+	readRequest := func(c net.Conn) {
+		hdr := make([]byte, 4)
+		io.ReadFull(c, hdr)
+		io.ReadFull(c, make([]byte, int(hdr[2])<<8|int(hdr[3])-4))
+	}
+
+	gw, _, stopGw := setupGateway(t)
+	defer stopGw()
+
+	// 1. The server accepts the TCP connection and then says nothing.
+	silent := serve(func(c net.Conn) { readRequest(c); time.Sleep(2 * time.Second) })
+	c, ctx := dialGateway(t, gw, "sess-silent", silent)
+	c.Read(ctx)
+
+	// 2. The server answers the negotiation, then never starts TLS.
+	noTLS := serve(func(c net.Conn) {
+		readRequest(c)
+		c.Write([]byte{3, 0, 0, 19, 14, 0xd0, 0, 0, 0x12, 0x34, 0, 2, 0, 8, 0, 8, 0, 0, 0})
+		time.Sleep(2 * time.Second)
+	})
+	c2, ctx2 := dialGateway(t, gw, "sess-notls", noTLS)
+	c2.Read(ctx2)
+
+	// 3. Nothing is listening there at all.
+	closed := serve(func(net.Conn) {})
+	host, port, _ := net.SplitHostPort(closed)
+	_ = host
+	_ = port
+	gw2, _, stop2 := setupGateway(t)
+	defer stop2()
+	c3, ctx3 := dialGateway(t, gw2, "sess-gone", "127.0.0.1:1")
+	c3.Read(ctx3)
+
+	out := logged.String()
+	for _, want := range []string{
+		"waiting for the server's negotiation reply: timed out",
+		"server selected NLA with early authorization",
+		"TLS handshake: timed out",
+		"could not connect",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("log missing %q:\n%s", want, out)
+		}
+	}
+	if n := strings.Count(out, "handshake failed after"); n < 3 {
+		t.Errorf("expected every failed handshake to be logged with its duration, got %d:\n%s", n, out)
+	}
+}

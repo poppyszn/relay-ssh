@@ -4,6 +4,7 @@
   import { RdpService, type Profile, type RdpSessionInfo } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import { formatRdpError } from "../lib/rdp_errors";
   import { buildConfig, loadRdpClient, mountClient, needsResize, type RdpUi, type Size } from "../lib/rdp_client";
+  import { useNativeClipboard } from "../lib/native_clipboard";
   import Icon from "./Icon.svelte";
   import Modal from "./Modal.svelte";
 
@@ -36,7 +37,11 @@
   let pending: { info: RdpSessionInfo; at: number } | null = null;
   // The size the remote desktop currently has, so a resize only goes out when the tab really changed.
   let applied: Size = { width: 0, height: 0 };
-  const TOKEN_LIFETIME_MS = 45_000;
+  // The gateway token lives 5 minutes (rdpTokenLifetime in Go); start over a little before it runs out.
+  const TOKEN_LIFETIME_MS = 4 * 60_000;
+  let restoreClipboard: (() => void) | null = null;
+  // Reports a stage to the app log with the time since the session opened, to explain slow or failed connections.
+  const note = (stage: string) => { if (sessionId) RdpService.Note(sessionId, stage).catch(() => {}); };
 
   function fail(err: unknown) {
     const e = err as { backtrace?: () => string; message?: string };
@@ -45,6 +50,7 @@
     errorMessage = formatted.title;
     errorHint = formatted.hint;
     errorDetail = raw;
+    note(`failed: ${raw}`);
     viewState = "error";
   }
 
@@ -54,6 +60,8 @@
     clearTimeout(resizeTimer);
     try { ui?.shutdown(); } catch { /* already closed */ }
     ui = null;
+    restoreClipboard?.();
+    restoreClipboard = null;
     host?.replaceChildren();
   }
 
@@ -71,6 +79,7 @@
     try {
       const info = await RdpService.Open(target);
       sessionId = info.sessionId;
+      note("opened");
 
       let password = manualPassword;
       if (!password && info.hasSavedPassword) {
@@ -95,6 +104,7 @@
 
   async function startRdpClient(info: RdpSessionInfo, password: string) {
     try {
+      note("loading the client");
       const client = await loadRdpClient();
       if (!client) {
         // Never draw a "connected" screen without a real client: say so, and free the tunnel and gateway session.
@@ -105,9 +115,13 @@
         viewState = "error";
         return;
       }
+      note("client loaded");
       await tick();
+      restoreClipboard ??= useNativeClipboard();
       ui = await mountClient(host!, client);
+      note("client ready");
       ui.setEnableClipboard(true);
+      ui.setEnableAutoClipboard(true);
       const rect = host!.getBoundingClientRect();
       applied = { width: Math.max(640, Math.floor(rect.width)), height: Math.max(480, Math.floor(rect.height)) };
       const config = buildConfig(ui, client, {
@@ -122,7 +136,9 @@
         height: applied.height,
       });
       // The gateway pauses here while a certificate prompt is answered (see the rdp:cert event).
+      note("connecting");
       const session = await ui.connect(config);
+      note("connected");
       viewState = "connected";
       ui.setVisibility(true);
       watchSize();
@@ -130,6 +146,7 @@
       errorDetail = "";
       errorMessage = "Session ended";
       errorHint = end.reason();
+      note(`ended: ${end.reason()}`);
       viewState = "reconnect";
     } catch (err) {
       if (viewState !== "error") fail(err);
