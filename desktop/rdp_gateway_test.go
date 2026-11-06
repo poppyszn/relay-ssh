@@ -682,3 +682,63 @@ func TestGatewayLogsTheSessionLifecycle(t *testing.T) {
 		t.Errorf("content or token leaked into the log:\n%s", out)
 	}
 }
+
+// Some Windows RDP servers drop the TLS session ("internal error") as soon as the NLA login starts when TLS 1.3 was
+// negotiated; RDP clients are conservative here, so the gateway never offers anything newer than TLS 1.2.
+func TestGatewayOffersAtMostTLS12(t *testing.T) {
+	cfg := rdpClientTLSConfig()
+	if cfg.MaxVersion != tls.VersionTLS12 {
+		t.Fatalf("MaxVersion = %#x, want TLS 1.2 (%#x)", cfg.MaxVersion, tls.VersionTLS12)
+	}
+	if cfg.MinVersion != tls.VersionTLS12 {
+		t.Fatalf("MinVersion = %#x, want TLS 1.2", cfg.MinVersion)
+	}
+	if !cfg.InsecureSkipVerify {
+		t.Fatal("certificates are trusted by fingerprint (TOFU), not by chain, so verification must be skipped")
+	}
+}
+
+// End to end: a server that only speaks TLS 1.3 is refused with an RDCleanPath error, not silently negotiated.
+func TestGatewayDoesNotNegotiateTLS13(t *testing.T) {
+	cert := generateTestCertificate(t)
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		c, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer c.Close()
+		hdr := make([]byte, 4)
+		io.ReadFull(c, hdr)
+		io.ReadFull(c, make([]byte, int(hdr[2])<<8|int(hdr[3])-4))
+		c.Write([]byte{0x03, 0x00, 0x00, 0x0b, 0x06, 0xd0, 0x00, 0x00, 0x12, 0x34, 0x00})
+		tls.Server(c, &tls.Config{Certificates: []tls.Certificate{cert}, MinVersion: tls.VersionTLS13}).Handshake()
+	}()
+
+	gw, _, stopGw := setupGateway(t)
+	defer stopGw()
+	token, wsURL, err := gw.RegisterSession("sess-tls13", ln.Addr().String(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c, _, err := websocket.Dial(ctx, wsURL+"?token="+token, &websocket.DialOptions{HTTPHeader: http.Header{"Origin": []string{"wails://localhost"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, _ := EncodeRDCleanPath(RDCleanPathPdu{Destination: ln.Addr().String(), ProxyAuth: token, X224ConnectionPdu: []byte{3, 0, 0, 11, 6, 0xe0, 0, 0, 0, 0, 0}})
+	c.Write(ctx, websocket.MessageBinary, req)
+	_, resp, err := c.Read(ctx)
+	if err != nil {
+		t.Fatalf("expected an RDCleanPath error response, got %v", err)
+	}
+	pdu, err := DecodeRDCleanPath(resp)
+	if err != nil || pdu.Error == nil {
+		t.Fatalf("expected an RDCleanPath error for a TLS 1.3-only server, got %+v (%v)", pdu, err)
+	}
+}

@@ -155,6 +155,17 @@ func (g *RdpGateway) Close() error {
 	return g.server.Close()
 }
 
+// rdpClientTLSConfig is how the gateway speaks TLS to an RDP host. Capped at TLS 1.2: some Windows servers drop the
+// session ("internal error") when the NLA login starts over TLS 1.3, and RDP clients are conservative about it.
+// The chain is not verified: the host is trusted by its certificate's fingerprint (see RdpCertStore).
+func rdpClientTLSConfig() *tls.Config {
+	return &tls.Config{
+		MinVersion:         tls.VersionTLS12,
+		MaxVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: true,
+	}
+}
+
 // selectedProtocol describes the security the server chose in its X.224 Connection Confirm, for the log.
 func selectedProtocol(x224 []byte) string {
 	if len(x224) < 11 {
@@ -288,9 +299,7 @@ func (g *RdpGateway) handshakeAndRelay(ctx context.Context, c *websocket.Conn, r
 
 	log.Printf("rdp gateway: %s: server selected %s", reg.Destination, selectedProtocol(serverX224))
 
-	tlsConn := tls.Client(tcpConn, &tls.Config{
-		InsecureSkipVerify: true,
-	})
+	tlsConn := tls.Client(tcpConn, rdpClientTLSConfig())
 	if err := tlsConn.HandshakeContext(ctx); err != nil {
 		errPdu := NewRDCleanPathErrorPdu(TLSHandshakeFailedErrorCode)
 		b, _ := EncodeRDCleanPath(errPdu)
