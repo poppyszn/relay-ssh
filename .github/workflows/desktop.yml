@@ -33,7 +33,7 @@ permissions:
 jobs:
   check:
     runs-on: macos-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     env:
       MACOSX_DEPLOYMENT_TARGET: '13.0'
       CGO_CFLAGS: -mmacosx-version-min=13.0
