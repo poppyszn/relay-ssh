@@ -611,3 +611,74 @@ func TestGatewayLogsWhyItRefusedAConnection(t *testing.T) {
 		t.Errorf("a token was written to the log:\n%s", out)
 	}
 }
+
+func TestSelectedProtocolDescribesWhatTheServerAgreedTo(t *testing.T) {
+	cc := func(neg ...byte) []byte {
+		base := []byte{0x03, 0x00, 0x00, byte(11 + len(neg)), byte(6 + len(neg)), 0xd0, 0, 0, 0x12, 0x34, 0}
+		return append(base, neg...)
+	}
+	cases := []struct {
+		name string
+		x224 []byte
+		want string
+	}{
+		{"no negotiation block means standard RDP security", cc(), "standard RDP security (no TLS)"},
+		{"TLS", cc(0x02, 0, 8, 0, 1, 0, 0, 0), "TLS"},
+		{"NLA", cc(0x02, 0, 8, 0, 2, 0, 0, 0), "NLA (CredSSP)"},
+		{"NLA with early user authorization", cc(0x02, 0, 8, 0, 8, 0, 0, 0), "NLA with early authorization (CredSSP)"},
+		{"the server refused the negotiation", cc(0x03, 0, 8, 0, 5, 0, 0, 0), "negotiation failure, code 5"},
+		{"too short to read", []byte{3, 0, 0}, "unreadable"},
+	}
+	for _, c := range cases {
+		if got := selectedProtocol(c.x224); got != c.want {
+			t.Errorf("%s: got %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+// The gateway logs what the server agreed to and how a session ended (who closed it, and how many bytes went
+// each way), never any content, so a connection that ends mid-handshake can be told from the log.
+func TestGatewayLogsTheSessionLifecycle(t *testing.T) {
+	var logged bytes.Buffer
+	log.SetOutput(&logged)
+	defer log.SetOutput(os.Stderr)
+
+	cert := generateTestCertificate(t)
+	serverAddr, stopServer := startFakeRdpServer(t, cert)
+	defer stopServer()
+	gw, store, stopGw := setupGateway(t)
+	defer stopGw()
+	if err := store.Trust(serverAddr, FingerprintSHA256(cert.Certificate[0])); err != nil { // known host: no prompt
+		t.Fatal(err)
+	}
+
+	token, wsURL, err := gw.RegisterSession("sess-life", serverAddr, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c, _, err := websocket.Dial(ctx, wsURL+"?token="+token, &websocket.DialOptions{HTTPHeader: http.Header{"Origin": []string{"wails://localhost"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, _ := EncodeRDCleanPath(RDCleanPathPdu{Destination: serverAddr, ProxyAuth: token, X224ConnectionPdu: []byte{3, 0, 0, 11, 6, 0xe0, 0, 0, 0, 0, 0}})
+	c.Write(ctx, websocket.MessageBinary, req)
+	if _, _, err := c.Read(ctx); err != nil { // the RDCleanPath response
+		t.Fatal(err)
+	}
+	c.Write(ctx, websocket.MessageBinary, []byte("hello"))
+	c.Read(ctx) // the echo
+	c.Close(websocket.StatusNormalClosure, "bye")
+	time.Sleep(300 * time.Millisecond)
+
+	out := logged.String()
+	for _, want := range []string{"server selected standard RDP security", "TLS established", "session ended", "client closed", "5 bytes to the server"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("log missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "hello") || strings.Contains(out, token) {
+		t.Errorf("content or token leaked into the log:\n%s", out)
+	}
+}

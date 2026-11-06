@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -154,6 +155,34 @@ func (g *RdpGateway) Close() error {
 	return g.server.Close()
 }
 
+// selectedProtocol describes the security the server chose in its X.224 Connection Confirm, for the log.
+func selectedProtocol(x224 []byte) string {
+	if len(x224) < 11 {
+		return "unreadable"
+	}
+	neg := x224[11:]
+	if len(neg) < 8 {
+		return "standard RDP security (no TLS)"
+	}
+	val := uint32(neg[4]) | uint32(neg[5])<<8 | uint32(neg[6])<<16 | uint32(neg[7])<<24
+	if neg[0] == 0x03 {
+		return fmt.Sprintf("negotiation failure, code %d", val)
+	}
+	switch val {
+	case 0:
+		return "standard RDP security (no TLS)"
+	case 1:
+		return "TLS"
+	case 2:
+		return "NLA (CredSSP)"
+	case 4:
+		return "RDSTLS"
+	case 8:
+		return "NLA with early authorization (CredSSP)"
+	}
+	return fmt.Sprintf("unknown protocol %d", val)
+}
+
 // refuse answers 403 and logs why. The client only ever sees "WebSocket is Closed", so this is where a
 // refused connection can be told apart. A token is never logged.
 func refuse(w http.ResponseWriter, why string) {
@@ -257,6 +286,8 @@ func (g *RdpGateway) handshakeAndRelay(ctx context.Context, c *websocket.Conn, r
 		return err
 	}
 
+	log.Printf("rdp gateway: %s: server selected %s", reg.Destination, selectedProtocol(serverX224))
+
 	tlsConn := tls.Client(tcpConn, &tls.Config{
 		InsecureSkipVerify: true,
 	})
@@ -269,6 +300,7 @@ func (g *RdpGateway) handshakeAndRelay(ctx context.Context, c *websocket.Conn, r
 	defer tlsConn.Close()
 
 	state := tlsConn.ConnectionState()
+	log.Printf("rdp gateway: %s: TLS established (%s, %s)", reg.Destination, tls.VersionName(state.Version), tls.CipherSuiteName(state.CipherSuite))
 	if len(state.PeerCertificates) == 0 {
 		return fmt.Errorf("no peer certificates returned by server")
 	}
@@ -324,20 +356,27 @@ func (g *RdpGateway) handshakeAndRelay(ctx context.Context, c *websocket.Conn, r
 		return err
 	}
 
-	// Bidirectional byte relay with backpressure
-	errCh := make(chan error, 2)
+	// Bidirectional byte relay with backpressure. Only sizes and who ended it are logged, never content.
+	type ended struct {
+		who string
+		err error
+	}
+	var toServer, toClient atomic.Int64
+	started := time.Now()
+	errCh := make(chan ended, 2)
 	go func() {
 		for {
 			mt, data, rerr := c.Read(ctx)
 			if rerr != nil {
-				errCh <- rerr
+				errCh <- ended{"client", rerr}
 				return
 			}
 			if mt == websocket.MessageBinary && len(data) > 0 {
 				if _, werr := tlsConn.Write(data); werr != nil {
-					errCh <- werr
+					errCh <- ended{"server", werr}
 					return
 				}
+				toServer.Add(int64(len(data)))
 			}
 		}
 	}()
@@ -348,20 +387,23 @@ func (g *RdpGateway) handshakeAndRelay(ctx context.Context, c *websocket.Conn, r
 			n, rerr := tlsConn.Read(buf)
 			if n > 0 {
 				if werr := c.Write(ctx, websocket.MessageBinary, buf[:n]); werr != nil {
-					errCh <- werr
+					errCh <- ended{"client", werr}
 					return
 				}
+				toClient.Add(int64(n))
 			}
 			if rerr != nil {
-				errCh <- rerr
+				errCh <- ended{"server", rerr}
 				return
 			}
 		}
 	}()
 
-	<-errCh
+	first := <-errCh
 	tlsConn.Close()
 	c.Close(websocket.StatusNormalClosure, "session closed")
 	<-errCh
+	log.Printf("rdp gateway: %s: session ended after %s, %s closed it (%v); %d bytes to the server, %d bytes to the client",
+		reg.Destination, time.Since(started).Round(time.Millisecond), first.who, first.err, toServer.Load(), toClient.Load())
 	return nil
 }
