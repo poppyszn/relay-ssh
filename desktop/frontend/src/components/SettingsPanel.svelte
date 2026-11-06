@@ -136,6 +136,10 @@
       <button type="button" class="switch" role="switch" aria-checked={settings.copyOnSelect} aria-labelledby="set-copy" onclick={() => (settings.copyOnSelect = !settings.copyOnSelect)}></button>
     </div>
     <div class="opt">
+      <div class="txt"><span id="set-click">Click to move the cursor</span><span class="hint">Click in the command you are typing to move the cursor there. Works at the prompt of a shell that has command blocks set up (it needs their prompt markers), never while a program is running.</span></div>
+      <button type="button" class="switch" role="switch" aria-checked={settings.clickToMove} aria-labelledby="set-click" onclick={() => (settings.clickToMove = !settings.clickToMove)}></button>
+    </div>
+    <div class="opt">
       <div class="txt"><span id="set-blink">Blinking cursor</span></div>
       <button type="button" class="switch" role="switch" aria-checked={settings.cursorBlink} aria-labelledby="set-blink" onclick={() => (settings.cursorBlink = !settings.cursorBlink)}></button>
     </div>

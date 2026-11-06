@@ -2,6 +2,8 @@ import { Terminal, type IDisposable } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { SearchAddon } from "@xterm/addon-search";
 import { BlockTracker, type BlockRef } from "./blocks";
+import { nextExtent } from "./terminal_anchor";
+import { installClickToMove } from "./click_to_move";
 import { settings } from "../state/settings.svelte";
 import "@xterm/xterm/css/xterm.css";
 import { TerminalService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
@@ -17,13 +19,15 @@ const ACK_BATCH = 128 * 1024;
  * rows. Full-screen programs and a scrolled buffer are left alone.
  */
 export function anchorBottom(term: Terminal): IDisposable {
+  let extent = 0; // rows from the top that hold content; see terminal_anchor.ts
   const apply = () => {
     const screen = term.element?.querySelector<HTMLElement>(".xterm-screen");
     if (!screen || !term.rows) return;
     const buf = term.buffer.active;
     let shift = 0;
     if (buf.type === "normal" && buf.baseY === 0) {
-      shift = Math.max(0, term.rows - (buf.cursorY + 1)) * (screen.clientHeight / term.rows);
+      extent = nextExtent(extent, buf, term.rows);
+      shift = Math.max(0, term.rows - extent) * (screen.clientHeight / term.rows);
     }
     screen.style.transform = shift > 0 ? `translateY(${Math.round(shift)}px)` : "";
   };
@@ -124,6 +128,8 @@ export async function openSession(el: HTMLElement, target: string, scrollback = 
     dispose: () => { ws.close(); term.dispose(); },
   };
   const tracker = new BlockTracker(term as never, () => s.onBlocks?.(), (b, r) => s.onBlockMenu?.(b, r));
+  // Clicking in the command being typed moves the cursor there (only while a prompt is waiting; see click_to_move.ts).
+  installClickToMove(term as never, tracker, (keys) => { if (ws.readyState === WebSocket.OPEN) ws.send(enc.encode(keys)); }, () => settings.clickToMove);
   const anchor = anchorBottom(term);
   term.onSelectionChange(() => {
     if (settings.copyOnSelect && term.hasSelection()) navigator.clipboard?.writeText(term.getSelection()).catch(() => {});

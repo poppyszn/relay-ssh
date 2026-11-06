@@ -91,4 +91,15 @@ describe("SettingsPanel", () => {
     expect(settings.rdpClipboard).toBe(false);
     expect(sw.getAttribute("aria-checked")).toBe("false");
   });
+
+  it("lets click-to-move-cursor be switched off, and says when it works", () => {
+    settings.clickToMove = true;
+    const t = show();
+    const sw = t.querySelector<HTMLElement>('[aria-labelledby="set-click"]')!;
+    expect(sw.getAttribute("aria-checked")).toBe("true");
+    expect(t.querySelector("#set-click")?.textContent).toBe("Click to move the cursor");
+    expect(t.textContent).toMatch(/command blocks/i);
+    click(sw);
+    expect(settings.clickToMove).toBe(false);
+  });
 });

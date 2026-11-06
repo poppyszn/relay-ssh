@@ -147,10 +147,11 @@ input[type="checkbox"] { width: 15px; height: 15px; padding: 0; accent-color: va
 }
 .drag { --wails-draggable: drag; }
 .nodrag { --wails-draggable: no-drag; }
-/* Slim, flat scrollbars that sit flush against the window edge (no inset track). */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text) 24%, transparent); min-height: 32px; }
-::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--text) 42%, transparent); }
+/* Scrollbars: a 14px grab area with an 8px thumb inset in it (the transparent border), so they are easy to hit and
+   still look slim. The track is transparent and the bar sits flush against the window edge. */
+::-webkit-scrollbar { width: 14px; height: 14px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text) 24%, transparent); background-clip: padding-box; border: 3px solid transparent; border-radius: 8px; min-height: 40px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--text) 42%, transparent); background-clip: padding-box; }
 ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
 
 /* Command blocks: xterm decorations drawn over the terminal (see blocks.ts). */
@@ -160,6 +161,8 @@ input[type="checkbox"] { width: 15px; height: 15px; padding: 0; accent-color: va
    (--bleed-l/-r are measured in terminal.ts). */
 .relay-block { pointer-events: none; margin-left: calc(-1 * var(--bleed-l, 24px)); width: calc(100% + var(--bleed-l, 24px) + var(--bleed-r, 24px)) !important; background: var(--band); border-top: 1px solid var(--divider); box-shadow: inset 3px 0 var(--stripe-ok); }
 .relay-block.err { background: color-mix(in srgb, var(--err) 12%, transparent); border-top-color: var(--err-edge); border-bottom: 1px solid var(--err-edge); box-shadow: inset 3px 0 var(--err); }
+/* Full-screen programs (vim, less, htop) run on the alternate screen: no block overlays over them (see blocks.ts). */
+.xterm.relay-alt .relay-block, .xterm.relay-alt .relay-head, .xterm.relay-alt .relay-badge { display: none !important; }
 /* The block header: directory and git branch on the block's blank first row. */
 .relay-head { pointer-events: none; display: flex !important; align-items: center; gap: 12px; overflow: hidden; white-space: nowrap; font: 500 11px var(--sans); color: var(--dim); }
 .relay-head .head-path { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
@@ -172,9 +175,9 @@ input[type="checkbox"] { width: 15px; height: 15px; padding: 0; accent-color: va
 .relay-badge .block-menu:hover { background: var(--line); color: var(--strong); }
 .relay-badge.err { color: var(--err-text); }
 
-/* xterm 6 draws its own scrollbar inside the padded terminal. Slim it to a 5px slider
-   (with a 10px grab area) and push it out to the pane's right edge, through the padding. */
-.xterm .xterm-scrollable-element > .scrollbar.vertical { width: 10px !important; right: -24px !important; }
-.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider { width: 5px !important; left: auto !important; right: 0 !important; background: color-mix(in srgb, var(--text) 16%, transparent); }
-.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover { background: color-mix(in srgb, var(--text) 34%, transparent); }
-.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active { background: color-mix(in srgb, var(--text) 45%, transparent); }
+/* xterm 6 draws its own scrollbar inside the padded terminal. Make it a 14px grab area with an 8px slider, and push
+   it out to the pane's right edge, through the padding. */
+.xterm .xterm-scrollable-element > .scrollbar.vertical { width: 14px !important; right: -24px !important; }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider { width: 8px !important; left: auto !important; right: 3px !important; border-radius: 4px; background: color-mix(in srgb, var(--text) 22%, transparent); }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover { background: color-mix(in srgb, var(--text) 40%, transparent); }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active { background: color-mix(in srgb, var(--text) 52%, transparent); }

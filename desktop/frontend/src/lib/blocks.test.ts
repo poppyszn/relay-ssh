@@ -10,11 +10,16 @@ function fake() {
   const row = { baseY: 0, cursorY: 0, cursorX: 0 };
   const lines: string[] = [];
   const elements: HTMLElement[] = [];
+  let bufType: "normal" | "alternate" = "normal";
+  let onBuffer: () => void = () => {};
+  const element = document.createElement("div");
   const decos: { line: number; height: number; anchor?: string; cls: string; text: string }[] = [];
   const term: TermLike = {
     cols: 80,
     rows: 24,
+    element,
     buffer: {
+      onBufferChange: (cb: () => void) => { onBuffer = cb; return { dispose() {} }; },
       active: {
         get baseY() { return row.baseY; },
         get cursorX() { return row.cursorX; },
@@ -22,7 +27,7 @@ function fake() {
         viewportY: 0,
         get length() { return lines.length; },
         getLine: (y: number) => (lines[y] === undefined ? undefined : { isWrapped: false, translateToString: (trim = false, start = 0) => (trim ? lines[y].slice(start).trimEnd() : lines[y].slice(start)) }) as never,
-        type: "normal",
+        get type() { return bufType; },
       },
     },
     parser: { registerOscHandler: (_id, cb) => { osc = cb; return { dispose() {} }; } },
@@ -52,10 +57,59 @@ function fake() {
   return {
     term, decos, row, lines, elements,
     osc: (d: string) => osc(d),
+    setAlt: (on: boolean) => { bufType = on ? "alternate" : "normal"; onBuffer(); },
     type: (s: string) => onData(s),
     flush: () => new Promise((r) => setTimeout(r, 0)),
   };
 }
+
+describe("BlockTracker input start", () => {
+  // Where typed input begins, but only while a prompt is waiting for it: that is when clicking may move the cursor.
+  it("is known between the prompt and Enter, and nowhere else", () => {
+    const f = fake();
+    const t = new BlockTracker(f.term);
+    expect(t.inputStart()).toBeUndefined(); // before any prompt
+    f.row.cursorY = 4; f.row.cursorX = 0; f.osc("A");
+    expect(t.inputStart()).toBeUndefined(); // the prompt is still being drawn
+    f.row.cursorX = 2; f.osc("B");
+    expect(t.inputStart()).toEqual({ line: 4, col: 2 });
+    f.type("ls\r"); // Enter: the command is running, keys would go to it
+    expect(t.inputStart()).toBeUndefined();
+    t.dispose();
+  });
+});
+
+describe("BlockTracker on the alternate screen", () => {
+  // Blocks are overlays tied to rows of the normal screen. A full-screen program (vim, less, htop) switches to the
+  // alternate screen, and the overlays must not be drawn over it.
+  it("hides block decorations while a full-screen program runs, and shows them again after", () => {
+    const f = fake();
+    const t = new BlockTracker(f.term);
+    const el = f.term.element!;
+    expect(el.classList.contains("relay-alt")).toBe(false);
+    f.setAlt(true);
+    expect(el.classList.contains("relay-alt")).toBe(true);
+    f.setAlt(false);
+    expect(el.classList.contains("relay-alt")).toBe(false);
+    t.dispose();
+  });
+
+  it("is hidden from the start when created while on the alternate screen", () => {
+    const f = fake();
+    f.setAlt(true);
+    const t = new BlockTracker(f.term);
+    expect(f.term.element!.classList.contains("relay-alt")).toBe(true);
+    t.dispose();
+  });
+
+  it("stops watching and clears the mark when disposed", () => {
+    const f = fake();
+    const t = new BlockTracker(f.term);
+    f.setAlt(true);
+    t.dispose();
+    expect(f.term.element!.classList.contains("relay-alt")).toBe(false);
+  });
+});
 
 describe("BlockTracker", () => {
   it("draws a block from prompt to the next prompt, with exit status and badge", async () => {
@@ -174,7 +228,7 @@ describe("BlockTracker", () => {
     const f = fake();
     new BlockTracker(f.term);
     f.osc("A"); f.osc("B"); f.type("vim\r");
-    (f.term.buffer.active as { type: string }).type = "alternate";
+    f.setAlt(true);
     f.row.cursorY = 2;
     f.osc("D;0");
     await f.flush();

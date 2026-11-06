@@ -5,7 +5,11 @@ import { blockText, rowAt } from "./blocktext";
 export type TermLike = Pick<Terminal, "cols" | "rows" | "registerMarker" | "onData"> & {
   /** The terminal's DOM element; absent in tests, where hover tracking is skipped. */
   element?: HTMLElement;
-  buffer: { active: Pick<Terminal["buffer"]["active"], "baseY" | "cursorX" | "cursorY" | "viewportY" | "type" | "length" | "getLine"> };
+  buffer: {
+    active: Pick<Terminal["buffer"]["active"], "baseY" | "cursorX" | "cursorY" | "viewportY" | "type" | "length" | "getLine">;
+    /** Fires when a full-screen program switches to or from the alternate screen. Absent in some fakes. */
+    onBufferChange?: (cb: () => void) => IDisposable;
+  };
   parser: { registerOscHandler(id: number, cb: (data: string) => boolean): IDisposable };
   registerDecoration(o: Parameters<Terminal["registerDecoration"]>[0]): IDecoration | undefined;
 };
@@ -93,6 +97,31 @@ export class BlockTracker {
       }),
     );
     this.trackHover();
+    this.hideOnAlternateScreen();
+  }
+
+  /**
+   * Blocks are overlays tied to rows of the normal screen. A full-screen program (vim, less, htop) runs on the
+   * alternate screen, and the overlays would be drawn over it (backgrounds, headers, badges), so they are hidden by
+   * a class on the terminal element for as long as it is active.
+   */
+  private hideOnAlternateScreen() {
+    const el = this.term.element;
+    if (!el) return;
+    const sync = () => el.classList.toggle("relay-alt", this.term.buffer.active.type === "alternate");
+    sync();
+    const sub = this.term.buffer.onBufferChange?.(sync);
+    this.subs.push({ dispose: () => { sub?.dispose(); el.classList.remove("relay-alt"); } });
+  }
+
+  /**
+   * Where typed input begins (the buffer line and column just after the prompt), but only while a prompt is waiting
+   * for it: between the prompt and Enter. Clicking may move the cursor then; at any other time keys would go to a
+   * running program.
+   */
+  inputStart(): { line: number; col: number } | undefined {
+    if (!this.cmd || this.ran || this.cmd.isDisposed || this.cmd.line < 0) return undefined;
+    return { line: this.cmd.line, col: this.cmdCol };
   }
 
   /** Marks the block under the pointer so its menu button shows. */
