@@ -1,6 +1,9 @@
 // @vitest-environment happy-dom
 import { flushSync, mount, unmount } from "svelte";
 import { describe, expect, it, vi } from "vitest";
+
+// These tests are about the view, not the 5 MB client, which exists only after `make rdp-client`.
+vi.mock("../lib/rdp_client", async (orig) => ({ ...(await orig<typeof import("../lib/rdp_client")>()), loadRdpClient: async () => null }));
 import RdpView from "./RdpView.svelte";
 import { formatRdpError } from "../lib/rdp_errors";
 import { RdpService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";

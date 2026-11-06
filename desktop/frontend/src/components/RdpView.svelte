@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from "svelte";
   import { Events } from "@wailsio/runtime";
-  import { RdpService, type Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
+  import { RdpService, type Profile, type RdpSessionInfo } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import { formatRdpError } from "../lib/rdp_errors";
+  import { buildConfig, loadRdpClient, mountClient, type RdpUi } from "../lib/rdp_client";
   import Icon from "./Icon.svelte";
   import Modal from "./Modal.svelte";
 
@@ -22,19 +23,42 @@
   let errorMessage = $state("");
   let errorHint = $state("");
   let sessionId = $state("");
-  let canvasContainer = $state<HTMLElement | undefined>(undefined);
-  let canvas = $state<HTMLCanvasElement | undefined>(undefined);
-  let canvasFocused = $state(false);
+  let host = $state<HTMLElement | undefined>(undefined);
 
   let certEvent = $state<CertInfo | null>(null);
   let manualPassword = $state("");
-  let wasmClient: any = null;
+  let ui: RdpUi | null = null;
   let resizeObserver: ResizeObserver | null = null;
+  let resizeTimer: ReturnType<typeof setTimeout> | undefined;
   let unlistenCert: (() => void) | null = null;
+  // The session Open returned while the password was being typed. Its token only lives 60 seconds.
+  let pending: { info: RdpSessionInfo; at: number } | null = null;
+  const TOKEN_LIFETIME_MS = 45_000;
 
-  const MAX_CLIPBOARD = 1024 * 1024; // 1 MiB limit
+  function fail(err: unknown) {
+    const e = err as { backtrace?: () => string; message?: string };
+    const formatted = formatRdpError(e?.backtrace?.() ?? e?.message ?? String(err));
+    errorMessage = formatted.title;
+    errorHint = formatted.hint;
+    viewState = "error";
+  }
+
+  function teardown() {
+    resizeObserver?.disconnect();
+    resizeObserver = null;
+    clearTimeout(resizeTimer);
+    try { ui?.shutdown(); } catch { /* already closed */ }
+    ui = null;
+    host?.replaceChildren();
+  }
+
+  function closeSession() {
+    if (sessionId) RdpService.Close(sessionId).catch(() => {});
+    sessionId = "";
+  }
 
   async function connectSession() {
+    teardown();
     viewState = "connecting";
     errorMessage = "";
     errorHint = "";
@@ -42,8 +66,8 @@
       const info = await RdpService.Open(target);
       sessionId = info.sessionId;
 
-      let password = "";
-      if (info.hasSavedPassword) {
+      let password = manualPassword;
+      if (!password && info.hasSavedPassword) {
         try {
           password = await RdpService.Credentials(sessionId);
         } catch {
@@ -51,94 +75,84 @@
         }
       }
 
-      if (!password && !manualPassword) {
+      if (!password) {
+        pending = { info, at: Date.now() };
         viewState = "password_prompt";
         return;
       }
 
-      await startRdpClient(info, password || manualPassword);
-    } catch (err: any) {
-      const formatted = formatRdpError(err?.message ?? String(err));
-      errorMessage = formatted.title;
-      errorHint = formatted.hint;
-      viewState = "error";
+      await startRdpClient(info, password);
+    } catch (err) {
+      fail(err);
     }
   }
 
-  async function startRdpClient(info: any, pass: string) {
+  async function startRdpClient(info: RdpSessionInfo, password: string) {
     try {
-      // Dynamic import of IronRDP WASM client wrapper
-      const wasmPath = "../wasm/ironrdp.js";
-      const ironrdp = await import(/* @vite-ignore */ wasmPath).catch(() => null);
-
-      if (!ironrdp) {
+      const client = await loadRdpClient();
+      if (!client) {
         // Never draw a "connected" screen without a real client: say so, and free the tunnel and gateway session.
-        RdpService.Close(info.sessionId).catch(() => {});
+        closeSession();
         errorMessage = "Remote desktop is not built into this version";
-        errorHint = "This copy of Relay was built without its RDP client, so it cannot open remote desktops. Build it with the IronRDP client (see desktop/README.md), or use an SSH connection.";
+        errorHint = "This copy of Relay was built without its RDP client, so it cannot open remote desktops. Build it with `make rdp-client` (see desktop/README.md), or use an SSH connection.";
         viewState = "error";
         return;
       }
-
-      // Initialize IronRDP client
-      viewState = "connected";
       await tick();
-
-      if (canvas && canvasContainer) {
-        const rect = canvasContainer.getBoundingClientRect();
-        canvas.width = Math.max(800, Math.floor(rect.width));
-        canvas.height = Math.max(600, Math.floor(rect.height));
-
-        setupResizeObserver();
+      ui = await mountClient(host!, client);
+      ui.setEnableClipboard(true);
+      const rect = host!.getBoundingClientRect();
+      const config = buildConfig(ui, client, {
+        username: info.user,
+        password,
+        domain: info.domain,
+        host: info.host,
+        port: info.port,
+        wsUrl: info.wsUrl,
+        token: info.token,
+        width: Math.max(640, Math.floor(rect.width)),
+        height: Math.max(480, Math.floor(rect.height)),
+      });
+      // The gateway pauses here while a certificate prompt is answered (see the rdp:cert event).
+      const session = await ui.connect(config);
+      viewState = "connected";
+      ui.setVisibility(true);
+      watchSize();
+      const end = await session.run();
+      errorMessage = "Session ended";
+      errorHint = end.reason();
+      viewState = "reconnect";
+    } catch (err) {
+      if (viewState !== "error") fail(err);
+    } finally {
+      if (viewState === "error" || viewState === "reconnect") {
+        teardown();
+        closeSession();
       }
-    } catch (err: any) {
-      const formatted = formatRdpError(err?.message ?? String(err));
-      errorMessage = formatted.title;
-      errorHint = formatted.hint;
-      viewState = "error";
     }
   }
 
-  function setupResizeObserver() {
-    if (!canvasContainer || !canvas) return;
-    resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width > 0 && height > 0 && canvas) {
-          canvas.width = Math.floor(width);
-          canvas.height = Math.floor(height);
-          if (wasmClient?.resize) {
-            wasmClient.resize(canvas.width, canvas.height);
-          }
+  // The remote desktop follows the tab's size (display control), a moment after the resizing stops.
+  function watchSize() {
+    if (!host) return;
+    resizeObserver = new ResizeObserver(() => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const { width, height } = host!.getBoundingClientRect();
+        if (ui && width > 0 && height > 0) {
+          try { ui.resize(Math.floor(width), Math.floor(height)); } catch { /* the server cannot resize */ }
         }
-      }
+      }, 250);
     });
-    resizeObserver.observe(canvasContainer);
+    resizeObserver.observe(host);
   }
 
-  function handleKey(e: KeyboardEvent) {
-    if (!canvasFocused) return;
-    // Cmd combinations on macOS stay with Relay
-    if (e.metaKey) {
-      return;
-    }
-    // Prevent default browser shortcuts when canvas has focus
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (wasmClient?.sendKey) {
-      wasmClient.sendKey(e.code, e.type === "keydown");
-    }
-  }
-
-  function handlePaste(e: ClipboardEvent) {
-    if (!canvasFocused) return;
-    const text = e.clipboardData?.getData("text/plain") ?? "";
-    if (text && text.length <= MAX_CLIPBOARD) {
-      if (wasmClient?.sendClipboardText) {
-        wasmClient.sendClipboardText(text);
-      }
-    }
+  function cancel() {
+    teardown();
+    closeSession();
+    errorMessage = "Connection cancelled";
+    errorHint = "The connection attempt was cancelled.";
+    viewState = "error";
   }
 
   async function acceptCert(accept: boolean) {
@@ -156,7 +170,15 @@
 
   function submitPassword(e?: Event) {
     e?.preventDefault();
-    if (manualPassword) {
+    if (!manualPassword) return;
+    const p = pending;
+    pending = null;
+    if (p && Date.now() - p.at < TOKEN_LIFETIME_MS) {
+      viewState = "connecting";
+      startRdpClient(p.info, manualPassword);
+    } else {
+      // Typing took longer than the gateway token lives: start over with a fresh session.
+      closeSession();
       connectSession();
     }
   }
@@ -174,22 +196,21 @@
 
   onDestroy(() => {
     if (unlistenCert) unlistenCert();
-    if (resizeObserver) resizeObserver.disconnect();
-    if (sessionId) {
-      RdpService.Close(sessionId).catch(() => {});
-    }
+    teardown();
+    closeSession();
   });
 </script>
 
-<svelte:window onkeydown={handleKey} onkeyup={handleKey} onpaste={handlePaste} />
-
-<div class="rdp-view" bind:this={canvasContainer}>
+<div class="rdp-view">
+  <!-- The client lives here for the whole session. It stays mounted under the prompts and cards below,
+       because removing it would end the session (the certificate prompt appears mid-connection). -->
+  <div class="stage" class:live={viewState === "connected"} bind:this={host}></div>
   {#if viewState === "connecting"}
     <div class="center-card" role="status">
       <div class="spinner" aria-hidden="true"></div>
       <div class="title">Connecting to {prof?.name ?? target}</div>
       <div class="sub mono">{prof?.user}@{prof?.host}:{prof?.port || 3389}</div>
-      <button type="button" class="btn sm" onclick={() => { if (sessionId) RdpService.Close(sessionId); viewState = "error"; errorMessage = "Connection cancelled"; errorHint = "The connection attempt was cancelled."; }}>Cancel</button>
+      <button type="button" class="btn sm" onclick={cancel}>Cancel</button>
     </div>
   {:else if viewState === "password_prompt"}
     <div class="center-card">
@@ -239,21 +260,11 @@
       </div>
     </Modal>
   {:else if viewState === "connected"}
-    <div class="canvas-wrap">
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-      <canvas
-        bind:this={canvas}
-        tabindex="0"
-        class="rdp-canvas"
-        onfocus={() => (canvasFocused = true)}
-        onblur={() => (canvasFocused = false)}
-        aria-label="Remote Desktop canvas"
-      ></canvas>
-      <div class="hud" class:focused={canvasFocused}>
-        <span class="dot ok"></span>
-        <span class="mono">{prof?.user}@{prof?.host}:{prof?.port || 3389}</span>
-        <span class="kb-hint">Keyboard active (⌘ shortcuts stay with Relay)</span>
-      </div>
+    <div class="bar" role="toolbar" aria-label="Remote desktop">
+      <span class="dot ok" aria-hidden="true"></span>
+      <span class="mono who">{prof?.user}@{prof?.host}</span>
+      <button type="button" class="btn ghost sm" title="Send Ctrl+Alt+Delete to the remote desktop" onclick={() => ui?.ctrlAltDel()}>Ctrl+Alt+Del</button>
+      <button type="button" class="btn ghost sm" onclick={cancel}>Disconnect</button>
     </div>
   {:else if viewState === "error" || viewState === "reconnect"}
     <div class="center-card" role="alert">
@@ -267,7 +278,7 @@
 
 <style>
   .rdp-view { width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--bg); position: relative; overflow: hidden; }
-  .center-card { margin: auto; width: min(440px, 90%); padding: var(--s5); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-modal); display: flex; flex-direction: column; align-items: center; gap: var(--s3); text-align: center; }
+  .center-card { position: relative; z-index: 1; margin: auto; width: min(440px, 90%); padding: var(--s5); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-modal); display: flex; flex-direction: column; align-items: center; gap: var(--s3); text-align: center; }
   .title { font-weight: 600; font-size: var(--t-md); color: var(--strong); }
   .sub { font-size: var(--t-xs); color: var(--muted); }
   .hint-text { font-size: var(--t-sm); color: var(--muted); line-height: 1.5; margin: var(--s1) 0; }
@@ -280,11 +291,11 @@
   .fp-box { display: flex; flex-direction: column; gap: var(--s1); padding: var(--s3); background: var(--field); border: 1px solid var(--fieldline); border-radius: var(--r-sm); font-size: var(--t-xs); }
   .fp { word-break: break-all; color: var(--strong); font-size: var(--t-xs); }
   .modal-acts { display: flex; justify-content: flex-end; gap: var(--s2); }
-  .canvas-wrap { width: 100%; height: 100%; position: relative; display: flex; }
-  .rdp-canvas { width: 100%; height: 100%; display: block; outline: none; }
-  .rdp-canvas:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
-  .hud { position: absolute; bottom: var(--s2); left: var(--s2); display: flex; align-items: center; gap: var(--s2); padding: 4px var(--s3); background: var(--float); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: var(--t-xs); color: var(--muted); pointer-events: none; opacity: 0.7; transition: opacity 0.15s ease; }
-  .hud.focused { opacity: 1; }
-  .kb-hint { border-left: 1px solid var(--line); padding-left: var(--s2); }
+  /* Hidden (not removed) until the session is up; the prompts and cards above it are positioned over it. */
+  .stage { position: absolute; inset: 0; visibility: hidden; }
+  .stage.live { visibility: visible; }
+  .bar { position: absolute; top: var(--s2); right: var(--s2); z-index: 2; display: flex; align-items: center; gap: var(--s1); padding: 2px var(--s2) 2px var(--s3); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-sm); font-size: var(--t-xs); color: var(--muted); opacity: 0.35; transition: opacity var(--dur-2) var(--ease); }
+  .bar:hover, .bar:focus-within { opacity: 1; }
+  .who { margin-right: var(--s1); }
   .err-icon { color: var(--warn); }
 </style>
