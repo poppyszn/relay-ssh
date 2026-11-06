@@ -120,3 +120,10 @@ export function RememberPassphrase(name: string, passphrase: string): $Cancellab
 export function Restore(path: string, passphrase: string): $CancellablePromise<void> {
     return $Call.ByID(2164495108, path, passphrase);
 }
+
+/**
+ * Version reports which build of Relay is running, for the status bar. Bound to the frontend.
+ */
+export function Version(): $CancellablePromise<string> {
+    return $Call.ByID(4087209626);
+}

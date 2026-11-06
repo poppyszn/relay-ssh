@@ -148,4 +148,16 @@ describe("RdpView component", () => {
     expect(close).toHaveBeenCalledWith("s-nowasm");
     unmount(c);
   });
+
+  it("keeps the original error text under the friendly summary so a failure can be diagnosed", async () => {
+    vi.spyOn(RdpService, "Open").mockRejectedValue(new Error("dial tcp 10.0.0.5:3389: connect: connection refused"));
+    const target = document.createElement("div");
+    const c = mount(RdpView, { target, props: { target: "win-box-raw", prof: { name: "win-box-raw", protocol: "rdp", host: "10.0.0.5", user: "admin", port: 3389, auth: "", key: "", folder: "", tags: [], jump: "", forwardAgent: false, blocks: "", tunnels: [] } } });
+    flushSync();
+    await new Promise((r) => setTimeout(r, 20));
+    flushSync();
+    expect(target.textContent).toContain("Port closed or unreachable");
+    expect(target.querySelector("details")?.textContent).toContain("dial tcp 10.0.0.5:3389: connect: connection refused");
+    unmount(c);
+  });
 });

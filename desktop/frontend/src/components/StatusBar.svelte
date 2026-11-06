@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { ToolsService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import { ws } from "../state/workspace.svelte";
   import { vault } from "../state/vault.svelte";
   import Icon from "./Icon.svelte";
@@ -7,6 +9,9 @@
   let { profiles, themeName, onvault }: { profiles: Profile[]; themeName: string; onvault?: () => void } = $props();
   const info = $derived(ws.panes[ws.focusedPane]);
   const prof = $derived(info?.target ? profiles.find((p) => p.name === info.target) : undefined);
+  // Which build this is (the commit it was made from), so "is this the right copy?" has an answer.
+  let version = $state("");
+  onMount(() => { ToolsService.Version().then((v) => (version = v), () => {}); });
   const size = $derived.by(() => {
     const t = ws.session(ws.focusedPane)?.term;
     return t ? `${t.cols}×${t.rows}` : "";
@@ -39,6 +44,7 @@
   </button>
   <span class="cell mono">UTF-8 {size}</span>
   <span class="cell">{themeName}</span>
+  {#if version}<span class="cell mono ver" data-version title="Relay build {version}">{version}</span>{/if}
 </footer>
 
 <style>
@@ -49,4 +55,5 @@
   .act:hover { background: var(--hover); color: var(--strong); }
   .ok { color: var(--ok); }
   .vault-btn { color: var(--muted); }
+  .ver { color: var(--dim); user-select: text; }
 </style>

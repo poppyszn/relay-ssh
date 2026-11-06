@@ -22,6 +22,7 @@
   let viewState = $state<RdpState>("connecting");
   let errorMessage = $state("");
   let errorHint = $state("");
+  let errorDetail = $state("");
   let sessionId = $state("");
   let host = $state<HTMLElement | undefined>(undefined);
 
@@ -39,9 +40,11 @@
 
   function fail(err: unknown) {
     const e = err as { backtrace?: () => string; message?: string };
-    const formatted = formatRdpError(e?.backtrace?.() ?? e?.message ?? String(err));
+    const raw = e?.backtrace?.() ?? e?.message ?? String(err);
+    const formatted = formatRdpError(raw);
     errorMessage = formatted.title;
     errorHint = formatted.hint;
+    errorDetail = raw;
     viewState = "error";
   }
 
@@ -64,6 +67,7 @@
     viewState = "connecting";
     errorMessage = "";
     errorHint = "";
+    errorDetail = "";
     try {
       const info = await RdpService.Open(target);
       sessionId = info.sessionId;
@@ -95,6 +99,7 @@
       if (!client) {
         // Never draw a "connected" screen without a real client: say so, and free the tunnel and gateway session.
         closeSession();
+        errorDetail = "";
         errorMessage = "Remote desktop is not built into this version";
         errorHint = "This copy of Relay was built without its RDP client, so it cannot open remote desktops. Build it with `make rdp-client` (see desktop/README.md), or use an SSH connection.";
         viewState = "error";
@@ -122,6 +127,7 @@
       ui.setVisibility(true);
       watchSize();
       const end = await session.run();
+      errorDetail = "";
       errorMessage = "Session ended";
       errorHint = end.reason();
       viewState = "reconnect";
@@ -154,6 +160,7 @@
   function cancel() {
     teardown();
     closeSession();
+    errorDetail = "";
     errorMessage = "Connection cancelled";
     errorHint = "The connection attempt was cancelled.";
     viewState = "error";
@@ -167,6 +174,7 @@
       viewState = "connecting";
     } else {
       viewState = "error";
+      errorDetail = "";
       errorMessage = "Certificate rejected by user";
       errorHint = "The remote desktop connection was aborted because the TLS certificate was not trusted.";
     }
@@ -228,7 +236,7 @@
         <p class="hint">Stored in memory for this session only; never saved to disk or sent to the backend.</p>
         <div class="acts">
           <button type="submit" class="btn primary">Connect</button>
-          <button type="button" class="btn" onclick={() => { viewState = "error"; errorMessage = "Cancelled"; errorHint = "No password entered."; }}>Cancel</button>
+          <button type="button" class="btn" onclick={() => { viewState = "error"; errorDetail = ""; errorMessage = "Cancelled"; errorHint = "No password entered."; }}>Cancel</button>
         </div>
       </form>
     </div>
@@ -275,6 +283,7 @@
       <div class="err-icon"><Icon name="warning" size={20} /></div>
       <div class="title">{errorMessage || "Session ended"}</div>
       {#if errorHint}<div class="hint-text">{errorHint}</div>{/if}
+      {#if errorDetail}<details class="detail"><summary>Technical details</summary><pre class="mono">{errorDetail}</pre></details>{/if}
       <button type="button" class="btn primary sm" onclick={connectSession}>Reconnect</button>
     </div>
   {/if}
@@ -302,4 +311,7 @@
   .bar:hover, .bar:focus-within { opacity: 1; }
   .who { margin-right: var(--s1); }
   .err-icon { color: var(--warn); }
+  .detail { width: 100%; text-align: left; font-size: var(--t-xs); color: var(--muted); }
+  .detail summary { cursor: pointer; }
+  .detail pre { margin: var(--s2) 0 0; padding: var(--s2) var(--s3); max-height: 160px; overflow: auto; white-space: pre-wrap; word-break: break-word; user-select: text; background: var(--field); border: 1px solid var(--fieldline); border-radius: var(--r-sm); }
 </style>
