@@ -32,6 +32,10 @@ publicly.
   Origin matches to prevent local SSRF or unauthorized access.
 - RDP host certificates use Trust-On-First-Use (TOFU) with SHA-256 fingerprints saved in `~/.config/relay-ssh/rdp_hosts.toml` (`0600`). Any certificate change produces a clear warning and stops the connection until confirmed.
 - RDP connection handshakes are validated via ASN.1 RDCleanPath parsing before raw RDP byte streaming begins.
+- The RDP gateway only dials the destination registered for that session (a different one in the client's request is refused), speaks TLS 1.2 to the host, bounds every handshake step to 20 seconds, caps a client message at 128 KiB, and logs why it refused or ended a connection (sizes and reasons only, never content or tokens). A session token is single use and lasts 5 minutes.
+- The RDP client is WebAssembly, so the page's Content-Security-Policy allows `'wasm-unsafe-eval'` (to compile it), `data:` in `connect-src` (it fetches its own inlined module) and `worker-src 'self' blob:` (it runs a worker); nothing else is loosened, and the only network origins allowed are loopback.
+- While a remote desktop is open the client's clipboard sync is backed by the app's native clipboard (text only), so it needs no browser permission; the browser's own clipboard is restored when the last RDP tab closes.
+- The remote desktop client is built from a pinned IronRDP commit (`desktop/rdp-client/ironrdp.pin`) that the build refuses to deviate from; a weekly job proposes newer releases for human review and CI runs `cargo audit` on its lockfile.
 - File and forward operations validate paths and ports against strict patterns, and reject control
   characters so a crafted name cannot add extra `sftp` commands.
 

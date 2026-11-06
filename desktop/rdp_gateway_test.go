@@ -836,3 +836,35 @@ func TestGatewayLogsHandshakeFailuresAndStalls(t *testing.T) {
 		t.Errorf("expected every failed handshake to be logged with its duration, got %d:\n%s", n, out)
 	}
 }
+
+// RDP messages can be up to 64 KiB (the TPKT length is 16 bits). The WebSocket library's default read limit is 32 KiB,
+// which would drop a session the first time the client sent a bigger one.
+func TestGatewayRelaysClientMessagesUpToTheRDPLimit(t *testing.T) {
+	cert := generateTestCertificate(t)
+	serverAddr, stopServer := startFakeRdpServer(t, cert)
+	defer stopServer()
+	gw, store, stopGw := setupGateway(t)
+	defer stopGw()
+	if err := store.Trust(serverAddr, FingerprintSHA256(cert.Certificate[0])); err != nil {
+		t.Fatal(err)
+	}
+	c, ctx := dialGateway(t, gw, "sess-big", serverAddr)
+	defer c.Close(websocket.StatusNormalClosure, "done") // ends the relay, so the fake server can stop
+	if _, _, err := c.Read(ctx); err != nil { // the RDCleanPath response
+		t.Fatal(err)
+	}
+	c.SetReadLimit(1 << 20) // our side of the test connection
+
+	big := bytes.Repeat([]byte{0xAB}, 65535)
+	if err := c.Write(ctx, websocket.MessageBinary, big); err != nil {
+		t.Fatal(err)
+	}
+	got := 0
+	for got < len(big) { // the fake server echoes it back, possibly in pieces
+		_, data, err := c.Read(ctx)
+		if err != nil {
+			t.Fatalf("session dropped after %d of %d bytes echoed: %v", got, len(big), err)
+		}
+		got += len(data)
+	}
+}

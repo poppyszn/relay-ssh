@@ -185,6 +185,8 @@ jump = "bastion"
   pinned per tab with port forwards; a host-key manager for `known_hosts`
 - [x] Encrypted vault for opt-in SSH and RDP password auto-fill
 - [x] Embedded Remote Desktop (RDP) tabs with WebAssembly IronRDP, TOFU cert pinning and SSH jump tunnels (works against Windows with NLA, tested by hand; file transfer not built)
+- [ ] RDP file transfer between your Mac and a remote desktop (IronRDP has a file-transfer provider; needs an upload/download UI)
+- [ ] RDP: copy and paste of images and other non-text content
 - [x] Per-block menu: copy command, output, or both
 - [x] Light theme (Daylight) and System, which follows the OS
 - [x] Block header: directory and git branch on every block

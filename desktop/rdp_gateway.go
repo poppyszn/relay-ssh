@@ -257,6 +257,9 @@ func (g *RdpGateway) handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer c.Close(websocket.StatusInternalError, "gateway error")
+	// The library default (32 KiB) would end a session the first time the client sent a bigger RDP message; a
+	// TPKT is at most 64 KiB. Still bounded, so a misbehaving page cannot make the gateway buffer without limit.
+	c.SetReadLimit(128 << 10)
 
 	started := time.Now()
 	if err := g.handshakeAndRelay(r.Context(), c, reg); err != nil {
