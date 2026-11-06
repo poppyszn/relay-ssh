@@ -129,7 +129,7 @@ tools, files, forwards          ssh / sftp / ssh-keygen         ~/.ssh/relay-ssh
 
 ## Remote Desktop (RDP)
 
-Relay has embedded RDP client support in the desktop application alongside SSH. **It is experimental.** It connects to a real Windows server with NLA (Network Level Authentication), and has been run against an xrdp server in a container (TLS, login screen and desktop drawn correctly, keyboard, mouse, resizing). Clipboard, jump hosts and the vault's saved password are not yet proven. It is only in builds that include the client (below).
+Relay has embedded RDP client support in the desktop application alongside SSH. **It is experimental.** It has been tested by hand against a real Windows server with NLA (Network Level Authentication): login, keyboard, mouse, resizing, text clipboard both ways, a saved vault password and a jump host all work. It was also run against an xrdp server in a container. File transfer is not built (the Files and Port forwards buttons are SSH features and are disabled on RDP tabs). It is only in builds that include the client (below).
 
 - **Building the client:** the remote desktop client is IronRDP's official browser client, built from the IronRDP commit pinned in `desktop/rdp-client/ironrdp.pin`. Run `make rdp-client` (needs `git`, `node`, `rustup` and `wasm-pack`) before building the app; without it the RDP tab says so instead of connecting.
 
@@ -184,7 +184,7 @@ jump = "bastion"
 - [ ] DevOps: environment tags with coloured tabs; AWS SSM (SSH over SSM and EC2 import); Kubernetes contexts
   pinned per tab with port forwards; a host-key manager for `known_hosts`
 - [x] Encrypted vault for opt-in SSH and RDP password auto-fill
-- [ ] Embedded Remote Desktop (RDP) tabs with WebAssembly IronRDP, TOFU cert pinning and SSH jump tunnels (works against Windows with NLA; clipboard, jump hosts and saved passwords still to be proven)
+- [x] Embedded Remote Desktop (RDP) tabs with WebAssembly IronRDP, TOFU cert pinning and SSH jump tunnels (works against Windows with NLA, tested by hand; file transfer not built)
 - [x] Per-block menu: copy command, output, or both
 - [x] Light theme (Daylight) and System, which follows the OS
 - [x] Block header: directory and git branch on every block
