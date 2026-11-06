@@ -54,9 +54,9 @@ jobs:
       - run: npm ci
         working-directory: desktop/frontend
       # The Rust toolchain itself is installed by `make rdp-client` (the version in desktop/rdp-client/ironrdp.pin).
-      - uses: jetli/wasm-pack-action@0d673aca0fb86c757c3e1e21b06f8c7d62057d39 # v0.4.0
-        with:
-          version: 'v0.15.0' # keep equal to wasm_pack in desktop/rdp-client/ironrdp.pin
+      - name: Install wasm-pack
+        # Pinned to the version IronRDP's own build uses (wasm_pack in desktop/rdp-client/ironrdp.pin).
+        run: which wasm-pack >/dev/null 2>&1 || cargo install --version 0.15.0 wasm-pack --locked
       - run: make desktop-check
       # The RDP client must still build from its pinned release.
       - run: make rdp-client
