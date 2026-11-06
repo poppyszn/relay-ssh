@@ -579,8 +579,8 @@ func TestGatewayDisconnects(t *testing.T) {
 // A refused socket used to be silent: the client only reports "WebSocket is Closed". The gateway now logs why,
 // without ever writing a token to the log.
 func TestGatewayLogsWhyItRefusedAConnection(t *testing.T) {
-	var logged bytes.Buffer
-	log.SetOutput(&logged)
+	logged := &syncBuffer{}
+	log.SetOutput(logged)
 	defer log.SetOutput(os.Stderr)
 
 	gw, _, stopGw := setupGateway(t)
@@ -639,8 +639,8 @@ func TestSelectedProtocolDescribesWhatTheServerAgreedTo(t *testing.T) {
 // The gateway logs what the server agreed to and how a session ended (who closed it, and how many bytes went
 // each way), never any content, so a connection that ends mid-handshake can be told from the log.
 func TestGatewayLogsTheSessionLifecycle(t *testing.T) {
-	var logged bytes.Buffer
-	log.SetOutput(&logged)
+	logged := &syncBuffer{}
+	log.SetOutput(logged)
 	defer log.SetOutput(os.Stderr)
 
 	cert := generateTestCertificate(t)
@@ -743,6 +743,24 @@ func TestGatewayDoesNotNegotiateTLS13(t *testing.T) {
 	}
 }
 
+// syncBuffer is a log sink safe to read while the gateway's goroutines are still writing to it.
+type syncBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *syncBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
+}
+
 // dialGateway connects like the browser client would and sends its RDCleanPath request.
 func dialGateway(t *testing.T, gw *RdpGateway, id, dest string) (*websocket.Conn, context.Context) {
 	t.Helper()
@@ -764,8 +782,8 @@ func dialGateway(t *testing.T, gw *RdpGateway, id, dest string) (*websocket.Conn
 // A handshake that fails or stalls used to leave no trace at all (only "server selected" lines for the ones
 // that got that far), so a connection that "times out" could not be explained. Every way out is logged now.
 func TestGatewayLogsHandshakeFailuresAndStalls(t *testing.T) {
-	var logged bytes.Buffer
-	log.SetOutput(&logged)
+	logged := &syncBuffer{}
+	log.SetOutput(logged)
 	defer log.SetOutput(os.Stderr)
 	old := rdpHandshakeTimeout
 	rdpHandshakeTimeout = 400 * time.Millisecond
@@ -850,7 +868,7 @@ func TestGatewayRelaysClientMessagesUpToTheRDPLimit(t *testing.T) {
 	}
 	c, ctx := dialGateway(t, gw, "sess-big", serverAddr)
 	defer c.Close(websocket.StatusNormalClosure, "done") // ends the relay, so the fake server can stop
-	if _, _, err := c.Read(ctx); err != nil { // the RDCleanPath response
+	if _, _, err := c.Read(ctx); err != nil {            // the RDCleanPath response
 		t.Fatal(err)
 	}
 	c.SetReadLimit(1 << 20) // our side of the test connection

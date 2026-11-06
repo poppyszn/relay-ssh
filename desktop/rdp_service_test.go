@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -372,8 +371,8 @@ exec sleep 10
 // time goes. It carries stage names and error text only, is bounded, and an unknown session is ignored.
 func TestRdpServiceNoteLogsStagesWithoutTrustingTheText(t *testing.T) {
 	svc, _, _ := setupRdpTestEnv(t)
-	var logged bytes.Buffer
-	log.SetOutput(&logged)
+	logged := &syncBuffer{}
+	log.SetOutput(logged)
 	defer log.SetOutput(os.Stderr)
 
 	svc.mu.Lock()
