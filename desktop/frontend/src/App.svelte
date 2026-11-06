@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import { Clipboard, Events } from "@wailsio/runtime";
-  import { blankProfile, nextSession } from "./lib/lib";
+  import { blankProfile, duplicateProfile, nextSession } from "./lib/lib";
   import { ws } from "./state/workspace.svelte";
   import { leaves } from "./lib/panes";
   import TabBar from "./components/TabBar.svelte";
@@ -155,6 +155,11 @@
 
   // Always edit the stored profile, not a cached copy: forwards saved from their own
   // panel, a restore or an import may have changed it since the list was loaded.
+  // Opens the new-connection form prefilled with a copy; nothing is saved until the form is.
+  function duplicate(p: Profile) {
+    form = { initial: duplicateProfile(p, profiles.map((x) => x.name)), oldName: "" };
+  }
+
   async function edit(p: Profile) {
     await refresh();
     form = { initial: profiles.find((x) => x.name === p.name) ?? p, oldName: p.name };
@@ -944,7 +949,7 @@
   <TabBar custom={customChrome} connected={!!ws.panes[ws.focusedPane]?.target && !focusedIsRdp} remoteDesktop={focusedIsRdp} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsplit={(d) => ws.split(d)} onsettings={() => openSettings()} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} onsnippets={() => (snippetsOpen = !snippetsOpen)} />
   <div class="body">
     {#if sidebar}
-      <Sidebar {profiles} {folders} {open} current={ws.panes[ws.focusedPane]?.target ?? ""} onconnect={(p) => connect(p)} onnew={newConnection} onedit={edit} ontools={(t) => { toolsTab = t; toolsOpen = true; }} onchanged={refresh} />
+      <Sidebar {profiles} {folders} {open} current={ws.panes[ws.focusedPane]?.target ?? ""} onconnect={(p) => connect(p)} onnew={newConnection} onedit={edit} onduplicate={duplicate} ontools={(t) => { toolsTab = t; toolsOpen = true; }} onchanged={refresh} />
     {/if}
     <main>
       {#if banner}<div class="notice bad banner" role="alert"><span>{banner}</span><button type="button" class="icon-btn dense" aria-label="Dismiss" onclick={() => (banner = "")}><Icon name="x" size={14} /></button></div>{/if}

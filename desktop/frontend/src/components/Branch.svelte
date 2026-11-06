@@ -8,9 +8,9 @@
   import Icon from "./Icon.svelte";
   import Menu from "./Menu.svelte";
 
-  let { node, depth, searching, open, current, onconnect, onedit }: {
+  let { node, depth, searching, open, current, onconnect, onedit, onduplicate }: {
     node: TreeNode; depth: number; searching: boolean; open: Set<string>; current: string;
-    onconnect: (p: Profile) => void; onedit: (p: Profile) => void;
+    onconnect: (p: Profile) => void; onedit: (p: Profile) => void; onduplicate?: (p: Profile) => void;
   } = $props();
 
   const expanded = $derived(sb.expanded(node.path, searching));
@@ -61,10 +61,10 @@
                onkeydown={(e) => { if (e.key === "Enter") sb.commitCreate(); if (e.key === "Escape") { e.stopPropagation(); sb.creatingIn = null; } }} /></div>
     {/if}
     {#each node.children as c (c.path)}
-      <Branch node={c} depth={depth + 1} {searching} {open} {current} {onconnect} {onedit} />
+      <Branch node={c} depth={depth + 1} {searching} {open} {current} {onconnect} {onedit} {onduplicate} />
     {/each}
     {#each node.profiles as p (p.name)}
-      <ConnRow profile={p} depth={depth + 1} live={open.has(p.name)} current={current === p.name} {onconnect} {onedit} />
+      <ConnRow profile={p} depth={depth + 1} live={open.has(p.name)} current={current === p.name} {onconnect} {onedit} {onduplicate} />
     {/each}
   {/if}
 </div>

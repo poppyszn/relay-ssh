@@ -10,7 +10,7 @@
   import Card from "./Card.svelte";
   import { connSearch } from "../state/connsearch.svelte";
 
-  let { profiles, folders, open, current, onconnect, onnew, onedit, ontools, onchanged }: {
+  let { profiles, folders, open, current, onconnect, onnew, onedit, onduplicate, ontools, onchanged }: {
     profiles: Profile[];
     folders: string[];
     /** Connections that have an open tab. */
@@ -21,6 +21,8 @@
     /** Starts a new connection, in the given folder. */
     onnew: (folder: string) => void;
     onedit: (p: Profile) => void;
+    /** Opens the new-connection form prefilled with a copy of this connection. */
+    onduplicate: (p: Profile) => void;
     ontools: (tab: "import" | "keys") => void;
     onchanged: () => void;
   } = $props();
@@ -73,7 +75,7 @@
     {#if tree.unfiled.length}
       <div data-drop="">
         {#each tree.unfiled as p (p.name)}
-          <ConnRow profile={p} depth={0} live={open.has(p.name)} current={current === p.name} {onconnect} {onedit} />
+          <ConnRow profile={p} depth={0} live={open.has(p.name)} current={current === p.name} {onconnect} {onedit} {onduplicate} />
         {/each}
       </div>
     {/if}
@@ -84,7 +86,7 @@
                onkeydown={(e) => { if (e.key === "Enter") sb.commitCreate(); if (e.key === "Escape") { e.stopPropagation(); sb.creatingIn = null; } }} /></div>
     {/if}
     {#each tree.roots as n (n.path)}
-      <Branch node={n} depth={0} {searching} {open} {current} {onconnect} {onedit} />
+      <Branch node={n} depth={0} {searching} {open} {current} {onconnect} {onedit} {onduplicate} />
     {/each}
     {#if !tree.unfiled.length && !tree.roots.length && sb.creatingIn !== ""}
       {#if profiles.length === 0 && folders.length === 0}

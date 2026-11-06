@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
-import { buildConfig, loadRdpClient, mountClient, needsResize, setClipboardShared, type RdpClientModule } from "./rdp_client";
+import { buildConfig, clampBar, loadRdpClient, mountClient, needsResize, setClipboardShared, type RdpClientModule } from "./rdp_client";
 
 // A stand-in for the IronRDP web component: a custom element that announces itself with `ready`.
 function fakeElementClass(ui: object) {
@@ -91,5 +91,19 @@ describe("sharing the clipboard with the remote desktop", () => {
     setClipboardShared(ui, false);
     setClipboardShared(ui, true);
     expect(calls).toEqual([["clipboard", false], ["auto", false], ["clipboard", true], ["auto", true]]);
+  });
+});
+
+describe("keeping the toolbar reachable", () => {
+  const host = { width: 1000, height: 640 };
+  const bar = { width: 300, height: 30 };
+  it("rests at the top right and can only move within the desktop", () => {
+    expect(clampBar({ x: 0, y: 0 }, host, bar)).toEqual({ x: 0, y: 0 });
+    expect(clampBar({ x: 50, y: -40 }, host, bar)).toEqual({ x: 0, y: 0 }); // right of or above the corner
+    expect(clampBar({ x: -10000, y: 10000 }, host, bar)).toEqual({ x: -(1000 - 300 - 16), y: 640 - 30 - 16 });
+    expect(clampBar({ x: -200, y: 100 }, host, bar)).toEqual({ x: -200, y: 100 });
+  });
+  it("never leaves a window too small for it stuck off-screen", () => {
+    expect(clampBar({ x: -50, y: 50 }, { width: 200, height: 20 }, bar)).toEqual({ x: 0, y: 0 });
   });
 });

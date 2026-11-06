@@ -114,3 +114,12 @@ export function setClipboardShared(ui: RdpUi, on: boolean): void {
   ui.setEnableClipboard(on);
   ui.setEnableAutoClipboard(on);
 }
+
+/** Where the toolbar may rest: its offset from the top right corner, kept inside the desktop (8px from each edge) so
+ * it can always be reached again. A desktop too small for it leaves it in the corner. */
+export function clampBar(pos: { x: number; y: number }, host: Size, bar: Size): { x: number; y: number } {
+  const PAD = 8;
+  const minX = Math.min(0, -(host.width - bar.width - 2 * PAD));
+  const maxY = Math.max(0, host.height - bar.height - 2 * PAD);
+  return { x: Math.min(0, Math.max(minX, Math.round(pos.x))), y: Math.min(maxY, Math.max(0, Math.round(pos.y))) };
+}

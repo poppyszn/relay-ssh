@@ -310,7 +310,7 @@ describe("PromptTracker", () => {
   });
 });
 
-import { parseTarget } from "./lib";
+import { duplicateProfile, parseTarget } from "./lib";
 describe("parseTarget", () => {
   it("reads what people paste from a terminal", () => {
     expect(parseTarget("ssh deploy@10.0.2.15")).toEqual({ user: "deploy", host: "10.0.2.15", port: 22 });
@@ -324,5 +324,35 @@ describe("parseTarget", () => {
     for (const q of ["", "prod", "db-primary", "#dev", "Acme/bastion", "ssh", "user@", "@host", "a@b c", "x@-oProxyCommand=sh", "x@host:99999", "ssh -o ProxyCommand=sh host"]) {
       expect(parseTarget(q), q).toBeNull();
     }
+  });
+});
+
+describe("duplicating a connection", () => {
+  const web = mk({ name: "web", host: "10.0.0.5", user: "deploy", port: 2222, folder: "Acme", tags: ["prod", "eu"], jump: "bastion", forwardAgent: true, tunnels: [{ type: "local", listen: "5432", target: "db:5432" }] });
+
+  it("copies every setting under a new, valid name in the same folder", () => {
+    const copy = duplicateProfile(web, ["web", "bastion"]);
+    expect(copy).toMatchObject({ name: "web-copy", host: "10.0.0.5", user: "deploy", port: 2222, folder: "Acme", jump: "bastion", forwardAgent: true });
+    expect(copy.tags).toEqual(["prod", "eu"]);
+    expect(copy.tunnels).toEqual(web.tunnels);
+  });
+
+  it("does not share its lists with the original", () => {
+    const copy = duplicateProfile(web, ["web"]);
+    copy.tags!.push("x");
+    copy.tunnels![0].listen = "1";
+    expect(web.tags).toEqual(["prod", "eu"]);
+    expect(web.tunnels![0].listen).toBe("5432");
+  });
+
+  it("finds a name that is free", () => {
+    expect(duplicateProfile(web, ["web", "web-copy"]).name).toBe("web-copy-2");
+    expect(duplicateProfile(web, ["web", "web-copy", "web-copy-2", "web-copy-3"]).name).toBe("web-copy-4");
+  });
+
+  it("duplicates a copy of a copy sensibly, and works for remote desktops", () => {
+    expect(duplicateProfile({ ...web, name: "web-copy" }, ["web", "web-copy"]).name).toBe("web-copy-2");
+    const rdp = duplicateProfile(mk({ name: "win", protocol: "rdp", domain: "CORP", host: "h", user: "u", port: 3389 }), ["win"]);
+    expect(rdp).toMatchObject({ name: "win-copy", protocol: "rdp", domain: "CORP", port: 3389 });
   });
 });

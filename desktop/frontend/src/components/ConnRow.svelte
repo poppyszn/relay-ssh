@@ -3,13 +3,14 @@
   import { dragSource, sb } from "../state/foldertree.svelte";
   import Icon from "./Icon.svelte";
 
-  let { profile, depth, live, current, onconnect, onedit }: {
+  let { profile, depth, live, current, onconnect, onedit, onduplicate }: {
     profile: Profile;
     depth: number;
     live: boolean;
     current: boolean;
     onconnect: (p: Profile) => void;
     onedit: (p: Profile) => void;
+    onduplicate?: (p: Profile) => void;
   } = $props();
 
   const tags = $derived(profile.tags ?? []);
@@ -31,6 +32,7 @@
     <span class="tags">{#if tags[0]}<span class="chip">{tags[0]}</span>{/if}{#if moreTags}<span class="more" title={(profile.tags ?? []).slice(1).join(", ")}>+{moreTags}</span>{/if}</span>
     <span class="l2"><span class="host mono">{address}</span>{#if profile.jump}<span class="via" title="Connects through {profile.jump}">via {profile.jump}</span>{/if}</span>
   </button>
+  {#if onduplicate}<button type="button" class="icon-btn dense dup" data-nodrag aria-label="Duplicate {profile.name}" title="Duplicate" onclick={() => onduplicate(profile)}><Icon name="copy" size={14} /></button>{/if}
   <button type="button" class="icon-btn dense edit" data-nodrag aria-label="Edit {profile.name}" title="Edit" onclick={() => onedit(profile)}><Icon name="pencil" size={14} /></button>
 </div>
 
@@ -52,13 +54,14 @@
   .rdp-icon { display: inline-flex; color: var(--muted); }
   .rdp-icon.ok { color: var(--ok); }
   .name { min-width: 0; font-weight: 600; color: var(--strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tags { display: flex; align-items: center; gap: var(--s1); min-width: 0; overflow: hidden; margin-right: 22px; }
+  .tags { display: flex; align-items: center; gap: var(--s1); min-width: 0; overflow: hidden; margin-right: 46px; }
   .more { font-size: var(--t-xs); color: var(--dim); }
   .l2 { grid-column: 2 / -1; display: flex; align-items: baseline; gap: var(--s2); min-width: 0; font-size: var(--t-xs); white-space: nowrap; }
   /* When both do not fit, the jump host gives way before the address does. */
   .host { flex: 0 0.01 auto; min-width: 0; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
   .via { flex: 0 1 auto; min-width: 0; color: var(--dim); overflow: hidden; text-overflow: ellipsis; }
   .via::before { content: "·"; margin-right: var(--s2); }
-  .edit { position: absolute; right: var(--s3); top: 5px; opacity: 0; pointer-events: none; }
-  .row:hover .edit, .edit:focus-visible { opacity: 1; pointer-events: auto; }
+  .edit, .dup { position: absolute; right: var(--s3); top: 5px; opacity: 0; pointer-events: none; }
+  .dup { right: calc(var(--s3) + 26px); }
+  .row:hover .edit, .row:hover .dup, .edit:focus-visible, .dup:focus-visible { opacity: 1; pointer-events: auto; }
 </style>

@@ -46,6 +46,16 @@ export function parseTarget(q: string): { user: string; host: string; port: numb
   return { user: m[1] ?? "", host: m[2], port };
 }
 
+/** A copy of a connection under a new name that is free (name-copy, name-copy-2, ...), in the same folder with the same
+ * settings and its own lists. A saved password is not carried over; the form for the copy starts without one. */
+export function duplicateProfile(p: Profile, existing: string[]): Profile {
+  const root = p.name.replace(/-copy(-\d+)?$/, "");
+  const taken = new Set(existing);
+  let name = `${root}-copy`;
+  for (let n = 2; taken.has(name); n++) name = `${root}-copy-${n}`;
+  return { ...p, name, tags: [...(p.tags ?? [])], tunnels: (p.tunnels ?? []).map((t) => ({ ...t })) } as Profile;
+}
+
 export function parseTags(s: string): string[] {
   return [...new Set(s.split(",").map((t) => t.trim()).filter(Boolean))];
 }

@@ -19,6 +19,19 @@ describe("ConnRow", () => {
     unmount(c);
   });
 
+  it("offers Duplicate next to Edit, and does not connect when it is used", () => {
+    const target = document.createElement("div");
+    let duplicated = "", connected = 0;
+    const profile = { ...blankProfile(), name: "web", host: "h", user: "u" };
+    const c = mount(ConnRow, { target, props: { ...props(0), profile, onconnect: () => connected++, onduplicate: (p: typeof profile) => (duplicated = p.name) } });
+    const btn = target.querySelector<HTMLButtonElement>('button[aria-label="Duplicate web"]')!;
+    expect(btn).not.toBeNull();
+    btn.click();
+    expect(duplicated).toBe("web");
+    expect(connected).toBe(0);
+    unmount(c);
+  });
+
   // The name line used to carry tags, the jump host and the edit button, so names truncated to a letter.
   it("keeps the name line to the name and one tag, and puts the jump host with the address", () => {
     const target = document.createElement("div");
@@ -108,6 +121,18 @@ describe("opening a connection", () => {
     const { opened, c, main } = mk();
     click(main, 0);
     expect(opened).toEqual(["web"]);
+    unmount(c);
+  });
+});
+
+describe("Duplicate in the sidebar tree", () => {
+  it("is on connections inside folders too", () => {
+    const target = document.createElement("div");
+    const web = { ...blankProfile(), name: "web", host: "h", user: "u", folder: "Acme" };
+    const node = { name: "Acme", path: "Acme", children: [], profiles: [web], count: 1 };
+    const c = mount(Branch, { target, props: { node, depth: 0, searching: false, open: new Set<string>(), current: "", onconnect: () => {}, onedit: () => {}, onduplicate: () => {} } as never });
+    flushSync();
+    expect(target.querySelector('button[aria-label="Duplicate web"]')).not.toBeNull();
     unmount(c);
   });
 });

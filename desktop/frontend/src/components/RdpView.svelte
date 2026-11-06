@@ -3,7 +3,7 @@
   import { Events } from "@wailsio/runtime";
   import { RdpService, type Profile, type RdpSessionInfo } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import { formatRdpError } from "../lib/rdp_errors";
-  import { buildConfig, loadRdpClient, mountClient, needsResize, setClipboardShared, type RdpUi, type Size } from "../lib/rdp_client";
+  import { buildConfig, clampBar, loadRdpClient, mountClient, needsResize, setClipboardShared, type RdpUi, type Size } from "../lib/rdp_client";
   import { settings } from "../state/settings.svelte";
   import { copyText } from "../lib/clipboard";
   import { useNativeClipboard } from "../lib/native_clipboard";
@@ -39,6 +39,33 @@
   let pending: { info: RdpSessionInfo; at: number } | null = null;
   // The size the remote desktop currently has, so a resize only goes out when the tab really changed.
   let applied: Size = { width: 0, height: 0 };
+  // The toolbar's offset from its default spot (the top right); where it is left is remembered.
+  const BAR_KEY = "relay.rdpbar.v1";
+  let barEl = $state<HTMLElement | undefined>(undefined);
+  let barPos = $state((() => { try { const v = JSON.parse(localStorage.getItem(BAR_KEY) ?? "null"); return { x: Number(v?.x) || 0, y: Number(v?.y) || 0 }; } catch { return { x: 0, y: 0 }; } })());
+  const rectSize = (el: Element): Size => { const r = el.getBoundingClientRect(); return { width: r.width, height: r.height }; };
+  function moveBar(next: { x: number; y: number }) {
+    barPos = host && barEl ? clampBar(next, rectSize(host), rectSize(barEl)) : next;
+    try { localStorage.setItem(BAR_KEY, JSON.stringify(barPos)); } catch { /* not remembered */ }
+  }
+  function gripKey(e: KeyboardEvent) {
+    const step = 16;
+    const delta: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    if (e.key === "Home") { e.preventDefault(); return moveBar({ x: 0, y: 0 }); }
+    const d = delta[e.key];
+    if (!d) return;
+    e.preventDefault();
+    moveBar({ x: barPos.x + d[0], y: barPos.y + d[1] });
+  }
+  function gripDown(e: PointerEvent) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const start = { x: e.clientX, y: e.clientY, from: { ...barPos } };
+    const move = (ev: PointerEvent) => moveBar({ x: start.from.x + ev.clientX - start.x, y: start.from.y + ev.clientY - start.y });
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  }
   // The gateway token lives 5 minutes (rdpTokenLifetime in Go); start over a little before it runs out.
   const TOKEN_LIFETIME_MS = 4 * 60_000;
   let restoreClipboard: (() => void) | null = null;
@@ -173,6 +200,7 @@
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
         const next = host!.getBoundingClientRect();
+        if (barEl) moveBar(barPos); // keep the toolbar inside a smaller desktop
         if (ui && needsResize(applied, next)) {
           applied = { width: Math.floor(next.width), height: Math.floor(next.height) };
           try { ui.resize(applied.width, applied.height); } catch { /* the server cannot resize */ }
@@ -299,7 +327,8 @@
       </div>
     </Modal>
   {:else if viewState === "connected"}
-    <div class="bar" role="toolbar" aria-label="Remote desktop">
+    <div class="bar" role="toolbar" aria-label="Remote desktop" bind:this={barEl} style="transform: translate({barPos.x}px, {barPos.y}px)">
+      <button type="button" class="grip" data-grip aria-label="Move this toolbar: drag it, or use the arrow keys (Home puts it back)" title="Drag to move" onpointerdown={gripDown} onkeydown={gripKey}></button>
       <span class="dot ok" aria-hidden="true"></span>
       <span class="mono who">{prof?.user}@{prof?.host}</span>
       <button type="button" class="btn ghost sm" data-clipboard aria-pressed={clipboardShared} title={clipboardShared ? "Your clipboard and this remote desktop's are shared both ways. Click to stop sharing." : "The clipboard is not shared with this remote desktop. Click to share it."} onclick={toggleClipboard}>Clipboard: {clipboardShared ? "shared" : "off"}</button>
@@ -340,6 +369,9 @@
   .bar { position: absolute; top: var(--s2); right: var(--s2); z-index: 2; display: flex; align-items: center; gap: var(--s1); padding: 2px var(--s2) 2px var(--s3); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-sm); font-size: var(--t-xs); color: var(--muted); opacity: 0.35; transition: opacity var(--dur-2) var(--ease); }
   .bar:hover, .bar:focus-within { opacity: 1; }
   .who { margin-right: var(--s1); }
+  .grip { width: 14px; height: 22px; flex: none; padding: 0; border: 0; border-radius: var(--r-xs); background: radial-gradient(circle, var(--dim) 1.2px, transparent 1.6px) 0 0 / 5px 6px; cursor: grab; touch-action: none; }
+  .grip:active { cursor: grabbing; }
+  .grip:hover { background-color: var(--line); }
   .err-icon { color: var(--warn); }
   .detail { width: 100%; text-align: left; font-size: var(--t-xs); color: var(--muted); }
   .detail summary { cursor: pointer; }
