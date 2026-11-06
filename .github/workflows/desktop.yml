@@ -64,6 +64,7 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high
         working-directory: desktop/frontend
       - name: Audit Rust dependencies
-        run: which cargo-audit >/dev/null 2>&1 || cargo install --version 0.20.0 cargo-audit --locked; cargo audit --file desktop/.ironrdp-src/Cargo.lock
+        # Audits the IronRDP client we ship (not IronRDP's whole workspace); see the script for what it accepts and why.
+        run: which cargo-audit >/dev/null 2>&1 || cargo install --version 0.22.2 cargo-audit --locked; ./desktop/scripts/audit-ironrdp.sh
       - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
         working-directory: desktop

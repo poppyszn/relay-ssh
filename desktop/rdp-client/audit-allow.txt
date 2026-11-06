@@ -1,0 +1,3 @@
+# Advisories (RUSTSEC ids) that affect a crate in the WebAssembly client we ship but are accepted, with the reason.
+# desktop/scripts/audit-ironrdp.sh fails on any other advisory in that client. One per line: ID, then the reason.
+RUSTSEC-2023-0071  Marvin timing side channel in RSA decryption; no fixed version exists. The crate comes in through IronRDP's authentication libraries (picky, sspi). Exploiting it needs an attacker to time many RSA decryptions of chosen ciphertexts, which an RDP login does not expose. Revisit when a fix is released.
