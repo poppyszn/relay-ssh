@@ -111,6 +111,9 @@ func (ToolsService) DefaultBackupName() string {
 // Backup writes an encrypted backup of the connections and adopted keys to path.
 // The passphrase is used once and never stored.
 func (ToolsService) Backup(path, passphrase string) error {
+	if err := grants.require(path); err != nil {
+		return err
+	}
 	if passphrase == "" {
 		return errors.New("a passphrase is required")
 	}
@@ -141,6 +144,9 @@ func (ToolsService) NeedsPassphrase(path string) bool { return strings.HasSuffix
 
 // Restore replaces the current connections and adopted keys with the backup's.
 func (ToolsService) Restore(path, passphrase string) error {
+	if err := grants.require(path); err != nil {
+		return err
+	}
 	p, err := paths.Default()
 	if err != nil {
 		return err
@@ -217,6 +223,7 @@ func (ToolsService) Keys() ([]KeyInfo, error) {
 		seen[name] = true
 		vault := filepath.Join(p.KeysDir, name)
 		enc, _ := keyEncrypted(vault)
+		grants.allow(vault) // listed for the user, so it may be handed back
 		out = append(out, KeyInfo{Name: name, Path: vault, Adopted: true, Encrypted: enc, UsedBy: usedBy(name)})
 	}
 	for _, path := range core.FindKeyFiles(home) {
@@ -225,6 +232,7 @@ func (ToolsService) Keys() ([]KeyInfo, error) {
 			continue // already adopted under this name
 		}
 		tilde := "~/.ssh/" + name
+		grants.allow(path) // listed for the user, so it may be handed back
 		enc, _ := keyEncrypted(path)
 		out = append(out, KeyInfo{Name: name, Path: path, Encrypted: enc, UsedBy: usedBy(path, tilde)})
 	}
@@ -239,6 +247,9 @@ func (ToolsService) Keys() ([]KeyInfo, error) {
 
 // KeyNeedsPassphrase reports whether the private key at path is protected by a passphrase.
 func (ToolsService) KeyNeedsPassphrase(path string) bool {
+	if grants.require(path) != nil {
+		return false
+	}
 	enc, _ := keyEncrypted(path)
 	return enc
 }
@@ -259,6 +270,9 @@ func (ToolsService) RememberPassphrase(name, passphrase string) error {
 // does not ask each time. Relay itself never stores the passphrase. If the passphrase is wrong,
 // nothing is adopted.
 func (ToolsService) AdoptKey(path, passphrase string) error {
+	if err := grants.require(path); err != nil {
+		return err
+	}
 	p, err := paths.Default()
 	if err != nil {
 		return err
@@ -308,27 +322,27 @@ func (ToolsService) AdoptKey(path, passphrase string) error {
 
 // PickBackupPath opens the native save dialog. Empty if cancelled.
 func (t ToolsService) PickBackupPath() (string, error) {
-	return application.Get().Dialog.SaveFile().
+	return grantPicked(application.Get().Dialog.SaveFile().
 		SetMessage("Save encrypted backup").
 		SetFilename(t.DefaultBackupName()).
 		CanCreateDirectories(true).
-		PromptForSingleSelection()
+		PromptForSingleSelection())
 }
 
 // PickRestorePath opens the native open dialog. Empty if cancelled.
 func (ToolsService) PickRestorePath() (string, error) {
-	return application.Get().Dialog.OpenFile().
+	return grantPicked(application.Get().Dialog.OpenFile().
 		SetTitle("Choose a backup to restore").
 		CanChooseFiles(true).
-		PromptForSingleSelection()
+		PromptForSingleSelection())
 }
 
 // PickKeyToAdopt opens the native open dialog on ~/.ssh. Empty if cancelled.
 func (ToolsService) PickKeyToAdopt() (string, error) {
 	home, _ := os.UserHomeDir()
-	return application.Get().Dialog.OpenFile().
+	return grantPicked(application.Get().Dialog.OpenFile().
 		SetTitle("Choose a private key to adopt").
 		SetDirectory(filepath.Join(home, ".ssh")).
 		CanChooseFiles(true).ShowHiddenFiles(true).
-		PromptForSingleSelection()
+		PromptForSingleSelection())
 }

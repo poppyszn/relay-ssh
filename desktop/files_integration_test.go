@@ -97,6 +97,7 @@ func TestFilesAgainstARealSSHD(t *testing.T) {
 		t.Fatal(err)
 	}
 	remote := filepath.Join(work, "hello.txt")
+	grants.allow(local) // what choosing it in the upload dialog does
 	if err := f.Upload(box, local, remote); err != nil {
 		t.Fatalf("Upload: %v", err)
 	}
@@ -120,6 +121,7 @@ func TestFilesAgainstARealSSHD(t *testing.T) {
 	}
 
 	back := filepath.Join(t.TempDir(), "copy.txt")
+	grants.allow(back) // what choosing it in the save dialog does
 	if err := f.Download(box, remote, back); err != nil {
 		t.Fatalf("Download: %v", err)
 	}

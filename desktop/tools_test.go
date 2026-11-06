@@ -51,6 +51,7 @@ func TestBackupRestoreThroughTheService(t *testing.T) {
 	}
 	tools := ToolsService{}
 	dest := filepath.Join(t.TempDir(), "b")
+	grants.allow(dest) // choosing the save location in the dialog
 	if err := tools.Backup(dest, ""); err == nil {
 		t.Error("an empty passphrase must be rejected")
 	}
@@ -63,6 +64,7 @@ func TestBackupRestoreThroughTheService(t *testing.T) {
 	if err := (ProfilesService{}).Delete("web"); err != nil {
 		t.Fatal(err)
 	}
+	grants.allow(dest + ".age") // choosing the file in the restore dialog
 	if err := tools.Restore(dest+".age", "wrong"); err == nil || !strings.Contains(err.Error(), "passphrase") {
 		t.Errorf("wrong passphrase err = %v", err)
 	}
@@ -133,10 +135,10 @@ func TestAdoptAskForTheKeysPassphrase(t *testing.T) {
 	plain := makeKey(t, ssh, "id_plain", "")
 	tools := ToolsService{}
 
+	ks, _ := tools.Keys() // the Keys tab lists them first, which is what lets their paths be handed back
 	if !tools.KeyNeedsPassphrase(locked) || tools.KeyNeedsPassphrase(plain) {
 		t.Fatal("KeyNeedsPassphrase gave the wrong answer")
 	}
-	ks, _ := tools.Keys()
 	for _, k := range ks {
 		if k.Encrypted != (k.Name == "id_locked") {
 			t.Errorf("%s: Encrypted = %v", k.Name, k.Encrypted)

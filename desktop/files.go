@@ -212,11 +212,17 @@ func (f *FilesService) simple(target string, timeout time.Duration, verb string,
 
 // Download copies a remote file to a local path.
 func (f *FilesService) Download(target, remote, local string) error {
+	if err := grants.require(local); err != nil {
+		return err
+	}
 	return f.simple(target, 30*time.Minute, "get -p", remote, local)
 }
 
 // Upload copies a local file to a remote path.
 func (f *FilesService) Upload(target, local, remote string) error {
+	if err := grants.require(local); err != nil {
+		return err
+	}
 	return f.simple(target, 30*time.Minute, "put -p", local, remote)
 }
 
@@ -235,10 +241,10 @@ func (f *FilesService) Rename(target, from, to string) error {
 
 // PickDownloadPath opens the native save dialog with the file's name. Empty if cancelled.
 func (*FilesService) PickDownloadPath(name string) (string, error) {
-	return application.Get().Dialog.SaveFile().SetFilename(name).CanCreateDirectories(true).PromptForSingleSelection()
+	return grantPicked(application.Get().Dialog.SaveFile().SetFilename(name).CanCreateDirectories(true).PromptForSingleSelection())
 }
 
 // PickUploadPath opens the native open dialog. Empty if cancelled.
 func (*FilesService) PickUploadPath() (string, error) {
-	return application.Get().Dialog.OpenFile().SetTitle("Choose a file to upload").CanChooseFiles(true).PromptForSingleSelection()
+	return grantPicked(application.Get().Dialog.OpenFile().SetTitle("Choose a file to upload").CanChooseFiles(true).PromptForSingleSelection())
 }
