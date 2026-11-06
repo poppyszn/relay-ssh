@@ -4,59 +4,75 @@
 
 <h1 align="center">Relay</h1>
 
-<p align="center"><b>A fast, modern SSH connection manager and terminal, built on OpenSSH.</b></p>
+<p align="center"><b>Your SSH and remote desktop connections, organised, in one fast app. Built on OpenSSH.</b></p>
 
-Relay is a desktop app for people who live in SSH: a tree of your connections, a real terminal with
-per-command blocks, tabs and split panes, and the everyday tools around SSH (encrypted backup, key
-management, file browsing, port forwards) in one place. It ships with **`relay-ssh`**, a small command-line
-companion that reads and writes the same data.
+Relay is a desktop app for people who connect to many servers every day. It keeps your connections in a
+tree of folders, opens them in a real terminal with tabs and split panes, and adds the tools you otherwise
+cobble together around SSH: jump hosts and port forwards you set once, a file browser, encrypted backups,
+key management, and Windows remote desktop. It ships with **`relay-ssh`**, a small command-line companion
+that reads and writes the same data.
 
-> **Status: early and macOS first.** Relay is being built in the open. The desktop app is developed
-> and tested on macOS (Apple silicon). Windows and Linux builds, signed releases and installers are not
-> done yet. See [Roadmap](#roadmap).
+> **Status: early, macOS first.** Relay is developed and tested on macOS (Apple silicon). There are no
+> signed releases or installers yet, so for now you build it from source (see [Install](#install-and-build)).
+> Windows and Linux builds are planned. See the [Roadmap](#roadmap).
 
-## Why another SSH client?
+## The problem
 
-- **OpenSSH stays the SSH client.** Relay never reimplements the protocol. It generates standard
-  OpenSSH config and runs your system `ssh`, `sftp` and `ssh-keygen`, so jump hosts, agents, hardware
-  keys, passwords, passphrases and 2FA all keep working exactly as they do in a plain terminal.
-- **No secrets are stored by default.** Relay leaves passwords and passphrases to OpenSSH unless you opt in. For password-only servers, you can optionally store the password in an age-encrypted vault on disk (`~/.config/relay-ssh/vault.age`), unlocked with your master password and auto-filled safely during authentication. A saved password is only ever sent to the host, user and port it was saved for, and it is not part of backups. You can view one again in the connection's settings, but only after entering the master password (every time, even with the vault unlocked). Key passphrases (delegated to the macOS Keychain and ssh-agent) and 2FA codes are never stored by Relay.
-- **Your data is one human-readable file.** Connections live in `connections.toml`, which you can edit
-  with any editor. Relay regenerates an OpenSSH include file from it, and the CLI and the app always
-  agree.
-- **The terminal is not in the way.** Terminal bytes flow from a real PTY to [xterm.js](https://xtermjs.org)
-  untouched, with flow control. Go does no terminal emulation, which is what makes it fast with huge
-  output (a 200 MB `cat` finishes in about 2.5 s with the UI staying responsive).
+If you manage more than a handful of servers, your connection details end up scattered:
+
+- a long, hand-edited `~/.ssh/config` nobody can see the shape of;
+- jump hosts, tunnels and agent forwarding that you re-type as flags or have to remember;
+- keys and settings that are lost the day you change machines;
+- one terminal window per server, a second tool for files, a third for Windows boxes.
+
+Many tools that fix this replace SSH with their own client, or keep your passwords somewhere you cannot
+inspect. Relay takes the opposite approach.
+
+## What Relay does about it
+
+- **Connections you can see.** Folders and subfolders, tags, search, quick open. Jump hosts, agent
+  forwarding and port forwards are saved properties of a connection, not flags to remember. Two
+  connections may share a name as long as they sit in different folders (`Prod/db` and `Stage/db`).
+- **OpenSSH stays the SSH client.** Relay generates standard OpenSSH config and runs your system `ssh`,
+  `sftp` and `ssh-keygen`. Agents, hardware keys, passphrases, jump hosts and 2FA behave exactly as in a
+  plain terminal, and `ssh <name>` keeps working outside Relay too.
+- **A new machine is a restore away.** One encrypted backup holds your connections and keys.
+- **Your data is one readable file.** Connections live in `connections.toml`; you can edit or repair it
+  with any editor, and the app and the CLI always agree.
+- **Honest about secrets.** By default Relay stores none. If you opt in for a connection, its password
+  goes in an [age](https://age-encryption.org)-encrypted vault on disk, unlocked by a master password
+  (details in [Secrets and security](#secrets-and-security)).
+- **A terminal that stays out of the way.** Bytes flow from a real PTY to [xterm.js](https://xtermjs.org)
+  untouched, with flow control; Go does no terminal emulation. A 200 MB `cat` finishes in about 2.5 s with
+  the UI still responsive.
 
 ## Features
 
 **Desktop app (Relay)**
 
-- Connection tree with folders and subfolders, tags, search, jump hosts, agent forwarding and saved port
-  forwards. Double-click a connection to open it. Drag connections and folders to reorganise (every move asks
-  for confirmation first), drag a connection onto a terminal to split it, drag tabs to reorder them and
-  panes by their header to rearrange them.
-- Terminal with tabs, split panes, scrollback search, fonts and four themes (three dark, one light, or follow the system). With shell integration on,
-  each command becomes a block with its directory, git branch, exit status and duration, started from the bottom of the pane, and a ⋯ menu
-  on each block copies the command, its output, or both.
-  Local zsh and bash are set up automatically; for a remote host you opt in (a button, or
-  automatically per connection or for all of them, once the login has finished).
-- **Snippets:** saved commands (`~/.config/relay-ssh/snippets.toml`) that you insert into, or run in, any terminal.
-- **Tools:** health check with one-click fixes, passphrase-encrypted backup and restore, import from
-  `~/.ssh/config`, key management (adopt a key into the vault; for a key with a passphrase, Relay asks once and
-  hands it to the macOS Keychain and ssh-agent so ssh stops asking; Relay never stores it), and the **encrypted secret vault**
-  for optional SSH password auto-fill with idle auto-lock.
+- **Connections:** tree with folders, tags and search. Double-click to open, drag to reorganise (every move
+  asks first), duplicate a connection, import from `~/.ssh/config`. Drag a connection onto a terminal to
+  split it; drag tabs and pane headers to rearrange.
+- **Terminal:** tabs, split panes, scrollback search, fonts, four themes (three dark, one light, or follow
+  the system), keep-alives so idle sessions do not drop, and click-to-move-the-cursor on the command line.
+  With shell integration on, each command becomes a **block** with its directory, git branch, exit status
+  and duration, and a ⋯ menu copies the command, its output, or both. Local zsh and bash are set up
+  automatically; for a remote host you opt in.
+- **Snippets:** saved commands you insert into, or run in, any terminal.
 - **Files:** browse, upload and download over `sftp`, reusing the login of the connection's terminal tab.
 - **Port forwards:** add, stop and save local, remote and SOCKS forwards on a live connection, with a
   diagram of how each one works.
-- **Remote Desktop (RDP):** connect to Windows servers in dedicated canvas tabs with WebAssembly IronRDP,
-  TOFU host certificates, SSH jump host tunnels, and age vault password storage.
+- **Remote Desktop (RDP):** connect to Windows servers in their own tabs, through the same saved jump hosts,
+  with a clipboard you can switch off. Experimental; see [Remote Desktop](#remote-desktop-rdp).
+- **Tools:** health check with one-click fixes, passphrase-encrypted backup and restore, key management
+  (for a key with a passphrase, Relay asks once and hands it to the macOS Keychain and ssh-agent so ssh
+  stops asking; Relay never stores it), and the optional encrypted password vault.
 
 **Command line (`relay-ssh`)**
 
 ```
 relay-ssh                    pick a connection and connect
-relay-ssh <name>             connect to a saved profile
+relay-ssh <name>             connect to a saved profile (name, Folder/name, or id)
 relay-ssh ls [--tree]        list profiles
 relay-ssh add | edit | rm    manage profiles
 relay-ssh cp <name>:/p ./l   copy files with scp
@@ -67,12 +83,13 @@ relay-ssh sync               regenerate ~/.ssh/relay-ssh.d/config
 relay-ssh completion <shell> bash or zsh completions
 ```
 
-`relay-ssh` builds an argv and replaces itself with `ssh`; it is not running while you are connected.
+`relay-ssh` builds an argv and replaces itself with `ssh`; it is not running while you are connected. If a
+bare name matches several connections, it lists the `Folder/name` forms that would work.
 
 ## Install and build
 
-You need [Go](https://go.dev) 1.27+ and, for the desktop app, [Node.js](https://nodejs.org) 22 or newer and the
-[Wails 3](https://v3.wails.io) CLI.
+There are no prebuilt releases yet. You need [Go](https://go.dev) 1.27+ and, for the desktop app,
+[Node.js](https://nodejs.org) 22 or newer and the [Wails 3](https://v3.wails.io) CLI.
 
 **CLI**
 
@@ -82,18 +99,15 @@ go install github.com/poppyszn/relay-ssh/cmd/relay-ssh@latest
 make build            # produces ./relay-ssh
 ```
 
-**Coming from `sssh`?** The command-line tool used to be called `sssh`. The first time `relay-ssh` or the app
-starts it moves `~/.config/sssh` to `~/.config/relay-ssh` and `~/.ssh/sssh.d` to `~/.ssh/relay-ssh.d`, repoints the
-managed block in `~/.ssh/config`, and regenerates the generated config, so your connections and keys carry
-over. It never overwrites a `relay-ssh` folder that already exists, and the old `SSSH_HOME` and
-`SSSH_BACKUP_PASSPHRASE` variables still work. You can delete the old `sssh` binary afterwards.
-
 **Desktop app (macOS)**
 
 ```bash
+git clone https://github.com/poppyszn/relay-ssh && cd relay-ssh
 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+make rdp-client                       # optional: builds the Remote Desktop client (needs git, node, rustup, wasm-pack)
 cd desktop
 wails3 dev -config ./build/config.yml -port 9245     # run with live reload
+wails3 package                                       # build desktop/bin/relay.app
 ```
 
 To try it without touching your real SSH setup, point it at a throwaway home first:
@@ -102,9 +116,35 @@ To try it without touching your real SSH setup, point it at a throwaway home fir
 RELAY_SSH_HOME=/tmp/relay-home wails3 dev -config ./build/config.yml -port 9245
 ```
 
-`RELAY_SSH_HOME` redirects where Relay reads and writes its own files (`connections.toml`,
-`~/.ssh/relay-ssh.d/`). A production build is `npm run build` in `desktop/frontend`, then `go build` in
-`desktop/`.
+`RELAY_SSH_HOME` redirects where Relay reads and writes its own files (`connections.toml` and
+`~/.ssh/relay-ssh.d/`).
+
+## Getting started
+
+1. Open Relay and choose **New connection** (or **Tools → Import** to adopt the hosts already in your
+   `~/.ssh/config`).
+2. Give it a name, host, user and an auth method (agent, key or password). Pick a folder and, if the host
+   is behind a bastion, a jump host.
+3. Double-click it to connect. `ssh <name>` and `relay-ssh <name>` now work in any terminal as well.
+4. Make a backup (**Tools → Backup & restore**) so a new machine is one restore away.
+
+## Secrets and security
+
+- **Nothing is stored by default.** Passwords, key passphrases and 2FA codes are left to OpenSSH, the
+  ssh-agent and the macOS Keychain.
+- **Optional password vault.** For password-only servers you can save a password per connection. It is
+  kept only in an age-encrypted file (`~/.config/relay-ssh/vault.age`, mode `0600`), unlocked with a
+  master password and locked again after idle time. It never appears in `connections.toml`, the generated
+  SSH config, logs or backups.
+- **Auto-fill is narrow.** A saved password is only sent to the host, user, port and jump host it was
+  saved for, and only to a password prompt that matches one hop of that connection. Viewing a saved
+  password requires the master password every time.
+- **Key passphrases and 2FA codes are never stored by Relay.**
+- Local sockets listen on loopback only, with per-session tokens and exact Origin checks. Relay writes
+  only inside `~/.ssh/relay-ssh.d/` and one marked block of `~/.ssh/config`.
+
+The full list is in [SECURITY.md](SECURITY.md), including how to report a vulnerability privately. Relay
+has not had an independent security audit.
 
 ## How it works
 
@@ -117,28 +157,32 @@ connection tree UI      <--->   internal/core (shared)   <--->  connections.toml
 tools, files, forwards          ssh / sftp / ssh-keygen         ~/.ssh/relay-ssh.d/config
 ```
 
-- `connections.toml` is the single source of truth. Saving regenerates
-  `~/.ssh/relay-ssh.d/config`, pulled in by one marked `Include` block in `~/.ssh/config`. Relay only writes
-  inside `~/.ssh/relay-ssh.d/` and that block.
-- Terminal bytes and RDP packets travel over loopback WebSockets guarded by random session tokens and exact
-  Origin allow-lists. Relay relays RDP bytes directly but never decodes them.
+- `connections.toml` is the single source of truth. Saving regenerates `~/.ssh/relay-ssh.d/config`,
+  pulled in by one marked `Include` block in `~/.ssh/config`.
+- Every connection has a permanent id, so renaming or moving it never breaks a jump host or loses a saved
+  password. A name stays the `ssh` alias while it is unique; when two connections share one, the alias
+  becomes `Folder/name`.
 - File transfers and live port forwards attach to the connection's terminal tab through OpenSSH
-  connection sharing (`ControlMaster`), so they never need your credentials.
-- Backups are a gzip tarball encrypted with [age](https://age-encryption.org) (scrypt passphrase). Relay
-  never stores the passphrase.
+  connection sharing (`ControlMaster`), so they never need your credentials again.
+- Backups are a gzip tarball encrypted with age (scrypt passphrase). Relay never stores the passphrase.
 
 ## Remote Desktop (RDP)
 
-Relay has embedded RDP client support in the desktop application alongside SSH. **It is experimental.** It has been tested by hand against a real Windows server with NLA (Network Level Authentication): login, keyboard, mouse, resizing, text clipboard both ways, a saved vault password and a jump host all work. It was also run against an xrdp server in a container. File transfer is not built (the Files and Port forwards buttons are SSH features and are disabled on RDP tabs). It is only in builds that include the client (below).
+Relay can open Windows remote desktop sessions alongside SSH. **It is experimental.** It has been tested by
+hand against a real Windows server with NLA (login, keyboard, mouse, resizing, text clipboard both ways, a
+saved vault password and a jump host) and against an xrdp server in a container. File transfer is not built.
 
-- **Building the client:** the remote desktop client is IronRDP's official browser client, built from the IronRDP commit pinned in `desktop/rdp-client/ironrdp.pin`. Run `make rdp-client` (needs `git`, `node`, `rustup` and `wasm-pack`) before building the app; without it the RDP tab says so instead of connecting.
-
-- **Saved profiles:** Remote desktop connections are saved in `connections.toml` with `protocol = "rdp"`, an optional `domain`, and port defaulting to 3389. The `relay-ssh` CLI ignores RDP profiles so OpenSSH configuration remains clean.
-- **Pure relay:** Relay relays RDP bytes directly between the server and an in-browser WebAssembly client ([IronRDP](https://github.com/Devolutions/IronRDP)) over a loopback WebSocket. Go does no RDP decoding or rendering.
-- **TOFU host certificates:** Server TLS certificates are pinned on first use in `~/.config/relay-ssh/rdp_hosts.toml`. If a certificate fingerprint changes, Relay displays a clear security warning and requires explicit user confirmation.
-- **Jump hosts:** RDP connections can tunnel through any saved SSH jump host via a local port forward (`ssh -L`), automatically torn down when the session closes.
-- **Credentials:** Passwords can be stored encrypted in Relay's age vault (`~/.config/relay-ssh/vault.age`) or prompted in-memory per session. Relay never writes passwords to disk or logs unencrypted.
-- **Clipboard & shortcuts:** the client synchronises the clipboard with the remote desktop, and a toolbar sends Ctrl+Alt+Delete. Keyboard shortcuts using `⌘` stay with Relay so window and tab controls always work.
+- **Pure relay:** RDP bytes go directly between the server and an in-browser WebAssembly client
+  ([IronRDP](https://github.com/Devolutions/IronRDP)) over a loopback WebSocket. Go does no RDP decoding.
+- **Building the client:** run `make rdp-client` before building the app (the commit is pinned in
+  `desktop/rdp-client/ironrdp.pin`); without it an RDP tab says so instead of connecting.
+- **Host certificates:** pinned on first use in `~/.config/relay-ssh/rdp_hosts.toml`; a changed
+  fingerprint stops the connection until you confirm.
+- **Jump hosts:** an RDP connection can tunnel through any saved SSH connection (`ssh -L`), torn down when
+  the tab closes.
+- **Credentials and clipboard:** a password can be saved in the vault or typed per session. Clipboard
+  sharing can be switched off in Settings or per tab.
+- Saved RDP connections use `protocol = "rdp"` in `connections.toml`; the `relay-ssh` CLI skips them.
 
 ## Example `connections.toml`
 
@@ -147,15 +191,24 @@ version = 1
 folders = ["archive"]            # optional: folders that exist even when empty
 
 [[profile]]
+id = "@a1b2c3d4e5f6"             # permanent; added for you on save
+name = "bastion"
+host = "bastion.example.com"
+user = "ops"
+port = 22
+auth = "agent"                   # agent | key | password
+
+[[profile]]
+id = "@0f9e8d7c6b5a"
 name = "web-1"
 host = "10.0.0.5"
 user = "deploy"
 port = 2222
-auth = "key"                     # agent | key | password
+auth = "key"
 key = "id_ed25519"
-folder = "prod/eu"
+folder = "prod/eu"               # names only need to be unique within a folder
 tags = ["web", "critical"]
-jump = "bastion"                 # another saved profile
+jump = "@a1b2c3d4e5f6"           # the id of another saved profile
 forward_agent = true
 
   [[profile.tunnel]]
@@ -164,14 +217,18 @@ forward_agent = true
   target = "localhost:80"
 
 [[profile]]
+id = "@112233445566"
 name = "win-dc"
 protocol = "rdp"
 host = "10.0.0.12"
 user = "Administrator"
 domain = "CORP"
 port = 3389
-jump = "bastion"
+jump = "@a1b2c3d4e5f6"
 ```
+
+A `jump` written as a profile name (older files) is converted to the id the next time the file is saved.
+Moved from the old `sssh` tool? Relay migrates `~/.config/sssh` and `~/.ssh/sssh.d` on first start.
 
 ## Roadmap
 

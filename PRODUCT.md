@@ -37,7 +37,7 @@ Used all day, often with many tabs and panes open, mostly keyboard-driven (quick
 
 ## Brand Commitments
 
-The product is named Relay (repository `relay-ssh`). The app icon and logo are in `docs/assets/`. Open source, MIT, private until the owner decides otherwise.
+The product is named Relay (repository `relay-ssh`). The app icon and logo are in `docs/assets/`. Open source, MIT.
 
 ## Evidence on Hand
 

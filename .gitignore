@@ -6,3 +6,4 @@
 *.tar.gz.age
 .claude/
 desktop/frontend/.svelte-check/
+desktop/frontend/src/node_modules/

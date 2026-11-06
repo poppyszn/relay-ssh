@@ -7,8 +7,9 @@ them before opening a pull request, and open an issue first for anything bigger 
 
 1. **OpenSSH stays the SSH client.** Do not add SSH protocol code. Generate config and run `ssh`,
    `sftp` or `ssh-keygen`.
-2. **Never store a secret.** No passwords, passphrases, tokens or 2FA codes on disk or in memory beyond
-   the moment of use. They belong to `ssh`.
+2. **Store no secret by default.** Key passphrases and 2FA codes are never stored; they belong to `ssh`, the
+   agent and the Keychain. A password is kept only if the user opts in for that connection, and only in the
+   age-encrypted vault (`vault.age`), never in `connections.toml`, the generated config or logs.
 3. **One human-editable source of truth:** `connections.toml`. The CLI and the app share it through
    `internal/`, so a change made in one must appear in the other.
 4. **Stay inside the sandbox.** Relay writes only to `~/.ssh/relay-ssh.d/` and one marked block in

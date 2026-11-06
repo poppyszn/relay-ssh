@@ -8,7 +8,7 @@ Relay manages SSH connections, so security reports matter. Thank you for taking 
 **Security → Report a vulnerability** on this repository (private vulnerability reporting).
 
 Include what you found, how to reproduce it, and the impact you expect. You will get an acknowledgement
-and we will keep you updated on the fix. Please allow reasonable time to ship a fix before disclosing
+and you will be kept updated on the fix. Please allow reasonable time to ship a fix before disclosing
 publicly.
 
 ## What is in scope
