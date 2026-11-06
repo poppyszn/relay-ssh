@@ -51,6 +51,8 @@ func Generate(s config.Store) string {
 		fmt.Fprintf(&b, "    HostName %s\n", p.Host)
 		fmt.Fprintf(&b, "    User %s\n", p.User)
 		fmt.Fprintf(&b, "    Port %d\n", p.Port)
+		// Keep-alives stop a router or firewall forgetting an idle connection and dropping it.
+		b.WriteString("    ServerAliveInterval 30\n    ServerAliveCountMax 4\n")
 
 		switch p.Auth {
 		case config.AuthKey:

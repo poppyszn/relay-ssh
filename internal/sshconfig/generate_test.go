@@ -29,11 +29,15 @@ Host bastion
     HostName b.example.com
     User admin
     Port 22
+    ServerAliveInterval 30
+    ServerAliveCountMax 4
 
 Host prod-web
     HostName 10.0.0.5
     User deploy
     Port 2222
+    ServerAliveInterval 30
+    ServerAliveCountMax 4
     IdentityFile ~/.ssh/relay-ssh.d/keys/prod-web
     IdentitiesOnly yes
     ProxyJump bastion
@@ -206,5 +210,25 @@ func TestGenerateSkipsRdpProfiles(t *testing.T) {
 	}
 	if !strings.Contains(out, "Host bastion") {
 		t.Errorf("Generate() should include SSH profile bastion, got:\n%s", out)
+	}
+}
+
+// Idle connections were dropping when a router or firewall forgot them (typically after a minute or two of silence).
+// Every connection now sends a keep-alive every 30 seconds and is only declared dead after four unanswered ones.
+func TestGenerateKeepsIdleConnectionsAlive(t *testing.T) {
+	s := config.Store{Version: config.Version, Profiles: []config.Profile{
+		{Name: "a-agent", Host: "h", User: "u", Port: 22, Auth: config.AuthAgent},
+		{Name: "b-key", Host: "h", User: "u", Port: 22, Auth: config.AuthKey, Key: "k"},
+		{Name: "c-pass", Host: "h", User: "u", Port: 22, Auth: config.AuthPassword},
+		{Name: "d-jump", Host: "h", User: "u", Port: 22, Auth: config.AuthAgent, Jump: "a-agent"},
+	}}
+	blocks := strings.Split(Generate(s), "\nHost ")[1:]
+	if len(blocks) != 4 {
+		t.Fatalf("expected 4 host blocks, got %d", len(blocks))
+	}
+	for _, b := range blocks {
+		if !strings.Contains(b, "    ServerAliveInterval 30\n") || !strings.Contains(b, "    ServerAliveCountMax 4\n") {
+			t.Errorf("host block without keep-alive:\n%s", b)
+		}
 	}
 }
