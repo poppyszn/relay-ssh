@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds IronRDP's browser client (a WebAssembly module plus its web component and RDP backend, all
-# official Devolutions code) at the release pinned in desktop/rdp-client/ironrdp.pin, and copies the
+# official Devolutions code) at the commit pinned in desktop/rdp-client/ironrdp.pin, and copies the
 # result to desktop/frontend/vendor/ironrdp/ (not committed). Needs git, node, rustup and wasm-pack.
 set -euo pipefail
 
@@ -10,23 +10,22 @@ SRC="$ROOT/desktop/.ironrdp-src"
 OUT="$ROOT/desktop/frontend/vendor/ironrdp"
 
 pinned() { sed -n "s/^$1=//p" "$PIN"; }
-TAG="$(pinned tag)"; COMMIT="$(pinned commit)"; RUST="$(pinned rust)"
-[ -n "$TAG" ] && [ -n "$COMMIT" ] && [ -n "$RUST" ] || { echo "$PIN is missing tag, commit or rust" >&2; exit 1; }
+REF="$(pinned ref)"; RUST="$(pinned rust)"
+[ -n "$REF" ] && [ -n "$RUST" ] || { echo "$PIN is missing ref or rust" >&2; exit 1; }
+case "$REF" in *[!0-9a-f]* | "") echo "ref in $PIN must be a full commit hash" >&2; exit 1 ;; esac
+[ "${#REF}" = 40 ] || { echo "ref in $PIN must be a full 40-character commit hash" >&2; exit 1; }
 
 for tool in git node npm rustup wasm-pack; do
   command -v "$tool" >/dev/null 2>&1 || { echo "$tool not found. Install it first (macOS: brew install rustup wasm-pack, then rustup install $RUST)." >&2; exit 1; }
 done
 
-if [ -d "$SRC/.git" ]; then
-  git -C "$SRC" fetch -q --depth 1 origin "refs/tags/$TAG:refs/tags/$TAG"
-else
-  git clone -q --depth 1 --branch "$TAG" https://github.com/Devolutions/IronRDP "$SRC"
-fi
-git -C "$SRC" checkout -q --detach "$TAG"
+[ -d "$SRC/.git" ] || git init -q "$SRC"
+git -C "$SRC" fetch -q --depth 1 https://github.com/Devolutions/IronRDP "$REF"
+git -C "$SRC" checkout -q --detach FETCH_HEAD
 ACTUAL="$(git -C "$SRC" rev-parse HEAD)"
-[ "$ACTUAL" = "$COMMIT" ] || { echo "tag $TAG points to $ACTUAL, not the pinned $COMMIT. Refusing to build." >&2; exit 1; }
+[ "$ACTUAL" = "$REF" ] || { echo "fetched $ACTUAL, not the pinned $REF. Refusing to build." >&2; exit 1; }
 
-echo "Building IronRDP $TAG ($COMMIT) with Rust $RUST ..."
+echo "Building IronRDP $REF with Rust $RUST ..."
 rustup toolchain install "$RUST" --profile minimal --target wasm32-unknown-unknown >/dev/null
 export RUSTUP_TOOLCHAIN="$RUST"
 (
@@ -51,5 +50,5 @@ mv "$OUT/index.d.ts" "$OUT/iron-remote-desktop.d.ts"
 cp "$SRC/web-client/iron-remote-desktop-rdp/dist/iron-remote-desktop-rdp.js" "$OUT/"
 cp "$SRC/web-client/iron-remote-desktop-rdp/dist/index.d.ts" "$OUT/iron-remote-desktop-rdp.d.ts"
 cp "$SRC/LICENSE-MIT" "$SRC/LICENSE-APACHE" "$OUT/"
-printf '%s\n%s\n' "$TAG" "$COMMIT" > "$OUT/VERSION"
+printf '%s\n' "$REF" > "$OUT/VERSION"
 echo "IronRDP client built into $OUT"

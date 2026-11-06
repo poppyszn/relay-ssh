@@ -3,7 +3,7 @@
   import { Events } from "@wailsio/runtime";
   import { RdpService, type Profile, type RdpSessionInfo } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import { formatRdpError } from "../lib/rdp_errors";
-  import { buildConfig, loadRdpClient, mountClient, type RdpUi } from "../lib/rdp_client";
+  import { buildConfig, loadRdpClient, mountClient, needsResize, type RdpUi, type Size } from "../lib/rdp_client";
   import Icon from "./Icon.svelte";
   import Modal from "./Modal.svelte";
 
@@ -33,6 +33,8 @@
   let unlistenCert: (() => void) | null = null;
   // The session Open returned while the password was being typed. Its token only lives 60 seconds.
   let pending: { info: RdpSessionInfo; at: number } | null = null;
+  // The size the remote desktop currently has, so a resize only goes out when the tab really changed.
+  let applied: Size = { width: 0, height: 0 };
   const TOKEN_LIFETIME_MS = 45_000;
 
   function fail(err: unknown) {
@@ -102,6 +104,7 @@
       ui = await mountClient(host!, client);
       ui.setEnableClipboard(true);
       const rect = host!.getBoundingClientRect();
+      applied = { width: Math.max(640, Math.floor(rect.width)), height: Math.max(480, Math.floor(rect.height)) };
       const config = buildConfig(ui, client, {
         username: info.user,
         password,
@@ -110,8 +113,8 @@
         port: info.port,
         wsUrl: info.wsUrl,
         token: info.token,
-        width: Math.max(640, Math.floor(rect.width)),
-        height: Math.max(480, Math.floor(rect.height)),
+        width: applied.width,
+        height: applied.height,
       });
       // The gateway pauses here while a certificate prompt is answered (see the rdp:cert event).
       const session = await ui.connect(config);
@@ -138,9 +141,10 @@
     resizeObserver = new ResizeObserver(() => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        const { width, height } = host!.getBoundingClientRect();
-        if (ui && width > 0 && height > 0) {
-          try { ui.resize(Math.floor(width), Math.floor(height)); } catch { /* the server cannot resize */ }
+        const next = host!.getBoundingClientRect();
+        if (ui && needsResize(applied, next)) {
+          applied = { width: Math.floor(next.width), height: Math.floor(next.height) };
+          try { ui.resize(applied.width, applied.height); } catch { /* the server cannot resize */ }
         }
       }, 250);
     });

@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, vi } from "vitest";
-import { buildConfig, loadRdpClient, mountClient, type RdpClientModule } from "./rdp_client";
+import { buildConfig, loadRdpClient, mountClient, needsResize, type RdpClientModule } from "./rdp_client";
 
 // A stand-in for the IronRDP web component: a custom element that announces itself with `ready`.
 function fakeElementClass(ui: object) {
@@ -68,5 +68,18 @@ describe("the connection config", () => {
     expect(by.withServerDomain).toBe("CORP");
     expect(by.withDesktopSize).toEqual({ width: 1440, height: 900 });
     expect(by.withExtension).toEqual({ displayControl: true });
+  });
+});
+
+describe("following the tab's size", () => {
+  it("only asks the server to resize when the size really changed", () => {
+    expect(needsResize({ width: 1000, height: 640 }, { width: 1000, height: 640 })).toBe(false);
+    expect(needsResize({ width: 1000, height: 640 }, { width: 1000.4, height: 640.9 })).toBe(false); // sub-pixel noise
+    expect(needsResize({ width: 1000, height: 640 }, { width: 1001, height: 640 })).toBe(true);
+    expect(needsResize({ width: 1000, height: 640 }, { width: 900, height: 600 })).toBe(true);
+  });
+  it("never asks for a size the server would reject", () => {
+    expect(needsResize({ width: 1000, height: 640 }, { width: 0, height: 600 })).toBe(false);
+    expect(needsResize({ width: 1000, height: 640 }, { width: 600, height: 0 })).toBe(false);
   });
 });

@@ -129,9 +129,9 @@ tools, files, forwards          ssh / sftp / ssh-keygen         ~/.ssh/relay-ssh
 
 ## Remote Desktop (RDP)
 
-Relay has embedded RDP client support in the desktop application alongside SSH. **It is experimental**: the pieces are tested, but it has not yet been proven against a real Windows host, and it is only in builds that include the client (below).
+Relay has embedded RDP client support in the desktop application alongside SSH. **It is experimental.** It has been run end to end against an xrdp server in a container (TLS, login screen and desktop drawn correctly, keyboard, mouse, resizing), but not yet against a real Windows host, so Windows login (NLA) and clipboard are unproven. It is only in builds that include the client (below).
 
-- **Building the client:** the remote desktop client is IronRDP's official browser client, built from the release pinned in `desktop/rdp-client/ironrdp.pin`. Run `make rdp-client` (needs `git`, `node`, `rustup` and `wasm-pack`) before building the app; without it the RDP tab says so instead of connecting.
+- **Building the client:** the remote desktop client is IronRDP's official browser client, built from the IronRDP commit pinned in `desktop/rdp-client/ironrdp.pin`. Run `make rdp-client` (needs `git`, `node`, `rustup` and `wasm-pack`) before building the app; without it the RDP tab says so instead of connecting.
 
 - **Saved profiles:** Remote desktop connections are saved in `connections.toml` with `protocol = "rdp"`, an optional `domain`, and port defaulting to 3389. The `relay-ssh` CLI ignores RDP profiles so OpenSSH configuration remains clean.
 - **Pure relay:** Relay relays RDP bytes directly between the server and an in-browser WebAssembly client ([IronRDP](https://github.com/Devolutions/IronRDP)) over a loopback WebSocket. Go does no RDP decoding or rendering.

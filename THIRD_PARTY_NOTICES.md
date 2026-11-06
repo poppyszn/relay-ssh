@@ -27,7 +27,7 @@ carry their own licenses, which their packages include.
 
 | Component | License |
 | --- | --- |
-| [Devolutions/IronRDP](https://github.com/Devolutions/IronRDP) (`ironrdp-web`, `iron-remote-desktop`, `iron-remote-desktop-rdp`), built from the release in `desktop/rdp-client/ironrdp.pin` | MIT OR Apache-2.0 (copies of both licences are placed next to the built client) |
+| [Devolutions/IronRDP](https://github.com/Devolutions/IronRDP) (`ironrdp-web`, `iron-remote-desktop`, `iron-remote-desktop-rdp`), built from the commit in `desktop/rdp-client/ironrdp.pin` | MIT OR Apache-2.0 (copies of both licences are placed next to the built client) |
 
 ## Fonts (bundled into the desktop app)
 

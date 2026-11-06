@@ -95,3 +95,15 @@ export function buildConfig(ui: RdpUi, client: RdpClientModule, o: RdpConnect): 
     .withExtension(client.displayControl(true)) // lets the remote desktop follow the tab's size
     .build();
 }
+
+export interface Size {
+  width: number;
+  height: number;
+}
+
+/** Whether the remote desktop should be resized: the whole-pixel size changed, and is a usable size. */
+export function needsResize(applied: Size, next: Size): boolean {
+  const w = Math.floor(next.width), h = Math.floor(next.height);
+  if (w <= 0 || h <= 0) return false;
+  return w !== Math.floor(applied.width) || h !== Math.floor(applied.height);
+}

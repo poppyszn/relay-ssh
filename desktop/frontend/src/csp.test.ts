@@ -10,6 +10,9 @@ describe("the page's Content-Security-Policy", () => {
   it("lets WebAssembly compile, but still no inline or eval'd script", () => {
     expect(directive("script-src")).toEqual(["'self'", "'wasm-unsafe-eval'"]);
   });
+  it("lets the client run its own worker from a blob: URL (and no other source)", () => {
+    expect(directive("worker-src")).toEqual(["'self'", "blob:"]);
+  });
   it("lets the client load its inlined module and reach only the loopback gateway", () => {
     const connect = directive("connect-src");
     expect(connect).toContain("data:");

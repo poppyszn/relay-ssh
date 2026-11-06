@@ -1,7 +1,13 @@
-# The IronRDP release Relay's remote desktop client is built from (see desktop/scripts/build-ironrdp.sh).
-# tag:    a release tag of github.com/Devolutions/IronRDP for the iron-remote-desktop-rdp web package.
-# commit: the full commit that tag must point to. The build refuses a tag that has moved.
-# rust:   the toolchain that release pins in its own rust-toolchain.toml.
-tag=npm-iron-remote-desktop-rdp-v0.7.0
-commit=e45f68c7e52297ca50d33b44c0ace36c9940fbe6
-rust=1.89.0
+# The IronRDP source Relay's remote desktop client is built from (see desktop/scripts/build-ironrdp.sh).
+# ref:     the full commit of github.com/Devolutions/IronRDP. The build refuses anything else.
+# release: the newest IronRDP release tag when this was pinned (the update workflow looks for a newer one).
+# rust:    the toolchain that commit pins in its own rust-toolchain.toml.
+# wasm_pack: the wasm-pack version that commit's xtask uses.
+#
+# Why a commit and not the release: release npm-iron-remote-desktop-rdp-v0.7.0 (May 2026) predates
+# IronRDP PR #1486 (preserve bitmap source stride), without which servers such as xrdp are drawn sheared
+# and unusable. Tested against xrdp 0.9.24. Move to the next release that contains it.
+ref=da016ce860040c6cb37943cfc857d836735d252c
+release=npm-iron-remote-desktop-rdp-v0.7.0
+rust=1.94.1
+wasm_pack=0.15.0
