@@ -66,8 +66,8 @@ func main() {
 			application.NewService(&VaultService{}),
 			application.NewService(rdpService),
 		},
-		Assets:   application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
-		Mac:      application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
+		Assets: application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
+		Mac:    application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
 	})
 	app.OnShutdown(func() {
 		getVault().Lock()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/hex"
 	"testing"
 )
 
@@ -119,5 +120,52 @@ func TestRDCleanPathGoldenTagVerification(t *testing.T) {
 	expectedDestBytes := []byte{0xA2, 0x06, 0x0C, 0x04, 'h', 'o', 's', 't'}
 	if !bytes.Contains(der, expectedDestBytes) {
 		t.Errorf("encoded DER missing [2] EXPLICIT destination, got: %x", der)
+	}
+}
+
+// Bytes produced by IronRDP's own ironrdp-rdcleanpath crate (npm-iron-remote-desktop-rdp-v0.7.0)
+// for new_request(x224, "10.0.2.50:3389", "tok-123", Some("pcb")). This is what the real browser
+// client sends, so decoding it proves our codec reads the official wire format.
+const ironrdpRequestHex = "3039a00402020d3ea2100c0e31302e302e322e35303a33333839a3090c07746f6b2d313233a5050c03706362a60d040b0300000b06e00000000000"
+
+func TestDecodesARequestWrittenByIronRDP(t *testing.T) {
+	raw, err := hex.DecodeString(ironrdpRequestHex)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pdu, err := DecodeRDCleanPath(raw)
+	if err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if pdu.Version != RDCleanPathVersion1 || pdu.Destination != "10.0.2.50:3389" || pdu.ProxyAuth != "tok-123" || pdu.PreconnectionBlob != "pcb" {
+		t.Fatalf("fields wrong: %+v", pdu)
+	}
+	if hex.EncodeToString(pdu.X224ConnectionPdu) != "0300000b06e00000000000" {
+		t.Fatalf("x224 = %x", pdu.X224ConnectionPdu)
+	}
+}
+
+// What our gateway sends back. IronRDP's ironrdp-rdcleanpath crate decoded these exact bytes (version 3390,
+// server address, X.224 confirm and a two-certificate chain; and a general error) and accepted them as a valid
+// response and error, so the browser client will too.
+const (
+	ironrdpAcceptedResponseHex = "3034a00402020d3ea60d040b0300000b06d00000000000a70b3009040301020304020405a9100c0e31302e302e322e35303a33333839"
+	ironrdpAcceptedErrorHex    = "300fa00402020d3ea1073005a003020101"
+)
+
+func TestEncodesWhatIronRDPAccepts(t *testing.T) {
+	resp, err := EncodeRDCleanPath(NewRDCleanPathResponsePdu("10.0.2.50:3389", []byte{3, 0, 0, 11, 6, 0xd0, 0, 0, 0, 0, 0}, [][]byte{{1, 2, 3}, {4, 5}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := hex.EncodeToString(resp); got != ironrdpAcceptedResponseHex {
+		t.Fatalf("response bytes changed:\n got %s\nwant %s", got, ironrdpAcceptedResponseHex)
+	}
+	e, err := EncodeRDCleanPath(NewRDCleanPathErrorPdu(GeneralErrorCode))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := hex.EncodeToString(e); got != ironrdpAcceptedErrorHex {
+		t.Fatalf("error bytes changed:\n got %s\nwant %s", got, ironrdpAcceptedErrorHex)
 	}
 }
