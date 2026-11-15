@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { startPolling } from "./lib/poll";
   import { onMount, tick } from "svelte";
   import { Clipboard, Events } from "@wailsio/runtime";
   import { Toaster, toast as sonner } from "svelte-sonner";
@@ -145,8 +146,8 @@
     open;
     refreshForwardCount();
     if (!openSshProfiles.length) return;
-    const t = setInterval(refreshForwardCount, 4000);
-    return () => clearInterval(t);
+    // The badge only needs to be roughly right; it also refreshes whenever tabs or forwards change.
+    return startPolling(refreshForwardCount, 30_000);
   });
 
   function toggleDrawer(kind: Exclude<DrawerKind, "none">, target = "") {

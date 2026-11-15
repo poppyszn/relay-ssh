@@ -47,4 +47,24 @@ describe("ForwardsPanel embedded drawer", () => {
     flushSync();
     expect(buttons.map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "false", "true"]);
   });
+
+  it("does not poll the connection while the window is hidden", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+      const status = vi.spyOn(ForwardsService, "Status").mockResolvedValue({ connected: true, message: "", forwards: [] } as never);
+      const target = document.createElement("div");
+      document.body.append(target);
+      c = mount(ForwardsPanel, {
+        target,
+        props: { target: "prod-eu", name: "prod-eu", embedded: true, onclose: () => {}, onopen: () => {}, onchanged: () => {} },
+      });
+      flushSync();
+      const afterMount = status.mock.calls.length;
+      vi.advanceTimersByTime(60_000);
+      expect(status.mock.calls.length).toBe(afterMount);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

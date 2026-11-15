@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { startPolling } from "../lib/poll";
   import EmptyState from "./EmptyState.svelte";
   import ForwardDiagram from "./ForwardDiagram.svelte";
   import Icon from "./Icon.svelte";
@@ -50,8 +51,7 @@
 
   $effect(() => {
     refresh();
-    const t = setInterval(refresh, 3000);
-    return () => clearInterval(t);
+    return startPolling(refresh, 5000);
   });
 </script>
 
