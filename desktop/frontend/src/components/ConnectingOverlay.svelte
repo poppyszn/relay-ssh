@@ -38,7 +38,7 @@
   .hint.on { opacity: 1; }
   .btn { margin-top: var(--s3); }
   .spin { animation: turn 1s linear infinite; }
-  .track { fill: none; stroke: var(--line2); stroke-width: 3; }
+  .track { fill: none; stroke: var(--hairline); stroke-width: 3; }
   .arc { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 20 76; }
   @keyframes turn { to { transform: rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .spin { animation: none; } .arc { stroke-dasharray: 60 16; } }

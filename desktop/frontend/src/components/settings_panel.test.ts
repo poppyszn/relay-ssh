@@ -102,4 +102,31 @@ describe("SettingsPanel", () => {
     click(sw);
     expect(settings.clickToMove).toBe(false);
   });
+
+  it("lets the user pick what opens on startup", () => {
+    settings.startup = "launcher";
+    const t = show();
+    const group = t.querySelector<HTMLElement>('[role="group"][aria-labelledby="set-startup"]')!;
+    const restoreBtn = [...group.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Restore tabs")!;
+    expect(restoreBtn.getAttribute("aria-pressed")).toBe("false");
+    click(restoreBtn);
+    expect(settings.startup).toBe("restore");
+    expect(restoreBtn.getAttribute("aria-pressed")).toBe("true");
+    settings.startup = "launcher";
+  });
+
+  it("closes when the X close button or its inner icon is clicked", () => {
+    let closed = 0;
+    const t = show({ onclose: () => { closed += 1; } });
+    const closeBtn = t.querySelector<HTMLButtonElement>('button[aria-label="Close"]')!;
+    expect(closeBtn).toBeTruthy();
+    click(closeBtn);
+    expect(closed).toBe(1);
+    const svg = closeBtn.querySelector("svg");
+    if (svg) {
+      svg.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      flushSync();
+      expect(closed).toBe(2);
+    }
+  });
 });

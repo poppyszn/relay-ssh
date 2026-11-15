@@ -49,7 +49,7 @@ describe("clipboard sharing in a remote desktop tab", () => {
     expect(ui.setEnableAutoClipboard).toHaveBeenLastCalledWith(false);
     const btn = t.querySelector<HTMLButtonElement>("[data-clipboard]")!;
     expect(btn.getAttribute("aria-pressed")).toBe("false");
-    expect(btn.textContent).toMatch(/off/i);
+    expect(btn.textContent).toMatch(/^share clipboard$/i);
   });
 
   it("can be switched for this tab only, without changing the setting", async () => {
@@ -57,7 +57,7 @@ describe("clipboard sharing in a remote desktop tab", () => {
     const t = await connected();
     expect(ui.setEnableClipboard).toHaveBeenLastCalledWith(true);
     const btn = t.querySelector<HTMLButtonElement>("[data-clipboard]")!;
-    expect(btn.textContent).toMatch(/shared/i);
+    expect(btn.textContent).toMatch(/^unshare clipboard$/i);
     btn.click();
     flushSync();
     expect(ui.setEnableClipboard).toHaveBeenLastCalledWith(false);

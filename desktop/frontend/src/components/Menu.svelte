@@ -72,7 +72,7 @@
   }
 </script>
 
-<div class="menu" role="menu" aria-label={label} tabindex="-1" bind:this={box} onkeydown={key} style="width: {width}px; {style}" in:pop|global={{ duration: 120, y: 4 }}>
+<div class="menu nodrag" role="menu" aria-label={label} tabindex="-1" bind:this={box} onkeydown={key} style="width: {width}px; {style}" in:pop|global={{ duration: 170, y: 6, scale: 0.96 }} out:pop|global={{ duration: 110, y: 4, scale: 0.97 }}>
   {#each items as it, i (it.id)}
     {#if it.gapBefore}<div class="sep" role="separator"></div>{/if}
     <button type="button" class="item" class:rich class:row-hl={i === sel} class:danger={it.danger} role="menuitem" disabled={it.disabled} tabindex="-1" onmouseenter={() => !it.disabled && (sel = i)} onclick={() => run(i)}>
@@ -85,13 +85,13 @@
 </div>
 
 <style>
-  .menu { position: absolute; z-index: var(--z-pop); padding: var(--s1); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-pop); outline: none; }
-  .sep { height: 1px; margin: var(--s1) var(--s2); background: var(--line); }
+  .menu { position: absolute; z-index: var(--z-pop); padding: var(--s1); background: var(--float); border: 1px solid var(--float-edge); border-radius: var(--r-md); box-shadow: var(--e-pop); outline: none; }
+  .sep { height: 1px; margin: var(--s1) var(--s2); background: var(--hairline); }
   .item { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: var(--h-md); padding: 0 var(--s3); background: none; border: 0; border-radius: var(--r-sm); color: var(--text); text-align: left; font-size: var(--t-md); }
   .item.rich { min-height: 48px; }
   .item:disabled { opacity: 0.45; cursor: default; }
   .item.danger { color: var(--err-text); }
-  .ico { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--r-sm); background: var(--line); color: var(--text2); }
+  .ico { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--r-sm); background: var(--hover); color: var(--text2); }
   .item:not(.rich) .ico { width: 16px; height: 16px; background: none; }
   .row-hl .ico { color: var(--accent-text); background: var(--accent-ring); }
   .item:not(.rich).row-hl .ico { background: none; }

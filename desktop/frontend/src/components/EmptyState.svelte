@@ -15,7 +15,7 @@
 
 <style>
   .empty { display: grid; justify-items: center; gap: var(--s2); padding: var(--s8) var(--s6); text-align: center; color: var(--muted); }
-  .glyph { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-md); background: var(--line); color: var(--text2); margin-bottom: var(--s1); }
+  .glyph { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-md); background: var(--band); color: var(--text2); margin-bottom: var(--s1); }
   strong { color: var(--text); font-size: var(--t-md); font-weight: 600; }
   p { margin: 0; max-width: 34ch; font-size: var(--t-sm); line-height: 1.5; }
   .act { margin-top: var(--s2); display: flex; gap: var(--s2); }

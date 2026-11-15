@@ -1,5 +1,6 @@
 import { ProfilesService, type Profile } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
 import { canDrop, folderBase, folderParent, joinFolder, paneEdge, type PaneEdge } from "../lib/lib";
+import { ui } from "./ui.svelte";
 
 export type DragKind = "profile" | "folder" | "pane";
 export interface Pending { kind: DragKind; id: string; to: string; text: string; sub: string }
@@ -26,7 +27,7 @@ const msg = (e: unknown) => (e as Error)?.message ?? String(e);
 class SidebarState {
   collapsed = $state<Record<string, boolean>>(loadCollapsed());
   /** The folder new subfolders and connections go into; "" is the top level. */
-  selectedFolder = $state("");
+  selectedFolder = $state(ui.selectedFolder);
   /** The connection row last clicked (highlighted; double-click opens it). */
   selectedConn = $state("");
   /** Whether the user has opened a connection by double-clicking (the hint under the list goes away). */
@@ -91,6 +92,7 @@ class SidebarState {
   }
   select(path: string) {
     this.selectedFolder = path;
+    ui.setSelectedFolder(path);
   }
 
   private async run(fn: () => Promise<void>) {

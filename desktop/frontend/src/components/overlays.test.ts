@@ -77,6 +77,22 @@ describe("Modal", () => {
     s2.click();
     expect(keep).not.toHaveBeenCalled();
   });
+
+  it("closes on X button click without triggering scrim or window click", () => {
+    const close = vi.fn();
+    const winClick = vi.fn();
+    window.addEventListener("click", winClick);
+    try {
+      const t = show(Modal, { title: "Dialog", dismissOnScrim: true, onclose: close, children: body("x") });
+      const btn = t.querySelector<HTMLButtonElement>('button[aria-label="Close"]')!;
+      expect(btn).toBeTruthy();
+      btn.click();
+      expect(close).toHaveBeenCalledTimes(1);
+      expect(winClick).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("click", winClick);
+    }
+  });
 });
 
 describe("Menu", () => {

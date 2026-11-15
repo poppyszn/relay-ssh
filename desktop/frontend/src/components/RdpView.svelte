@@ -331,7 +331,7 @@
       <button type="button" class="grip" data-grip aria-label="Move this toolbar: drag it, or use the arrow keys (Home puts it back)" title="Drag to move" onpointerdown={gripDown} onkeydown={gripKey}></button>
       <span class="dot ok" aria-hidden="true"></span>
       <span class="mono who">{prof?.user}@{prof?.host}</span>
-      <button type="button" class="btn ghost sm" data-clipboard aria-pressed={clipboardShared} title={clipboardShared ? "Your clipboard and this remote desktop's are shared both ways. Click to stop sharing." : "The clipboard is not shared with this remote desktop. Click to share it."} onclick={toggleClipboard}>Clipboard: {clipboardShared ? "shared" : "off"}</button>
+      <button type="button" class="btn ghost sm" data-clipboard aria-pressed={clipboardShared} title={clipboardShared ? "Your clipboard and this remote desktop's are shared both ways. Click to stop sharing." : "The clipboard is not shared with this remote desktop. Click to share it."} onclick={toggleClipboard}>{clipboardShared ? "Unshare clipboard" : "Share clipboard"}</button>
       <button type="button" class="btn ghost sm" title="Send Ctrl+Alt+Delete to the remote desktop" onclick={() => ui?.ctrlAltDel()}>Ctrl+Alt+Del</button>
       <button type="button" class="btn ghost sm" onclick={cancel}>Disconnect</button>
     </div>
@@ -347,18 +347,18 @@
 </div>
 
 <style>
-  .rdp-view { width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--bg); position: relative; overflow: hidden; }
-  .center-card { position: relative; z-index: 1; margin: auto; width: min(440px, 90%); padding: var(--s5); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-modal); display: flex; flex-direction: column; align-items: center; gap: var(--s3); text-align: center; }
-  .title { font-weight: 600; font-size: var(--t-md); color: var(--strong); }
+  .rdp-view { width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--term); position: relative; overflow: hidden; }
+  .center-card { position: relative; z-index: 1; margin: auto; width: min(440px, 90%); padding: var(--s6); background: var(--float); border: 1px solid var(--float-edge); border-radius: var(--r-lg); box-shadow: var(--e-modal); display: flex; flex-direction: column; align-items: center; gap: var(--s3); text-align: center; }
+  .title { font-weight: 600; font-size: var(--t-lg); color: var(--strong); }
   .sub { font-size: var(--t-xs); color: var(--muted); }
   .hint-text { font-size: var(--t-sm); color: var(--muted); line-height: 1.5; margin: var(--s1) 0; }
-  .spinner { width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--hairline); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; border-top-color: var(--line); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation: none; border-top-color: var(--hairline); } }
   .pass-form { width: 100%; display: flex; flex-direction: column; gap: var(--s3); text-align: left; }
   .acts { display: flex; justify-content: flex-end; gap: var(--s2); margin-top: var(--s2); }
   .cert-modal { display: flex; flex-direction: column; gap: var(--s4); }
-  .fp-box { display: flex; flex-direction: column; gap: var(--s1); padding: var(--s3); background: var(--field); border: 1px solid var(--fieldline); border-radius: var(--r-sm); font-size: var(--t-xs); }
+  .fp-box { display: flex; flex-direction: column; gap: var(--s1); padding: var(--s3); background: var(--field); border-radius: var(--r-sm); font-size: var(--t-xs); }
   .fp { word-break: break-all; color: var(--strong); font-size: var(--t-xs); }
   .note { margin: 0; font-size: var(--t-sm); color: var(--muted); line-height: 1.5; }
   .copy { align-self: flex-start; margin-top: var(--s1); }
@@ -366,14 +366,15 @@
   /* Hidden (not removed) until the session is up; the prompts and cards above it are positioned over it. */
   .stage { position: absolute; inset: 0; visibility: hidden; }
   .stage.live { visibility: visible; }
-  .bar { position: absolute; top: var(--s2); right: var(--s2); z-index: 2; display: flex; align-items: center; gap: var(--s1); padding: 2px var(--s2) 2px var(--s3); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-sm); font-size: var(--t-xs); color: var(--muted); opacity: 0.35; transition: opacity var(--dur-2) var(--ease); }
+  .bar { position: absolute; top: 12px; right: 16px; z-index: 2; display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 6px 0 12px; background: var(--float); border: 1px solid var(--float-edge); border-radius: 999px; box-shadow: var(--e-pop); font-size: var(--t-xs); color: var(--muted); backdrop-filter: blur(16px); opacity: 0.72; transition: opacity var(--dur-2) var(--ease); }
   .bar:hover, .bar:focus-within { opacity: 1; }
-  .who { margin-right: var(--s1); }
-  .grip { width: 14px; height: 22px; flex: none; padding: 0; border: 0; border-radius: var(--r-xs); background: radial-gradient(circle, var(--dim) 1.2px, transparent 1.6px) 0 0 / 5px 6px; cursor: grab; touch-action: none; }
+  .bar :global(.btn) { border-radius: 999px; height: 24px; padding: 0 9px; font-size: 11px; }
+  .who { margin-right: 4px; color: var(--text); }
+  .grip { width: 14px; height: 20px; flex: none; padding: 0; border: 0; border-radius: 6px; background: radial-gradient(circle, var(--dim) 1.2px, transparent 1.6px) 0 0 / 5px 6px; cursor: grab; touch-action: none; }
   .grip:active { cursor: grabbing; }
-  .grip:hover { background-color: var(--line); }
+  .grip:hover { background-color: var(--hover); }
   .err-icon { color: var(--warn); }
   .detail { width: 100%; text-align: left; font-size: var(--t-xs); color: var(--muted); }
   .detail summary { cursor: pointer; }
-  .detail pre { margin: var(--s2) 0 0; padding: var(--s2) var(--s3); max-height: 160px; overflow: auto; white-space: pre-wrap; word-break: break-word; user-select: text; background: var(--field); border: 1px solid var(--fieldline); border-radius: var(--r-sm); }
+  .detail pre { margin: var(--s2) 0 0; padding: var(--s2) var(--s3); max-height: 160px; overflow: auto; white-space: pre-wrap; word-break: break-word; user-select: text; background: var(--field); border-radius: var(--r-sm); }
 </style>

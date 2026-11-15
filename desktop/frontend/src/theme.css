@@ -2,185 +2,260 @@
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
 @import "@fontsource/jetbrains-mono/700.css";
+@import "tailwindcss";
 
 :root {
-  --strip: #0f1620;
-  --rail: #16202d;
-  --bar: #131c28;
-  --bg: #19232f;
-  --term: #1b2634;
-  --line: #243044;
-  --line2: #2a3649;
-  --field: #111a25;
-  --fieldline: #58667b;
-  --float: #1a2534;
-  --floatline: #34445c;
-  --text: #d3dcea;
-  --text2: #b3bfd0;
-  --muted: #8d9bb0;
-  --dim: #7d8ba0;
-  --accent: #3b9ae1;
-  --accent-text: #7fb2ee;
-  --accent-soft: rgba(59, 154, 225, 0.14);
-  --ok: #9ad07a;
-  --err: #f07b86;
-  --err-text: #f79aa3;
-  --err-bg: rgba(240, 123, 134, 0.09);
-  --hover: #1a2535;
-  --active: #1f2b3b;
-  --foot: #172130;
-  --divider: #3d4f6b;
+  --strip: #040406;
+  --dock: #060608;
+  --rail: #08080c;
+  --bar: #060608;
+  --bg: #020203;
+  --term: #050507;
+  --line: #161720;
+  --line2: #222430;
+  --field: #111218;
+  --fieldline: #636675;
+  --float: #0c0d14;
+  --floatline: #272936;
+  --text: #f4f4f5;
+  --text2: #d4d4d8;
+  --muted: #a1a1aa;
+  --dim: #858591;
+  --accent: #318edc;
+  --accent-text: #7ab2ee;
+  --accent-soft: rgba(49, 142, 220, 0.14);
+  --ok: #4ade80;
+  --err: #fb7185;
+  --err-text: #fda4af;
+  --err-bg: rgba(251, 113, 133, 0.12);
+  --hover: #111219;
+  --active: #191b24;
+  --foot: #060608;
+  --divider: #222430;
+  --hairline: rgba(255, 255, 255, 0.065);
+  --float-edge: rgba(255, 255, 255, 0.10);
+  --field-edge: transparent;
+  --surface-btn: #14151e;
+  --surface-btn-hover: #1d1f2b;
+  --cta-bg: #f4f4f5;
+  --cta-fg: #09090b;
+  --cta-hover: #ffffff;
   /* Defaults for the first paint; settings.svelte.ts sets every theme variable at startup. */
-  --strong: #ffffff; --on-accent: #06131f; --on-err: #1a0508; --scrim: rgba(6, 10, 16, 0.62); --shadow: rgba(0, 0, 0, 0.5); --band: rgba(255, 255, 255, 0.028);
-  --warn: #e6c07b; --stripe-ok: #4f9b6e; --dot-off: #3a4a62; --switch-thumb: #cfd8e6; --accent-hover: #4aa8ee;
-  --accent-hl: rgba(59, 154, 225, 0.16); --accent-ring: rgba(59, 154, 225, 0.18); --accent-faint: rgba(59, 154, 225, 0.08); --accent-edge: rgba(59, 154, 225, 0.5);
-  --ok-bg: rgba(154, 208, 122, 0.08); --ok-edge: rgba(154, 208, 122, 0.4); --ok-glow: rgba(154, 208, 122, 0.18); --err-edge: rgba(240, 123, 134, 0.6);
-  --window-radius: 10px;
+  --strong: #ffffff; --on-accent: #04121f; --on-err: #1f050a; --scrim: rgba(0, 0, 0, 0.72); --shadow: rgba(0, 0, 0, 0.75); --band: rgba(255, 255, 255, 0.025);
+  --warn: #fbbf24; --stripe-ok: #4ade80; --dot-off: #3f3f46; --switch-thumb: #e4e4e7; --accent-hover: #4aa0e8;
+  --accent-hl: rgba(49, 142, 220, 0.16); --accent-ring: rgba(49, 142, 220, 0.18); --accent-faint: rgba(49, 142, 220, 0.08); --accent-edge: rgba(49, 142, 220, 0.45);
+  --ok-bg: rgba(74, 222, 128, 0.1); --ok-edge: rgba(74, 222, 128, 0.36); --ok-glow: rgba(74, 222, 128, 0.28); --err-edge: rgba(251, 113, 133, 0.45);
+  --window-radius: 12px;
 
-  /* Scales. Every panel, menu and control draws from these; do not add one-off values. */
+  /* Scales: strictly 12px floor across UI tokens. */
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px;
-  --r-xs: 4px;   /* chips, tags, key caps */
-  --r-sm: 6px;   /* buttons, inputs, menu rows */
-  --r-md: 10px;  /* modals, menus, popovers, cards, toasts */
-  --h-sm: 28px;  /* compact controls, icon buttons */
-  --h-md: 32px;  /* default controls */
-  --t-xs: 11px; --t-sm: 12px; --t-md: 13px; --t-lg: 15px; --t-xl: 18px;
-  --e-pop: 0 8px 24px var(--shadow);     /* menus, popovers, toasts */
-  --e-modal: 0 24px 64px var(--shadow);  /* modals */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --h-sm: 28px;
+  --h-md: 34px;
+  --t-xs: 12px; --t-sm: 13px; --t-md: 14px; --t-lg: 15px; --t-xl: 18px; --t-2xl: 24px;
+  --ls-tight: -0.02em;
+  --e-pop: 0 16px 48px var(--shadow);
+  --e-modal: 0 32px 96px var(--shadow);
   --z-pop: 40; --z-modal: 50; --z-toast: 90; --z-drag: 100;
-  --dur-1: 100ms; --dur-2: 160ms; --dur-3: 240ms;
-  --ease: cubic-bezier(0.16, 1, 0.3, 1);
-  --sans: "Inter Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  --dur-1: 100ms; --dur-2: 160ms; --dur-3: 220ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sans: "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
-* { box-sizing: border-box; }
-html, body, #app { height: 100%; margin: 0; color: var(--text); font: var(--t-md)/1.45 var(--sans); overflow: hidden; }
-/* The window is transparent when Relay draws its own frame, so the page paints the
-   background and rounds the corners itself (keep in step with windowRadius in main.go). */
-html, body { background: transparent; }
-html { color-scheme: dark; }
-#app { background: var(--bg); }
-.custom-chrome #app { border-radius: var(--window-radius); }
-button, input, select, textarea { font: inherit; color: inherit; }
-button { cursor: pointer; }
-.mono { font-family: var(--mono); }
 
-/* Keyboard focus: one ring for everything interactive. !important because components reset
-   buttons with `all: unset`, which would otherwise take the outline away. */
-:is(button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [tabindex]):focus-visible { outline: 2px solid var(--accent) !important; outline-offset: 1px !important; }
+@layer base {
+  * { box-sizing: border-box; }
+  html, body, #app {
+    height: 100%;
+    margin: 0;
+    color: var(--text);
+    font: var(--t-md)/1.5 var(--sans);
+    letter-spacing: -0.011em;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* The window is transparent when Relay draws its own frame, so the page paints the
+     background and rounds the corners itself (keep in step with windowRadius in main.go). */
+  html, body { background: transparent; }
+  html { color-scheme: dark; }
+  #app { background: var(--bg); }
+  .custom-chrome #app { border-radius: var(--window-radius); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
-/* Fields */
-input, select, textarea { background: var(--field); border: 1px solid var(--fieldline); border-radius: var(--r-sm); padding: 0 var(--s3); height: var(--h-md); min-width: 0; }
-textarea { height: auto; padding: var(--s2) var(--s3); }
-input::placeholder, textarea::placeholder { color: var(--dim); }
-input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
-input:disabled, select:disabled, textarea:disabled { opacity: 0.55; }
-select { appearance: none; padding-right: 30px; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 15px) 14px, calc(100% - 10px) 14px; background-size: 5px 5px; background-repeat: no-repeat; }
-input[type="checkbox"] { width: 15px; height: 15px; padding: 0; accent-color: var(--accent); }
-.field { display: grid; gap: 6px; }
-.field > span, .field > .field-label { font-size: var(--t-sm); color: var(--text2); }
-.field > small, .hint { font-size: var(--t-sm); color: var(--muted); }
+  /* Keyboard focus: crisp high-contrast ring for everything interactive. */
+  :is(button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [tabindex]):focus-visible {
+    outline: 2px solid var(--accent) !important;
+    outline-offset: 1px !important;
+  }
 
-/* Buttons: .btn (32) / .btn.sm (28); variants primary, ghost, danger (solid, for a confirmed action). */
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: var(--h-md); padding: 0 var(--s4); font-size: var(--t-md); font-weight: 500; white-space: nowrap; background: var(--line); border: 1px solid var(--floatline); border-radius: var(--r-sm); color: var(--text); transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease); }
-.btn:hover:not(:disabled) { border-color: var(--accent); }
-.btn:disabled { opacity: 0.5; cursor: default; }
-.btn.sm { height: var(--h-sm); padding: 0 var(--s3); font-size: var(--t-sm); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 600; }
-.btn.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
-.btn.ghost { background: transparent; border-color: transparent; color: var(--text2); }
-.btn.ghost:hover:not(:disabled) { background: var(--line); border-color: transparent; color: var(--text); }
-.btn.danger { background: var(--err); border-color: var(--err); color: var(--on-err); font-weight: 600; }
-.btn.danger:hover:not(:disabled) { filter: brightness(1.08); border-color: var(--err); }
-.btn.ghost.danger { background: transparent; border-color: transparent; color: var(--err-text); font-weight: 500; }
-.btn.ghost.danger:hover:not(:disabled) { background: var(--err-bg); filter: none; }
-.btn.link { height: auto; padding: 0; background: none; border: 0; color: var(--accent-text); font-weight: 500; }
-.btn.link:hover:not(:disabled) { text-decoration: underline; }
+  /* Fields: tonal stepped surface with borderless dark resting state; hairline edge on light theme. */
+  input, select, textarea {
+    background: var(--field);
+    border: 1px solid var(--field-edge);
+    border-radius: var(--r-sm);
+    padding: 0 var(--s3);
+    height: var(--h-md);
+    min-width: 0;
+    font-size: var(--t-md);
+    transition: background var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease);
+  }
+  textarea { height: auto; padding: var(--s2) var(--s3); }
+  input::placeholder, textarea::placeholder { color: var(--dim); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-ring); }
+  input:disabled, select:disabled, textarea:disabled { opacity: 0.45; }
+  select {
+    appearance: none;
+    padding-right: 30px;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 15px) 15px, calc(100% - 10px) 15px;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+  }
+  input[type="checkbox"] { width: 15px; height: 15px; padding: 0; accent-color: var(--accent); }
+}
 
-/* Icon-only button: 28px, 24px dense. The glyph comes from <Icon>. */
-.icon-btn { display: inline-grid; place-items: center; width: var(--h-sm); height: var(--h-sm); padding: 0; flex: none; background: transparent; border: 0; border-radius: var(--r-sm); color: var(--muted); transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
-.icon-btn.dense { width: 24px; height: 24px; }
-.icon-btn:hover:not(:disabled) { background: var(--line); color: var(--strong); }
-.icon-btn[aria-pressed="true"], .icon-btn.on { color: var(--accent-text); background: var(--accent-soft); }
-.icon-btn:disabled { opacity: 0.4; cursor: default; }
+@layer components {
+  .field { display: grid; gap: 6px; }
+  .field > span, .field > .field-label { font-size: var(--t-sm); color: var(--text2); font-weight: 500; }
+  .field > small, .hint { font-size: var(--t-xs); color: var(--muted); line-height: 1.45; }
 
-/* Status dot, chips, key caps, section labels */
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dot-off); flex: none; }
-.dot.ok { background: var(--ok); }
-.dot.err { background: var(--err); }
-.dot.warn { background: var(--warn); }
-.dot.live { box-shadow: 0 0 0 3px var(--ok-glow); }
-.chip { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-xs); line-height: 18px; padding: 0 var(--s2); border-radius: var(--r-xs); background: var(--line); color: var(--text2); white-space: nowrap; }
-.chip.ok { background: var(--ok-bg); color: var(--ok); }
-.chip.warn { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
-.chip.err { background: var(--err-bg); color: var(--err-text); }
-.chip.accent { background: var(--accent-soft); color: var(--accent-text); }
-.kbd { font: var(--t-xs) var(--sans); color: var(--muted); border: 1px solid var(--floatline); border-radius: var(--r-xs); padding: 0 5px; line-height: 16px; }
-.label { font-size: var(--t-xs); font-weight: 600; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+  /* Buttons: borderless tonal surfaces; .btn.primary uses crisp high-contrast ink. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: var(--h-md);
+    padding: 0 var(--s4);
+    font-size: var(--t-sm);
+    font-weight: 500;
+    white-space: nowrap;
+    background: var(--surface-btn);
+    border: 0;
+    border-radius: var(--r-sm);
+    color: var(--text2);
+    transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease), transform 80ms ease;
+    user-select: none;
+  }
+  .btn:hover:not(:disabled) { background: var(--surface-btn-hover); color: var(--strong); }
+  .btn:active:not(:disabled) { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.42; cursor: default; }
+  .btn.sm { height: var(--h-sm); padding: 0 var(--s3); font-size: var(--t-xs); }
+  .btn.primary { background: var(--cta-bg); color: var(--cta-fg); font-weight: 600; }
+  .btn.primary:hover:not(:disabled) { background: var(--cta-hover); color: var(--cta-fg); }
+  .btn.ghost { background: transparent; color: var(--muted); }
+  .btn.ghost:hover:not(:disabled) { background: var(--hover); color: var(--strong); }
+  .btn.danger { background: var(--err); color: var(--on-err); font-weight: 600; }
+  .btn.danger:hover:not(:disabled) { filter: brightness(1.08); color: var(--on-err); }
+  .btn.ghost.danger { background: transparent; color: var(--err-text); font-weight: 500; }
+  .btn.ghost.danger:hover:not(:disabled) { background: var(--err-bg); filter: none; }
+  .btn.link { height: auto; padding: 0; background: none; color: var(--accent-text); font-weight: 500; }
+  .btn.link:hover:not(:disabled) { text-decoration: underline; }
 
-/* Notice: the one inline message. Variants info (default), good, bad, warn. Render nothing when there is no text. */
-.notice { display: flex; align-items: flex-start; gap: var(--s2); padding: var(--s2) var(--s3); font-size: var(--t-sm); line-height: 1.5; color: var(--text2); background: var(--band); border: 1px solid var(--line2); border-radius: var(--r-sm); }
-.notice.good { color: var(--ok); background: var(--ok-bg); border-color: var(--ok-edge); }
-.notice.bad { color: var(--err-text); background: var(--err-bg); border-color: var(--err-edge); }
-.notice.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 9%, transparent); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  /* Icon-only button: 28px, 24px dense. */
+  .icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: var(--h-sm);
+    height: var(--h-sm);
+    padding: 0;
+    flex: none;
+    background: transparent;
+    border: 0;
+    border-radius: var(--r-sm);
+    color: var(--muted);
+    transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease), transform 80ms ease;
+  }
+  .icon-btn.dense { width: 24px; height: 24px; }
+  .icon-btn:hover:not(:disabled) { background: var(--hover); color: var(--strong); }
+  .icon-btn:active:not(:disabled) { transform: scale(0.96); }
+  .icon-btn[aria-pressed="true"], .icon-btn.on { color: var(--accent-text); background: var(--accent-soft); }
+  .icon-btn:disabled { opacity: 0.35; cursor: default; }
 
-/* Segmented control (joined) and switch */
-.seg { display: inline-flex; border: 1px solid var(--fieldline); border-radius: var(--r-sm); overflow: hidden; background: var(--field); }
-.seg > button { height: calc(var(--h-md) - 2px); padding: 0 var(--s3); display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 0; border-right: 1px solid var(--fieldline); color: var(--muted); font-size: var(--t-sm); }
-.seg > button:last-child { border-right: 0; }
-.seg > button:hover { color: var(--text); }
-.seg > button[aria-pressed="true"], .seg > button[aria-checked="true"] { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
-.switch { position: relative; width: 34px; height: 20px; flex: none; padding: 0; border: 1px solid var(--fieldline); border-radius: 10px; background: var(--field); transition: background var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease); }
-.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--switch-thumb); transition: transform var(--dur-2) var(--ease); }
-.switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
-.switch[aria-checked="true"]::after { transform: translateX(14px); }
+  /* Status dot, chips, key caps, section labels */
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dot-off); flex: none; transition: background-color 500ms ease, box-shadow 500ms ease; }
+  .dot.ok { background: var(--ok); }
+  .dot.err { background: var(--err); }
+  .dot.warn { background: var(--warn); }
+  .dot.live { box-shadow: 0 0 8px var(--ok-glow); }
+  .chip { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-xs); font-family: var(--mono); line-height: 20px; padding: 0 var(--s2); border-radius: var(--r-xs); background: var(--line); color: var(--text2); white-space: nowrap; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); }
+  .chip.warn { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); }
+  .chip.err { background: var(--err-bg); color: var(--err-text); }
+  .chip.accent { background: var(--accent-soft); color: var(--accent-text); }
+  .kbd { font: 500 var(--t-xs) var(--mono); color: var(--muted); background: var(--hover); border-radius: var(--r-xs); padding: 1px 6px; line-height: 18px; border: 0; }
+  .label { font-size: var(--t-xs); font-weight: 500; letter-spacing: 0.03em; color: var(--muted); }
 
-/* Selection language for lists and menus: hover is a wash, highlighted/selected is the accent wash. No edge stripes. */
-.row-hover:hover { background: var(--hover); }
-.row-hl, .row-hl:hover { background: var(--accent-hl); color: var(--strong); }
+  /* Notice: borderless tonal message banner */
+  .notice { display: flex; align-items: flex-start; gap: var(--s2); padding: var(--s2) var(--s3); font-size: var(--t-sm); line-height: 1.5; color: var(--text2); background: var(--band); border-radius: var(--r-sm); }
+  .notice.good { color: var(--ok); background: var(--ok-bg); }
+  .notice.bad { color: var(--err-text); background: var(--err-bg); }
+  .notice.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+
+  /* Segmented control (borderless stepped track) and switch */
+  .seg { display: inline-flex; padding: 2px; gap: 2px; border-radius: var(--r-sm); background: var(--field); }
+  .seg > button { height: calc(var(--h-md) - 4px); padding: 0 var(--s3); display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 0; border-radius: var(--r-xs); color: var(--muted); font-size: var(--t-xs); font-weight: 500; transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
+  .seg > button:hover { color: var(--text); }
+  .seg > button[aria-pressed="true"], .seg > button[aria-checked="true"] { background: var(--active); color: var(--strong); font-weight: 600; }
+  .switch { position: relative; width: 34px; height: 20px; flex: none; padding: 0; border: 0; border-radius: 9999px; background: var(--line2); transition: background var(--dur-2) var(--ease); }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--switch-thumb); transition: transform var(--dur-2) var(--ease); }
+  .switch[aria-checked="true"] { background: var(--accent); }
+  .switch[aria-checked="true"]::after { transform: translateX(14px); background: #ffffff; }
+
+  /* Selection language for lists and menus */
+  .row-hover:hover { background: var(--hover); }
+  .row-hl, .row-hl:hover { background: var(--active); color: var(--strong); }
+}
 
 .spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line2); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes page-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-6px) scale(0.96); } to { opacity: 1; transform: none; } }
+.anim-page { animation: page-in 240ms var(--ease) both; }
+.anim-fade { animation: fade-in 180ms ease-out both; }
+.anim-pop { animation: pop-in 180ms var(--ease) both; }
+
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .spinner { animation: none; border-top-color: var(--accent); }
 }
 .drag { --wails-draggable: drag; }
 .nodrag { --wails-draggable: no-drag; }
-/* Scrollbars: a 14px grab area with an 8px thumb inset in it (the transparent border), so they are easy to hit and
-   still look slim. The track is transparent and the bar sits flush against the window edge. */
+
+/* Scrollbars: sleek 6px visible pill thumb inset inside 14px grab area. */
 ::-webkit-scrollbar { width: 14px; height: 14px; }
-::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text) 24%, transparent); background-clip: padding-box; border: 3px solid transparent; border-radius: 8px; min-height: 40px; }
-::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--text) 42%, transparent); background-clip: padding-box; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text) 18%, transparent); background-clip: padding-box; border: 4px solid transparent; border-radius: 9999px; min-height: 40px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--text) 32%, transparent); background-clip: padding-box; }
 ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
 
 /* Command blocks: xterm decorations drawn over the terminal (see blocks.ts). */
-/* xterm paints its scroll layer black, which shows as a border around the padded terminal. */
 .xterm .xterm-viewport { background-color: var(--term) !important; }
-/* Blocks run edge to edge: they bleed through the terminal padding to the pane edges
-   (--bleed-l/-r are measured in terminal.ts). */
 .relay-block { pointer-events: none; margin-left: calc(-1 * var(--bleed-l, 24px)); width: calc(100% + var(--bleed-l, 24px) + var(--bleed-r, 24px)) !important; background: var(--band); border-top: 1px solid var(--divider); box-shadow: inset 3px 0 var(--stripe-ok); }
 .relay-block.err { background: color-mix(in srgb, var(--err) 12%, transparent); border-top-color: var(--err-edge); border-bottom: 1px solid var(--err-edge); box-shadow: inset 3px 0 var(--err); }
-/* Full-screen programs (vim, less, htop) run on the alternate screen: no block overlays over them (see blocks.ts). */
-.xterm.relay-alt .relay-block, .xterm.relay-alt .relay-head, .xterm.relay-alt .relay-badge { display: none !important; }
-/* xterm hides a decoration whose row has scrolled out of view with an inline display:none. The !important flex
-   rules below would override that and leave the header and badge pinned to the top, over later output. */
+.xterm.relay-alt .relay-block, .xterm.relay-alt .relay-head, .xterm.relay-badge { display: none !important; }
+/* xterm hides a decoration whose row has scrolled out of view with an inline display:none. */
 .xterm .relay-head[style*="display: none"], .xterm .relay-badge[style*="display: none"], .xterm .relay-block[style*="display: none"] { display: none !important; }
-/* The block header: directory and git branch on the block's blank first row. */
-.relay-head { pointer-events: none; display: flex !important; align-items: center; gap: 12px; overflow: hidden; white-space: nowrap; font: 500 11px var(--sans); color: var(--dim); }
+/* The block header: directory and git branch on the block's blank first row (12px floor). */
+.relay-head { pointer-events: none; display: flex !important; align-items: center; gap: 12px; overflow: hidden; white-space: nowrap; font: 500 12px var(--sans); color: var(--dim); }
 .relay-head .head-path { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .relay-head .head-branch { display: inline-flex; align-items: center; gap: 4px; flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; color: var(--accent-text); }
 .relay-head .head-branch svg { flex: none; }
 /* !important: xterm sets display:block inline on decoration elements. */
-.relay-badge { pointer-events: none; display: flex !important; align-items: center; justify-content: flex-end; gap: 4px; padding-right: 2px; font: 500 11px var(--sans); color: var(--muted); }
+.relay-badge { pointer-events: none; display: flex !important; align-items: center; justify-content: flex-end; gap: 4px; padding-right: 2px; font: 500 12px var(--sans); color: var(--muted); }
 .relay-badge .block-menu { pointer-events: auto; width: 22px; height: 20px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: var(--muted); opacity: 0; cursor: pointer; }
 .relay-badge.hot .block-menu, .relay-badge .block-menu:focus-visible { opacity: 1; }
 .relay-badge .block-menu:hover { background: var(--line); color: var(--strong); }
 .relay-badge.err { color: var(--err-text); }
 
-/* xterm 6 draws its own scrollbar inside the padded terminal. Make it a 14px grab area with an 8px slider, and push
-   it out to the pane's right edge, through the padding. */
+/* xterm 6 custom scrollbar: 14px grab area with 6px visual pill slider flush at right edge. */
 .xterm .xterm-scrollable-element > .scrollbar.vertical { width: 14px !important; right: -24px !important; }
-.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider { width: 8px !important; left: auto !important; right: 3px !important; border-radius: 4px; background: color-mix(in srgb, var(--text) 22%, transparent); }
-.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover { background: color-mix(in srgb, var(--text) 40%, transparent); }
-.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active { background: color-mix(in srgb, var(--text) 52%, transparent); }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider { width: 6px !important; left: auto !important; right: 4px !important; border-radius: 9999px; background: color-mix(in srgb, var(--text) 18%, transparent); }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover { background: color-mix(in srgb, var(--text) 32%, transparent); }
+.xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active { background: color-mix(in srgb, var(--text) 46%, transparent); }

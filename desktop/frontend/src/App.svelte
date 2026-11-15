@@ -1,21 +1,25 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
   import { Clipboard, Events } from "@wailsio/runtime";
+  import { Toaster, toast as sonner } from "svelte-sonner";
   import { blankProfile, duplicateProfile, nextSession } from "./lib/lib";
   import { ws } from "./state/workspace.svelte";
   import { leaves } from "./lib/panes";
+  import DockRail, { type DrawerKind } from "./components/DockRail.svelte";
   import TabBar from "./components/TabBar.svelte";
+  import SpotlightHome from "./components/SpotlightHome.svelte";
   import Sidebar from "./components/Sidebar.svelte";
   import DeleteConnection from "./components/DeleteConnection.svelte";
-  import StatusBar from "./components/StatusBar.svelte";
   import PaneView from "./components/PaneView.svelte";
   import DragGhost from "./components/DragGhost.svelte";
-  import Logo from "./components/Logo.svelte";
   import Icon from "./components/Icon.svelte";
   import BlockMenu from "./components/BlockMenu.svelte";
   import { copyText } from "./lib/clipboard";
+  import { deckLayer, drawerSlide, panelSwap } from "./lib/motion";
+  import { availableCommands } from "./lib/commands";
   import { settings } from "./state/settings.svelte";
   import { sb } from "./state/foldertree.svelte";
+  import { ui } from "./state/ui.svelte";
   import { vault } from "./state/vault.svelte";
   import { FilesService, ForwardsService, ProfilesService, SnippetsService, TerminalService, ToolsService, VaultService, type Profile } from "../bindings/github.com/poppyszn/relay-ssh/desktop";
 
@@ -23,9 +27,13 @@
   let profiles = $state<Profile[]>([]);
   let folders = $state<string[]>([]);
   let toolsTab = $state<"health" | "backup" | "import" | "keys">("health");
+  let drawer = $state<DrawerKind>("none");
+  let deckView = $state(true);
+  let drawerHost = $state("");
+  let liveForwardCount = $state(0);
   let banner = $state("");
   let palette = $state(false);
-  let sidebar = $state(true);
+  let booted = $state(false);
   let settingsOpen = $state(false);
   let toolsOpen = $state(false);
   let settingsSection = $state<"vault" | undefined>(undefined);
@@ -38,7 +46,19 @@
   let form = $state<{ initial: Profile; oldId: string } | null>(null);
   // Loaded the first time the form opens; the {#if} keeps `form` non-null while it renders.
   let ProfileForm = $state<typeof import("./components/ProfileForm.svelte").default | null>(null);
+  let SettingsPanel = $state<typeof import("./components/SettingsPanel.svelte").default | null>(null);
+  let Palette = $state<typeof import("./components/Palette.svelte").default | null>(null);
+  let FilesPanel = $state<typeof import("./components/FilesPanel.svelte").default | null>(null);
+  let ForwardsPanel = $state<typeof import("./components/ForwardsPanel.svelte").default | null>(null);
+  let SnippetsPanel = $state<typeof import("./components/SnippetsPanel.svelte").default | null>(null);
+  let ToolsPanel = $state<typeof import("./components/ToolsPanel.svelte").default | null>(null);
   $effect(() => { if (form && !ProfileForm) import("./components/ProfileForm.svelte").then((m) => (ProfileForm = m.default)); });
+  $effect(() => { if (settingsOpen && !SettingsPanel) import("./components/SettingsPanel.svelte").then((m) => (SettingsPanel = m.default)); });
+  $effect(() => { if (palette && !Palette) import("./components/Palette.svelte").then((m) => (Palette = m.default)); });
+  $effect(() => { if (drawer === "files" && !FilesPanel) import("./components/FilesPanel.svelte").then((m) => (FilesPanel = m.default)); });
+  $effect(() => { if (drawer === "forwards" && !ForwardsPanel) import("./components/ForwardsPanel.svelte").then((m) => (ForwardsPanel = m.default)); });
+  $effect(() => { if (drawer === "snippets" && !SnippetsPanel) import("./components/SnippetsPanel.svelte").then((m) => (SnippetsPanel = m.default)); });
+  $effect(() => { if (drawer === "tools" && !ToolsPanel) import("./components/ToolsPanel.svelte").then((m) => (ToolsPanel = m.default)); });
   let confirmDelete = $state<Profile | null>(null);
   // A modal keeps rendering while it fades out, after its state is already null: feed it the last value.
   let lastForm: typeof form = null;
@@ -49,30 +69,101 @@
   const unlocking = $derived.by(() => (unlockConnect ? (lastUnlock = unlockConnect) : lastUnlock));
   let benchHost = $state<HTMLElement>();
   let customChrome = $state(false);
-  let toast = $state("");
-  let toastTimer: ReturnType<typeof setTimeout> | undefined;
   async function copied(what: string, text: string) {
     const ok = await copyText(text);
-    toast = ok ? `Copied ${what}` : "Could not copy to the clipboard";
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => (toast = ""), 1800);
+    if (ok) sonner.success(`Copied ${what}`);
+    else sonner.error("Could not copy to the clipboard");
   }
 
   const open = $derived(new Set(ws.tabs.flatMap((t) => leaves(t.root).map((id) => ws.panes[id]?.target ?? "")).filter(Boolean)));
-  const actions = [
-    { id: "new-connection", label: "New connection", hint: mac ? "⌘N" : "Ctrl+Shift+N" },
-    { id: "new-folder", label: "New folder", hint: mac ? "⇧⌘N" : "" },
-    { id: "new-tab", label: "New local tab", hint: mac ? "⌘T" : "Ctrl+Shift+T" },
-    { id: "split-right", label: "Split pane right", hint: mac ? "⌘D" : "Ctrl+Shift+D" },
-    { id: "split-down", label: "Split pane down", hint: mac ? "⇧⌘D" : "Ctrl+Alt+D" },
-    { id: "files", label: "Browse files on this connection", hint: mac ? "⇧⌘O" : "Ctrl+Shift+O" },
-    { id: "forwards", label: "Manage port forwards on this connection", hint: mac ? "⇧⌘P" : "Ctrl+Shift+P" },
-    { id: "tools", label: "Open tools: health, backup, import, keys", hint: "" },
-    { id: "snippets", label: "Snippets", hint: mac ? "⇧⌘S" : "Ctrl+Shift+S" },
-    { id: "settings", label: "Open settings", hint: mac ? "⌘," : "Ctrl+Shift+," },
-    { id: "vault", label: "Open vault settings", hint: "" },
-    { id: "enable-blocks", label: "Enable command blocks in this session", hint: "" },
-  ];
+  const focusedPane = $derived(ws.panes[ws.focusedPane]);
+  const focusedIsRdp = $derived(profiles.find((p) => p.id === focusedPane?.target)?.protocol === "rdp");
+  const focusedIsSsh = $derived(!!focusedPane?.target && !focusedIsRdp);
+  const onDeck = $derived(deckView || ws.tabs.length === 0);
+  const effectiveDrawerTarget = $derived.by(() => {
+    if (focusedIsSsh && focusedPane?.target) return focusedPane.target;
+    if (drawerHost && profiles.some((p) => p.id === drawerHost && p.protocol !== "rdp")) return drawerHost;
+    return "";
+  });
+  const openSshProfiles = $derived(profiles.filter((p) => p.protocol !== "rdp" && open.has(p.id)));
+  const sshProfiles = $derived(profiles.filter((p) => p.protocol !== "rdp"));
+  const actions = $derived(
+    availableCommands(
+      {
+        hasPane: !!ws.focusedPane,
+        hasTarget: !!focusedPane?.target,
+        isSsh: focusedIsSsh,
+        isRdp: focusedIsRdp,
+        ended: !!focusedPane?.ended,
+        blocks: !!focusedPane?.blocks,
+        sidebarOpen: drawer === "hosts",
+      },
+      mac,
+    ),
+  );
+  const paletteTabs = $derived(
+    ws.tabs.map((t) => ({
+      id: t.id,
+      label: ws.tabTitle(t),
+      current: !onDeck && t.id === ws.activeId,
+    })),
+  );
+
+  // Opening or selecting any workspace tab automatically leaves the Spotlight Deck launcher.
+  let seenActiveTab = "";
+  $effect(() => {
+    if (ws.activeId && ws.activeId !== seenActiveTab) {
+      seenActiveTab = ws.activeId;
+      deckView = false;
+    } else if (!ws.activeId) {
+      seenActiveTab = "";
+    }
+  });
+
+  async function refreshForwardCount() {
+    const sshIds = [...new Set(
+      ws.tabs
+        .flatMap((t) => leaves(t.root))
+        .map((id) => ws.panes[id]?.target ?? "")
+        .filter((t) => t && profiles.find((p) => p.id === t)?.protocol !== "rdp"),
+    )];
+    if (!sshIds.length) {
+      liveForwardCount = 0;
+      return;
+    }
+    let total = 0;
+    for (const id of sshIds) {
+      try {
+        const st = await ForwardsService.Status(id);
+        if (st.connected) total += (st.forwards ?? []).filter((f) => f.listening).length;
+      } catch {}
+    }
+    liveForwardCount = total;
+  }
+
+  $effect(() => {
+    open;
+    refreshForwardCount();
+    if (!openSshProfiles.length) return;
+    const t = setInterval(refreshForwardCount, 4000);
+    return () => clearInterval(t);
+  });
+
+  function toggleDrawer(kind: Exclude<DrawerKind, "none">, target = "") {
+    banner = "";
+    if (target) drawerHost = target;
+    if (drawer === kind && !target) {
+      drawer = "none";
+      return;
+    }
+    drawer = kind;
+  }
+
+  function selectTab(id: string) {
+    deckView = false;
+    ws.select(id);
+    sb.selectedConn = ws.panes[ws.focusedPane]?.target ?? "";
+  }
 
   async function refresh() {
     try {
@@ -98,6 +189,9 @@
   }
 
   async function doConnect(p: Profile, split = false) {
+    deckView = false;
+    sb.selectedConn = p.id;
+    ui.recordConnection(p.id);
     if (split && ws.active) await ws.split("row", p.id);
     else await ws.openTab(p.id);
   }
@@ -105,31 +199,75 @@
   function run(id: string) {
     palette = false;
     switch (id) {
-      case "new-tab": return ws.openTab(null);
+      case "new-tab":
+        deckView = false;
+        return ws.openTab(null);
       case "new-connection": return newConnection(sb.selectedFolder);
-      case "new-folder": return (sidebar = true, sb.startCreate(""));
+      case "edit-connection": {
+        const t = ws.panes[ws.focusedPane]?.target;
+        const p = profiles.find((x) => x.id === t);
+        if (p) return edit(p);
+        return;
+      }
+      case "duplicate-connection": {
+        const t = ws.panes[ws.focusedPane]?.target;
+        const p = profiles.find((x) => x.id === t);
+        if (p) return duplicate(p);
+        return;
+      }
+      case "new-folder": return (drawer = "hosts", sb.startCreate(""));
       case "quick-open": return (palette = !palette);
-      case "split-right": return ws.split("row");
-      case "split-down": return ws.split("col");
+      case "split-right":
+        deckView = false;
+        return ws.split("row");
+      case "split-down":
+        deckView = false;
+        return ws.split("col");
       case "close": return ws.focusedPane && ws.closePane(ws.focusedPane);
       case "close-tab": return ws.activeId && ws.closeTab(ws.activeId);
-      case "next-tab": return ws.cycle(1);
-      case "prev-tab": return ws.cycle(-1);
-      case "toggle-sidebar": return (sidebar = !sidebar);
-      case "find": return ws.toggleSearch();
+      case "next-tab":
+        deckView = false;
+        return ws.cycle(1);
+      case "prev-tab":
+        deckView = false;
+        return ws.cycle(-1);
+      case "toggle-sidebar":
+        toggleDrawer("hosts");
+        ui.setSidebarOpen(drawer === "hosts");
+        return;
+      case "find":
+        deckView = false;
+        return ws.toggleSearch();
       case "settings": return openSettings();
-      case "tools": return (toolsTab = "health", toolsOpen = !toolsOpen);
+      case "tools":
+        toolsTab = "health";
+        toggleDrawer("tools");
+        return;
       case "vault": return openSettings("vault");
-      case "files": return openFiles();
-      case "forwards": return openForwards();
-      case "snippets": return (snippetsOpen = !snippetsOpen);
+      case "files":
+        openFiles();
+        return;
+      case "forwards":
+        openForwards();
+        return;
+      case "snippets":
+        toggleDrawer("snippets");
+        return;
       case "enable-blocks": return ws.focusedPane && ws.enableBlocks(ws.focusedPane);
+      case "reconnect": return ws.focusedPane && ws.reconnect(ws.focusedPane);
+      case "theme-obsidian":
+      case "theme-midnight":
+      case "theme-graphite":
+      case "theme-daylight":
+      case "theme-system":
+        settings.theme = id.slice(6);
+        return;
     }
     // tab-1 .. tab-8 pick that tab; tab-9 is always the last one.
     const n = /^tab-([1-9])$/.exec(id);
     if (n) {
       const t = n[1] === "9" ? ws.tabs.at(-1) : ws.tabs[Number(n[1]) - 1];
-      if (t) ws.select(t.id);
+      if (t) selectTab(t.id);
     }
   }
 
@@ -137,20 +275,22 @@
   // answers its prompts (including the passphrase) in the terminal and presses Enter.
   async function generateKey() {
     toolsOpen = false;
+    drawer = "none";
+    deckView = false;
     await ws.openTab(null);
     ws.session(ws.focusedPane)?.ws.send(new TextEncoder().encode("ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_relay"));
   }
 
   // The file browser works on a saved connection (it reuses that tab's login).
   // Files and port forwards work over ssh, which a remote desktop (RDP) connection does not have.
-  const focusedIsRdp = $derived(profiles.find((p) => p.id === ws.panes[ws.focusedPane]?.target)?.protocol === "rdp");
-
-  function openFiles() {
+  function openFiles(target = "") {
+    if (target) {
+      toggleDrawer("files", target);
+      return;
+    }
     const t = ws.panes[ws.focusedPane]?.target;
-    if (focusedIsRdp) return (banner = "The file browser works over SSH, so it is not available on a remote desktop connection.");
-    if (!t) return (banner = "Open a saved connection in this pane to browse its files.");
-    banner = "";
-    filesTarget = t;
+    if (focusedIsSsh && t) toggleDrawer("files", t);
+    else toggleDrawer("files");
   }
 
   // Always edit the stored profile, not a cached copy: forwards saved from their own
@@ -166,12 +306,14 @@
   }
 
   // Forwards are managed on a saved connection's live login.
-  function openForwards() {
+  function openForwards(target = "") {
+    if (target) {
+      toggleDrawer("forwards", target);
+      return;
+    }
     const t = ws.panes[ws.focusedPane]?.target;
-    if (focusedIsRdp) return (banner = "Port forwards are an SSH feature, so they are not available on a remote desktop connection.");
-    if (!t) return (banner = "Open a saved connection in this pane to manage its port forwards.");
-    banner = "";
-    forwardsTarget = t;
+    if (focusedIsSsh && t) toggleDrawer("forwards", t);
+    else toggleDrawer("forwards");
   }
 
   // A new connection starts in the selected folder, if there is one.
@@ -211,6 +353,16 @@
     ws.applySettings();
   });
 
+  // Persist open workspace tabs after initial startup hydration finishes.
+  $effect(() => {
+    if (!booted) return;
+    const saved = ws.tabs.map((t) => ({
+      target: ws.panes[t.focus]?.target ?? ws.panes[leaves(t.root)[0]]?.target ?? null,
+    }));
+    const idx = Math.max(0, ws.tabs.findIndex((t) => t.id === ws.activeId));
+    ui.saveSession(saved, idx);
+  });
+
   onMount(() => {
     const off = Events.On("menu", (e: { data: string }) => run(e.data));
     ws.blocksMode = (id) => profiles.find((p) => p.id === id)?.blocks;
@@ -220,7 +372,10 @@
     sb.onFocusConnection = (name) => {
       const ids = ws.tabs.flatMap((t) => leaves(t.root)).filter((id) => ws.panes[id]?.target === name);
       const id = nextSession(ids, ws.focusedPane);
-      if (id) ws.focus(id);
+      if (id) {
+        deckView = false;
+        ws.focus(id);
+      }
     };
     sb.onPaneToTab = (id, tab) => ws.movePaneToTab(id, tab);
     sb.onPaneMove = (id, target, edge) => ws.movePane(id, target, edge);
@@ -236,7 +391,29 @@
       if (mode === "smoke") return smoke(box, dir, sshdPort, localPort);
       if (mode) return (await import("./lib/bench")).runBench(benchHost!, mode);
       await refresh();
-      await ws.openTab(null);
+      if (settings.startup === "restore" && ui.sessionTabs.length) {
+        const ids = new Set(profiles.map((p) => p.id));
+        for (const savedTab of ui.sessionTabs) {
+          if (savedTab.target === null || ids.has(savedTab.target)) {
+            await ws.openTab(savedTab.target);
+          }
+        }
+        if (ws.tabs.length) {
+          const targetTab = ws.tabs[Math.min(ui.sessionActive, ws.tabs.length - 1)];
+          if (targetTab) ws.select(targetTab.id);
+        }
+      } else if (settings.startup === "local") {
+        await ws.openTab(null);
+      }
+      booted = true;
+      setTimeout(() => {
+        if (!SettingsPanel) import("./components/SettingsPanel.svelte").then((m) => (SettingsPanel = m.default)).catch(() => {});
+        if (!Palette) import("./components/Palette.svelte").then((m) => (Palette = m.default)).catch(() => {});
+        if (!FilesPanel) import("./components/FilesPanel.svelte").then((m) => (FilesPanel = m.default)).catch(() => {});
+        if (!ForwardsPanel) import("./components/ForwardsPanel.svelte").then((m) => (ForwardsPanel = m.default)).catch(() => {});
+        if (!SnippetsPanel) import("./components/SnippetsPanel.svelte").then((m) => (SnippetsPanel = m.default)).catch(() => {});
+        if (!ToolsPanel) import("./components/ToolsPanel.svelte").then((m) => (ToolsPanel = m.default)).catch(() => {});
+      }, 120);
     })();
     return () => { off(); offVault(); };
   });
@@ -575,7 +752,8 @@
       // sidebar: create folders and move things by dragging, through the real UI
       {
         const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-        sidebar = true;
+        ui.setSidebarOpen(true);
+        drawer = "hosts";
         await tick();
         const makeFolder = async (name: string) => {
           document.querySelector<HTMLElement>("[data-add-button]")!.click();
@@ -726,7 +904,8 @@
       // dragging: tabs reorder, and a connection dropped on a pane edge splits it (middle: a new tab)
       if (box) {
         const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-        sidebar = true;
+        ui.setSidebarOpen(true);
+        drawer = "hosts";
         await tick();
         const press = (el: Element, x: number, y: number) => el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, clientX: x, clientY: y, pointerId: 1 }));
         const dragTo = async (x: number, y: number) => { window.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y })); await tick(); };
@@ -954,52 +1133,231 @@
 <svelte:window onkeydown={keydown} />
 
 <div class="app">
-  <TabBar custom={customChrome} connected={!!ws.panes[ws.focusedPane]?.target && !focusedIsRdp} remoteDesktop={focusedIsRdp} onsidebar={() => (sidebar = !sidebar)} onsearch={() => (sidebar = true)} onpalette={() => (palette = true)} onsplit={(d) => ws.split(d)} onsettings={() => openSettings()} ontools={() => { toolsTab = "health"; toolsOpen = !toolsOpen; }} onfiles={openFiles} onforwards={openForwards} onsnippets={() => (snippetsOpen = !snippetsOpen)} />
-  <div class="body">
-    {#if sidebar}
-      <Sidebar {profiles} {folders} {open} current={ws.panes[ws.focusedPane]?.target ?? ""} onconnect={(p) => connect(p)} onnew={newConnection} onedit={edit} onduplicate={duplicate} ontools={(t) => { toolsTab = t; toolsOpen = true; }} onchanged={refresh} />
-    {/if}
-    <main>
-      {#if banner}<div class="notice bad banner" role="alert"><span>{banner}</span><button type="button" class="icon-btn dense" aria-label="Dismiss" onclick={() => (banner = "")}><Icon name="x" size={14} /></button></div>{/if}
-      <div class="stage" bind:this={benchHost}>
-        {#each ws.tabs as t (t.id)}
-          <div class="tabview" class:on={t.id === ws.activeId}>
-            <PaneView node={t.root} tabId={t.id} multi={leaves(t.root).length > 1} {profiles} />
+  <DockRail
+    {drawer}
+    {onDeck}
+    activeForwardCount={liveForwardCount}
+    vaultExists={vault.exists}
+    vaultUnlocked={vault.unlocked}
+    ondeck={() => (deckView = true)}
+    ontoggledrawer={(k) => toggleDrawer(k)}
+    onvault={() => openSettings("vault")}
+    onsettings={() => openSettings()}
+  />
+
+  <div class="deck-main">
+    <TabBar
+      custom={customChrome}
+      connected={focusedIsSsh}
+      remoteDesktop={focusedIsRdp}
+      {onDeck}
+      activeForwardCount={liveForwardCount}
+      sidebarOpen={drawer === "hosts"}
+      ondeck={() => (deckView = true)}
+      onselecttab={selectTab}
+      onsidebar={() => toggleDrawer("hosts")}
+      onsearch={() => ws.toggleSearch()}
+      onpalette={() => (palette = true)}
+      onsplit={(d) => { deckView = false; ws.split(d); }}
+      onsettings={() => openSettings()}
+      ontools={() => { toolsTab = "health"; toggleDrawer("tools"); }}
+      onfiles={() => openFiles()}
+      onforwards={() => openForwards()}
+      onsnippets={() => toggleDrawer("snippets")}
+    />
+
+    <div class="body">
+      {#if drawer !== "none"}
+        <aside
+          class="slide-drawer"
+          class:sidebar={drawer === "hosts"}
+          aria-label="Context drawer"
+          in:drawerSlide|global={{ width: 348 }}
+          out:drawerSlide|global={{ width: 348 }}
+        >
+          <div class="drawer-inner">
+            {#key drawer}
+              <div class="drawer-body" in:panelSwap|global>
+                {#if drawer === "hosts"}
+            <Sidebar
+              embedded
+              {profiles}
+              {folders}
+              {open}
+              current={!onDeck ? (ws.panes[ws.focusedPane]?.target ?? "") : ""}
+              onconnect={(p) => connect(p)}
+              onnew={newConnection}
+              onedit={edit}
+              onduplicate={duplicate}
+              ontools={(t) => { toolsTab = t; drawer = "tools"; }}
+              onchanged={refresh}
+              onclose={() => (drawer = "none")}
+            />
+          {:else if drawer === "files"}
+            {#if effectiveDrawerTarget && FilesPanel}
+              <FilesPanel embedded target={effectiveDrawerTarget} name={ws.labelOf(effectiveDrawerTarget)} onclose={() => (drawer = "none")} />
+            {:else}
+              <div class="drawer-pick">
+                <div class="drawer-pick-head">
+                  <span>Remote Files · SFTP</span>
+                  <button type="button" class="icon-btn dense" aria-label="Close drawer" onclick={() => (drawer = "none")}><Icon name="x" size={14} /></button>
+                </div>
+                <p class="drawer-pick-note">
+                  {focusedIsRdp ? "Remote desktop panes don't run an SSH multiplexer. Choose an SSH host below to browse its files:" : "Choose a connected or saved SSH host to browse files:"}
+                </p>
+                <div class="drawer-pick-list">
+                  {#if openSshProfiles.length}
+                    <div class="drawer-pick-sect">Connected SSH</div>
+                    {#each openSshProfiles as p (p.id)}
+                      <button type="button" class="drawer-pick-item" onclick={() => (drawerHost = p.id)}>
+                        <span class="dot ok"></span>
+                        <span class="pick-text"><strong>{p.name}</strong><span class="mono">{p.user}@{p.host}</span></span>
+                        <Icon name="chevron-right" size={14} />
+                      </button>
+                    {/each}
+                  {/if}
+                  {#if sshProfiles.filter((p) => !open.has(p.id)).length}
+                    <div class="drawer-pick-sect">Saved SSH Hosts</div>
+                    {#each sshProfiles.filter((p) => !open.has(p.id)) as p (p.id)}
+                      <button type="button" class="drawer-pick-item" onclick={async () => { await connect(p); drawerHost = p.id; }}>
+                        <span class="dot"></span>
+                        <span class="pick-text"><strong>{p.name}</strong><span class="mono">{p.user}@{p.host}</span></span>
+                        <Icon name="chevron-right" size={14} />
+                      </button>
+                    {/each}
+                  {:else if !openSshProfiles.length}
+                    <p class="drawer-pick-note">No saved SSH hosts yet.</p>
+                  {/if}
+                </div>
+              </div>
+            {/if}
+          {:else if drawer === "forwards"}
+            {#if effectiveDrawerTarget && ForwardsPanel}
+              <ForwardsPanel
+                embedded
+                target={effectiveDrawerTarget}
+                name={ws.labelOf(effectiveDrawerTarget)}
+                onchanged={() => { refresh(); refreshForwardCount(); }}
+                onclose={() => (drawer = "none")}
+                onopen={async () => { await ws.openTab(effectiveDrawerTarget); deckView = false; }}
+              />
+            {:else}
+              <div class="drawer-pick">
+                <div class="drawer-pick-head">
+                  <span>Port Forwards</span>
+                  <button type="button" class="icon-btn dense" aria-label="Close drawer" onclick={() => (drawer = "none")}><Icon name="x" size={14} /></button>
+                </div>
+                <p class="drawer-pick-note">
+                  {focusedIsRdp ? "Port forwards run over SSH. Choose an SSH host below to manage tunnels:" : "Choose a connected or saved SSH host to manage its tunnels:"}
+                </p>
+                <div class="drawer-pick-list">
+                  {#if openSshProfiles.length}
+                    <div class="drawer-pick-sect">Connected SSH</div>
+                    {#each openSshProfiles as p (p.id)}
+                      <button type="button" class="drawer-pick-item" onclick={() => (drawerHost = p.id)}>
+                        <span class="dot ok"></span>
+                        <span class="pick-text"><strong>{p.name}</strong><span class="mono">{p.user}@{p.host}</span></span>
+                        <Icon name="chevron-right" size={14} />
+                      </button>
+                    {/each}
+                  {/if}
+                  {#if sshProfiles.filter((p) => !open.has(p.id)).length}
+                    <div class="drawer-pick-sect">Saved SSH Hosts</div>
+                    {#each sshProfiles.filter((p) => !open.has(p.id)) as p (p.id)}
+                      <button type="button" class="drawer-pick-item" onclick={async () => { await connect(p); drawerHost = p.id; }}>
+                        <span class="dot"></span>
+                        <span class="pick-text"><strong>{p.name}</strong><span class="mono">{p.user}@{p.host}</span></span>
+                        <Icon name="chevron-right" size={14} />
+                      </button>
+                    {/each}
+                  {:else if !openSshProfiles.length}
+                    <p class="drawer-pick-note">No saved SSH hosts yet.</p>
+                  {/if}
+                </div>
+              </div>
+            {/if}
+                {:else if drawer === "snippets"}
+                  {#if SnippetsPanel}
+                    <SnippetsPanel
+                      embedded
+                      into={ws.panes[ws.focusedPane] ? (ws.panes[ws.focusedPane].target ? ws.labelOf(ws.panes[ws.focusedPane].target!) : "Local shell") : ""}
+                      onuse={(c, r) => ws.typeSnippet(c, r)}
+                      onclose={() => (drawer = "none")}
+                    />
+                  {/if}
+                {:else if drawer === "tools"}
+                  {#if ToolsPanel}
+                    <ToolsPanel embedded initial={toolsTab} onclose={() => (drawer = "none")} onchanged={refresh} ongenerate={generateKey} />
+                  {/if}
+                {/if}
+              </div>
+            {/key}
           </div>
-        {:else}
-          <div class="welcome">
-            <Logo size={44} />
-            <h1>Relay</h1>
-            <p>{profiles.length ? "Open a connection from the list, or start a local shell." : "Add your first connection, or bring in the hosts you already have."}</p>
-            <div class="actions">
-              {#if profiles.length === 0}
-                <button type="button" class="btn primary" onclick={() => newConnection("")}>New connection</button>
-                <button type="button" class="btn" onclick={() => { toolsTab = "import"; toolsOpen = true; }}>Import from ~/.ssh/config</button>
-              {/if}
-              <button type="button" class="btn" onclick={() => ws.openTab(null)}>Local shell</button>
+        </aside>
+      {/if}
+
+      <main>
+        {#if banner}
+          <div class="notice bad banner" role="alert">
+            <span>{banner}</span>
+            <button type="button" class="icon-btn dense" aria-label="Dismiss" onclick={() => (banner = "")}><Icon name="x" size={14} /></button>
+          </div>
+        {/if}
+
+        <div class="stage" bind:this={benchHost}>
+          {#each ws.tabs as t (t.id)}
+            <div class="tabview" class:on={!deckView && t.id === ws.activeId}>
+              <PaneView
+                node={t.root}
+                tabId={t.id}
+                multi={leaves(t.root).length > 1}
+                {profiles}
+                onfiles={(target) => openFiles(target)}
+                onforwards={(target) => openForwards(target)}
+                onsnippets={() => toggleDrawer("snippets")}
+                oninstallblocks={(id) => ws.enableBlocks(id)}
+              />
             </div>
-            <dl class="keys">
-              {#each [["Quick open", mac ? "⌘K" : "Ctrl+Shift+K"], ["New connection", mac ? "⌘N" : "Ctrl+Shift+N"], ["Local shell", mac ? "⌘T" : "Ctrl+Shift+T"], ["Switch tab", mac ? "⌘1–9" : "Alt+1–9"]] as [what, key] (what)}
-                <div><dt>{what}</dt><dd><span class="kbd">{key}</span></dd></div>
-              {/each}
-            </dl>
-          </div>
-        {/each}
-      </div>
-    </main>
+          {/each}
+
+          {#if onDeck}
+            <div class="deck-layer" in:deckLayer|global out:deckLayer|global>
+              <SpotlightHome
+                {profiles}
+                recentIds={ui.recentIds}
+                activeTargets={open}
+                vaultExists={vault.exists}
+                vaultUnlocked={vault.unlocked}
+                onconnect={(p, split) => connect(p, split ?? false)}
+                onnew={(prefill) => {
+                  if (prefill) form = { initial: { ...blankProfile(), name: prefill.host, ...prefill }, oldId: "" };
+                  else newConnection("");
+                }}
+                onlocal={async () => { deckView = false; await ws.openTab(null); }}
+                onhosts={() => toggleDrawer("hosts")}
+                onimport={() => { toolsTab = "import"; drawer = "tools"; }}
+                onsettings={() => openSettings()}
+                onpalette={() => (palette = true)}
+              />
+            </div>
+          {/if}
+        </div>
+      </main>
+    </div>
   </div>
-  <StatusBar {profiles} themeName={settings.label} onvault={() => openSettings("vault")} />
 </div>
 
+<!-- Programmatic smoke() modal fallbacks; normal Command Deck navigation uses the slide-over drawer above -->
 {#if snippetsOpen}{#await import("./components/SnippetsPanel.svelte") then { default: SnippetsPanel }}<SnippetsPanel into={ws.panes[ws.focusedPane] ? (ws.panes[ws.focusedPane].target ? ws.labelOf(ws.panes[ws.focusedPane].target!) : "Local shell") : ""} onuse={(c, run) => ws.typeSnippet(c, run)} onclose={() => (snippetsOpen = false)} />{/await}{/if}
 {#if forwardsTarget}{#await import("./components/ForwardsPanel.svelte") then { default: ForwardsPanel }}<ForwardsPanel target={forwardsTarget} name={ws.labelOf(forwardsTarget)} onchanged={refresh} onclose={() => (forwardsTarget = "")} onopen={() => { const t = forwardsTarget; forwardsTarget = ""; ws.openTab(t); }} />{/await}{/if}
 {#if filesTarget}{#await import("./components/FilesPanel.svelte") then { default: FilesPanel }}<FilesPanel target={filesTarget} name={ws.labelOf(filesTarget)} onclose={() => (filesTarget = "")} />{/await}{/if}
 {#if toolsOpen}{#await import("./components/ToolsPanel.svelte") then { default: ToolsPanel }}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/await}{/if}
+
 {#if ws.blockMenu}<BlockMenu block={ws.blockMenu.block} rect={ws.blockMenu.rect} oncopy={copied} onclose={() => (ws.blockMenu = null)} />{/if}
-{#if toast}<div class="toast" role="status"><Icon name="check" />{toast}</div>{/if}
-{#if settingsOpen}{#await import("./components/SettingsPanel.svelte") then { default: SettingsPanel }}<SettingsPanel section={settingsSection} onclose={() => { settingsOpen = false; settingsSection = undefined; }} />{/await}{/if}
+<Toaster theme={settings.resolved === "light" ? "light" : "dark"} position="bottom-center" toastOptions={{ class: "toast" }} />
+{#if settingsOpen && SettingsPanel}<SettingsPanel section={settingsSection} onclose={() => { settingsOpen = false; settingsSection = undefined; }} />{/if}
 <DragGhost />
-{#if palette}{#await import("./components/Palette.svelte") then { default: Palette }}<Palette {profiles} active={open} {actions} onconnect={connect} onnew={(t) => { palette = false; form = { initial: { ...blankProfile(), name: t.host, ...t }, oldId: "" }; }} onaction={run} onclose={() => (palette = false)} />{/await}{/if}
+{#if palette && Palette}<Palette {profiles} active={open} {actions} tabs={paletteTabs} onconnect={connect} onselecttab={(tabId) => { palette = false; selectTab(tabId); }} onnew={(t) => { palette = false; form = { initial: { ...blankProfile(), name: t.host, ...t }, oldId: "" }; }} onaction={run} onclose={() => (palette = false)} />{/if}
 {#if unlockConnect && VaultPanel}
   <VaultPanel
     mode="unlock-connect"
@@ -1027,21 +1385,27 @@
 {/if}
 
 <style>
-  .app { display: flex; flex-direction: column; height: 100%; }
-  .body { flex: 1; min-height: 0; display: flex; }
-  main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--term); }
+  .app { display: flex; flex-direction: row; height: 100%; background: var(--bg); overflow: hidden; }
+  .deck-main { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; }
+  .body { flex: 1; min-height: 0; display: flex; overflow: hidden; position: relative; }
+  .slide-drawer { width: 348px; flex: none; display: flex; flex-direction: column; min-height: 0; background: var(--rail); border-right: 1px solid var(--hairline); z-index: 10; overflow: hidden; }
+  .drawer-inner { width: 348px; min-width: 348px; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  .drawer-body { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+  main { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg); }
   .stage { flex: 1; min-height: 0; position: relative; }
   .tabview { position: absolute; inset: 0; display: none; }
-  .tabview.on { display: flex; }
-  .welcome { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: var(--s2); text-align: center; color: var(--muted); }
-  .welcome h1 { color: var(--strong); margin: var(--s3) 0 0; font-size: var(--t-xl); font-weight: 600; }
-  .welcome p { margin: 0; max-width: 40ch; }
-  .welcome .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s2); margin-top: var(--s4); }
-  .welcome .keys { display: grid; gap: var(--s1); width: 240px; margin: var(--s6) 0 0; padding-top: var(--s4); border-top: 1px solid var(--line); font-size: var(--t-sm); }
-  .welcome .keys div { display: flex; justify-content: space-between; align-items: center; }
-  .welcome .keys dt { color: var(--muted); }
-  .welcome .keys dd { margin: 0; }
+  .tabview.on { display: flex; animation: page-in 190ms var(--ease) both; }
+  .deck-layer { position: absolute; inset: 0; display: flex; z-index: 2; }
   .banner { margin: var(--s2) var(--s3) 0; justify-content: space-between; align-items: center; }
-  .toast { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: var(--z-toast); display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s4); background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-pop); font-size: var(--t-md); color: var(--text); }
-  .toast :global(svg) { color: var(--ok); }
+
+  .drawer-pick { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .drawer-pick-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 10px; border-bottom: 1px solid var(--hairline); font-size: var(--t-sm); font-weight: 600; color: var(--strong); }
+  .drawer-pick-note { margin: 0; padding: 12px 14px 4px; font-size: var(--t-xs); color: var(--muted); line-height: 1.5; }
+  .drawer-pick-list { flex: 1; min-height: 0; overflow: auto; padding: 8px 14px 14px; display: grid; align-content: start; gap: 6px; }
+  .drawer-pick-sect { margin-top: 8px; font-size: 11px; font-weight: 600; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .drawer-pick-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border-radius: 10px; background: var(--field); color: var(--text); text-align: left; transition: background var(--dur-1) var(--ease); }
+  .drawer-pick-item:hover { background: var(--active); color: var(--strong); }
+  .pick-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+  .pick-text strong { font-size: var(--t-sm); color: var(--strong); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pick-text span { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 </style>

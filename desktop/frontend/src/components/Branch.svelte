@@ -35,7 +35,7 @@
     <span class="count">{node.count}</span>
     <button type="button" class="icon-btn dense more" data-nodrag data-folder-more aria-label="Folder options" aria-haspopup="menu" onclick={() => (sb.menuFolder = sb.menuFolder === node.path ? "" : node.path)}><Icon name="more" size={14} /></button>
     {#if sb.menuFolder === node.path}
-      <Menu label="Folder options" ignore="[data-folder-more]" style="right: 6px; top: 30px" width={168}
+      <Menu label="Folder options" ignore="[data-folder-more]" style="right: 6px; top: 32px" width={172}
         items={[{ id: "sub", label: "New subfolder" }, { id: "rename", label: "Rename" }, { id: "delete", label: "Delete", danger: true }]}
         onclose={() => (sb.menuFolder = "")}
         onselect={(id) => {
@@ -48,7 +48,7 @@
   </div>
 
   {#if sb.confirmDelete === node.path}
-    <Card text={`Delete the folder ${node.name}?`} sub={node.count ? `It still holds ${node.count} connection${node.count === 1 ? "" : "s"}, so this will be refused. Move them out first.` : "It is empty. Nothing else is touched."} confirm="Delete" danger indent={pad + 8} onconfirm={() => sb.remove(node.path)} oncancel={() => (sb.confirmDelete = "")} />
+    <Card text={`Delete folder ${node.name}?`} sub={node.count ? `It still holds ${node.count} connection${node.count === 1 ? "" : "s"}, so this will be refused. Move them out first.` : "It is empty. Nothing else is touched."} confirm="Delete" danger indent={pad + 8} onconfirm={() => sb.remove(node.path)} oncancel={() => (sb.confirmDelete = "")} />
   {/if}
   {#if sb.pending && sb.pending.to === node.path}
     <Card text={sb.pending.text} sub={sb.pending.sub} confirm="Move" indent={pad + 8} onconfirm={() => sb.confirmPending()} oncancel={() => (sb.pending = null)} />
@@ -70,23 +70,22 @@
 </div>
 
 <style>
-  /* Same inset, rounded highlight as connection rows (see ConnRow), and the same rule: no stacking
-     context on .head, or the folder menu opens underneath the rows that follow. */
-  .head { position: relative; display: flex; align-items: center; gap: var(--s1); height: var(--h-md); padding-right: var(--s4); color: var(--text2); user-select: none; }
+  .head { position: relative; display: flex; align-items: center; gap: var(--s1); height: 34px; padding-right: var(--s3); color: var(--text2); user-select: none; }
   .head::before { content: ""; position: absolute; inset: 1px var(--s2); pointer-events: none; border-radius: var(--r-sm); transition: background var(--dur-1) var(--ease); }
   .head:hover::before { background: var(--hover); }
-  .head.sel::before { background: var(--accent-faint); }
+  .head.sel::before { background: var(--active); }
   .head.ok::before { background: var(--accent-hl); outline: 1px dashed var(--accent); outline-offset: -1px; }
   .head.bad::before { outline: 1px dashed var(--err); outline-offset: -1px; }
   .head.bad { cursor: not-allowed; }
-  .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); pointer-events: none; }
+  .guide { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--hairline); pointer-events: none; }
   .caret, .name, .count, .more, .edit { position: relative; }
   .caret { width: 20px; border-radius: var(--r-xs); color: var(--dim); transition: transform var(--dur-2) var(--ease), background var(--dur-1) var(--ease); }
-  .name { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s2); height: 100%; padding: 0; background: none; border: 0; color: inherit; text-align: left; cursor: default; font-weight: 600; }
-  .ico { display: grid; color: var(--accent-text); flex: none; }
+  .name { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s2); height: 100%; padding: 0; background: none; border: 0; color: inherit; text-align: left; cursor: default; font-size: var(--t-md); font-weight: 500; }
+  .ico { display: grid; color: var(--muted); flex: none; transition: color var(--dur-1) var(--ease); }
+  .head.sel .ico { color: var(--accent-text); }
   .ico.empty { color: var(--dim); }
   .label-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .count { font-size: var(--t-xs); color: var(--dim); }
+  .count { font-size: var(--t-xs); font-family: var(--mono); color: var(--dim); }
   .more { display: none; }
   .head:hover .more, .more:focus-visible { display: inline-grid; }
   .head:hover .count { display: none; }
