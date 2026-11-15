@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { Switch } from "bits-ui";
   import { VaultService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
-  import { DENSITY, FONTS, SYSTEM, THEMES, settings } from "../state/settings.svelte";
+  import { DENSITY, FONTS, SYSTEM, THEMES, settings, type StartupMode } from "../state/settings.svelte";
   import { vault } from "../state/vault.svelte";
   import Modal from "./Modal.svelte";
   import VaultPanel from "./VaultPanel.svelte";
@@ -103,9 +104,18 @@
         </button>
       {/each}
       <button type="button" role="radio" class="theme" class:row-hl={settings.theme === SYSTEM} aria-checked={settings.theme === SYSTEM} onclick={() => (settings.theme = SYSTEM)} title="Follow the macOS light or dark appearance">
-        <span class="swatch" style="background: linear-gradient(90deg, {THEMES.midnight.vars.term} 50%, {THEMES.daylight.vars.term} 50%)"><i style="background: {THEMES.daylight.vars.accent}"></i></span>
+        <span class="swatch" style="background: linear-gradient(90deg, {THEMES.obsidian.vars.term} 50%, {THEMES.daylight.vars.term} 50%)"><i style="background: {THEMES.daylight.vars.accent}"></i></span>
         <span>System</span>
       </button>
+    </div>
+    <div class="field">
+      <span class="field-label" id="set-startup">On startup</span>
+      <div class="seg" role="group" aria-labelledby="set-startup">
+        {#each [["launcher", "Launcher"], ["local", "Local shell"], ["restore", "Restore tabs"]] as [id, label] (id)}
+          <button type="button" aria-pressed={settings.startup === id} onclick={() => (settings.startup = id as StartupMode)}>{label}</button>
+        {/each}
+      </div>
+      <span class="hint">Launcher opens the calm start canvas; Restore tabs reopens your prior tabs.</span>
     </div>
     <div class="pair">
       <label class="field">
@@ -133,19 +143,19 @@
     </div>
     <div class="opt">
       <div class="txt"><span id="set-copy">Copy on select</span><span class="hint">Selecting text copies it to the clipboard.</span></div>
-      <button type="button" class="switch" role="switch" aria-checked={settings.copyOnSelect} aria-labelledby="set-copy" onclick={() => (settings.copyOnSelect = !settings.copyOnSelect)}></button>
+      <Switch.Root class="switch" bind:checked={settings.copyOnSelect} aria-labelledby="set-copy" />
     </div>
     <div class="opt">
       <div class="txt"><span id="set-click">Click to move the cursor</span><span class="hint">Click in the command you are typing to move the cursor there. Works at the prompt of a shell that has command blocks set up (it needs their prompt markers), never while a program is running.</span></div>
-      <button type="button" class="switch" role="switch" aria-checked={settings.clickToMove} aria-labelledby="set-click" onclick={() => (settings.clickToMove = !settings.clickToMove)}></button>
+      <Switch.Root class="switch" bind:checked={settings.clickToMove} aria-labelledby="set-click" />
     </div>
     <div class="opt">
       <div class="txt"><span id="set-blink">Blinking cursor</span></div>
-      <button type="button" class="switch" role="switch" aria-checked={settings.cursorBlink} aria-labelledby="set-blink" onclick={() => (settings.cursorBlink = !settings.cursorBlink)}></button>
+      <Switch.Root class="switch" bind:checked={settings.cursorBlink} aria-labelledby="set-blink" />
     </div>
     <div class="opt">
       <div class="txt"><span id="set-blocks">Automatic command blocks over SSH</span><span class="hint">Types a short setup line into the remote bash or zsh after login. Each connection can override this. When off, you are offered it instead.</span></div>
-      <button type="button" class="switch" role="switch" aria-checked={settings.autoBlocks} aria-labelledby="set-blocks" onclick={() => (settings.autoBlocks = !settings.autoBlocks)}></button>
+      <Switch.Root class="switch" bind:checked={settings.autoBlocks} aria-labelledby="set-blocks" />
     </div>
   </section>
 
@@ -153,7 +163,7 @@
     <h3 class="label" id="set-rdp">Remote desktop</h3>
     <div class="opt">
       <div class="txt"><span id="set-rdpclip">Share the clipboard with remote desktops</span><span class="hint">While a remote desktop is focused, what you copy on this Mac is sent to it, and what it copies replaces your clipboard. Turn this off for servers you do not fully trust. Each remote desktop tab also has its own switch.</span></div>
-      <button type="button" class="switch" role="switch" aria-checked={settings.rdpClipboard} aria-labelledby="set-rdpclip" onclick={() => (settings.rdpClipboard = !settings.rdpClipboard)}></button>
+      <Switch.Root class="switch" bind:checked={settings.rdpClipboard} aria-labelledby="set-rdpclip" />
     </div>
   </section>
 
@@ -223,23 +233,23 @@
 
 <style>
   section { display: grid; gap: var(--s4); }
-  section + section { margin-top: var(--s5); padding-top: var(--s5); border-top: 1px solid var(--line); }
+  section + section { margin-top: var(--s5); padding-top: var(--s5); border-top: 1px solid var(--hairline); }
   h3 { margin: 0; }
   .themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: var(--s2); }
-  .theme { display: grid; gap: var(--s2); padding: var(--s2); text-align: left; background: var(--field); border: 1px solid var(--fieldline); border-radius: var(--r-sm); color: var(--text2); font-size: var(--t-sm); transition: border-color var(--dur-1) var(--ease); }
-  .theme:hover { border-color: var(--floatline); }
-  .theme[aria-checked="true"] { border-color: var(--accent); }
-  .swatch { display: block; position: relative; height: 40px; border-radius: var(--r-xs); overflow: hidden; }
-  .swatch i { position: absolute; left: var(--s2); top: var(--s2); width: 24px; height: 3px; }
+  .theme { display: grid; gap: var(--s2); padding: var(--s2); text-align: left; background: var(--field); border: 0; box-shadow: inset 0 0 0 1px transparent; border-radius: var(--r-md); color: var(--text2); font-size: var(--t-sm); transition: background var(--dur-1) var(--ease), box-shadow var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
+  .theme:hover { background: var(--hover); color: var(--text); }
+  .theme[aria-checked="true"] { background: var(--active); color: var(--strong); box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .swatch { display: block; position: relative; height: 40px; border-radius: var(--r-sm); overflow: hidden; }
+  .swatch i { position: absolute; left: var(--s2); top: var(--s2); width: 24px; height: 3px; border-radius: 2px; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
   .seg { justify-self: start; }
   .opt { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s4); }
   .opt .txt { display: grid; gap: 2px; }
-  .opt .switch { margin-top: 1px; }
+  .opt :global(.switch) { margin-top: 1px; }
   .head { display: flex; align-items: center; gap: var(--s2); }
   .head .hint { margin-left: var(--s1); }
   .lead { margin: 0; }
   .actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
   .actions.end { justify-content: flex-end; }
-  .inline { display: grid; gap: var(--s3); padding: var(--s4); background: var(--band); border: 1px solid var(--line); border-radius: var(--r-md); }
+  .inline { display: grid; gap: var(--s3); padding: var(--s4); background: var(--band); border: 0; border-radius: var(--r-md); }
 </style>

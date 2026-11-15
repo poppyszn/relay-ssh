@@ -85,7 +85,7 @@ func main() {
 // windowRadius is the corner radius, in points, of the frameless macOS window: a
 // small one. macOS draws very round corners on native windows; this is ours.
 // Keep it equal to --window-radius in theme.css.
-const windowRadius = 10
+const windowRadius = 12
 
 // customChrome reports whether Relay draws its own window frame and buttons
 // (macOS only). RELAY_NATIVE_FRAME=1 falls back to the native title bar.
@@ -96,11 +96,11 @@ func customChrome() bool {
 func windowOptions() application.WebviewWindowOptions {
 	opts := application.WebviewWindowOptions{
 		Title:            "Relay",
-		Width:            1280,
+		Width:            1420,
 		Height:           800,
-		MinWidth:         720,
-		MinHeight:        420,
-		BackgroundColour: application.NewRGB(15, 22, 32),
+		MinWidth:         880,
+		MinHeight:        520,
+		BackgroundColour: application.NewRGB(2, 2, 3),
 		URL:              "/",
 	}
 	if customChrome() {

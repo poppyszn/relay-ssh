@@ -50,7 +50,8 @@
     window.addEventListener("keydown", onWindowKey);
   });
   onDestroy(() => {
-    stack.splice(stack.indexOf(id), 1);
+    const idx = stack.indexOf(id);
+    if (idx >= 0) stack.splice(idx, 1);
     if (typeof window === "undefined") return;
     window.removeEventListener("keydown", onWindowKey);
     if (opener?.isConnected) opener.focus?.({ preventScroll: true });
@@ -75,21 +76,21 @@
 </script>
 
 <div
-  class="scrim"
+  class="scrim nodrag"
   style:z-index="calc(var(--z-modal) + {depth * 2})"
   role="presentation"
   onpointerdown={(e) => (pressedScrim = e.target === e.currentTarget)}
   onclick={(e) => { if (dismissOnScrim && pressedScrim && e.target === e.currentTarget) onclose(); pressedScrim = false; }}
-  in:veil|global
-  out:veil|global
+  in:veil|global={{ duration: 200 }}
+  out:veil|global={{ duration: 160 }}
 >
-  <div class="panel {size}" class:tall {role} aria-modal="true" aria-labelledby={titleId} tabindex="-1" bind:this={panel} onkeydown={onPanelKey} in:pop|global out:pop|global>
-    <header>
+  <div class="panel {size} nodrag" class:tall {role} aria-modal="true" aria-labelledby={titleId} tabindex="-1" bind:this={panel} onkeydown={onPanelKey} in:pop|global={{ duration: 230, y: 12, scale: 0.955 }} out:pop|global={{ duration: 160, y: 8, scale: 0.97 }}>
+    <header class="nodrag">
       <h2 id={titleId}>{title}</h2>
       {#if subtitle}<span class="chip mono">{subtitle}</span>{/if}
       <span class="grow"></span>
       {#if extra}{@render extra()}{/if}
-      <button type="button" class="icon-btn" aria-label="Close" onclick={onclose}><Icon name="x" /></button>
+      <button type="button" class="icon-btn nodrag modal-close" aria-label="Close" onclick={(e) => { e.stopPropagation(); onclose(); }}><Icon name="x" /></button>
     </header>
     <div class="modal-body" class:flush>{@render children()}</div>
     {#if footer}<footer>{@render footer()}</footer>{/if}
@@ -97,15 +98,17 @@
 </div>
 
 <style>
-  .scrim { position: fixed; inset: 0; display: grid; place-items: center; padding: var(--s6); background: var(--scrim); }
-  .panel { --w: 680px; width: min(var(--w), 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-modal); outline: none; overflow: hidden; }
+  .scrim { position: fixed; inset: 0; display: grid; place-items: center; padding: var(--s6); background: var(--scrim); backdrop-filter: blur(8px); }
+  .panel { --w: 680px; width: min(var(--w), 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--float); border: 1px solid var(--float-edge); border-radius: 16px; box-shadow: var(--e-modal); outline: none; overflow: hidden; }
   .panel.sm { --w: 440px; }
-  .panel.lg { --w: 920px; }
-  .panel.tall { height: min(640px, 100%); }
-  header { flex: none; height: 52px; display: flex; align-items: center; gap: var(--s3); padding: 0 var(--s3) 0 var(--s5); border-bottom: 1px solid var(--line); }
-  h2 { margin: 0; font-size: var(--t-lg); font-weight: 600; color: var(--strong); letter-spacing: -0.005em; }
+  .panel.lg { --w: 960px; }
+  .panel.tall { height: min(650px, 100%); }
+  header { flex: none; position: relative; z-index: 1; height: 54px; display: flex; align-items: center; gap: var(--s3); padding: 0 var(--s4) 0 var(--s5); border-bottom: 1px solid var(--hairline); }
+  .modal-close { position: relative; z-index: 2; pointer-events: auto; }
+  .modal-close :global(svg) { pointer-events: none; }
+  h2 { margin: 0; font-size: var(--t-lg); font-weight: 600; color: var(--strong); letter-spacing: -0.01em; }
   .grow { flex: 1; }
   .modal-body { flex: 1; min-height: 0; overflow: auto; padding: var(--s5); }
   .modal-body.flush { padding: 0; display: flex; flex-direction: column; }
-  footer { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: var(--s2); padding: var(--s3) var(--s5); border-top: 1px solid var(--line); background: var(--foot); }
+  footer { flex: none; display: flex; align-items: center; justify-content: flex-end; gap: var(--s2); padding: var(--s3) var(--s5); border-top: 1px solid var(--hairline); background: var(--foot); }
 </style>

@@ -1,14 +1,16 @@
 <script lang="ts">
   import { ToolsService, type HealthCheck, type ImportReport, type KeyInfo } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import EmptyState from "./EmptyState.svelte";
+  import Icon from "./Icon.svelte";
   import Modal from "./Modal.svelte";
   import RestoreBackup from "./RestoreBackup.svelte";
 
   type Tab = "health" | "backup" | "import" | "keys";
-  let { initial = "health", onclose, onchanged, ongenerate }: { initial?: Tab; onclose: () => void; onchanged: () => void; ongenerate: () => void } = $props();
+  let { initial = "health", embedded = false, onclose, onchanged, ongenerate }: { initial?: Tab; embedded?: boolean; onclose: () => void; onchanged: () => void; ongenerate: () => void } = $props();
 
   // svelte-ignore state_referenced_locally
   let tab = $state<Tab>(initial);
+  $effect(() => { tab = initial; });
   const tabs: { id: Tab; label: string }[] = [
     { id: "health", label: "Health" },
     { id: "backup", label: "Backup & restore" },
@@ -73,14 +75,19 @@
   }
 
   // Tabs: arrow keys move between them (the list is vertical).
-  let navEl: HTMLElement;
+  let navEl = $state<HTMLElement | null>(null);
   function onNavKey(e: KeyboardEvent) {
     const i = tabs.findIndex((t) => t.id === tab);
-    const next = e.key === "ArrowDown" ? (i + 1) % tabs.length : e.key === "ArrowUp" ? (i - 1 + tabs.length) % tabs.length : e.key === "Home" ? 0 : e.key === "End" ? tabs.length - 1 : -1;
+    const next =
+      e.key === "ArrowDown" || e.key === "ArrowRight" ? (i + 1) % tabs.length
+      : e.key === "ArrowUp" || e.key === "ArrowLeft" ? (i - 1 + tabs.length) % tabs.length
+      : e.key === "Home" ? 0
+      : e.key === "End" ? tabs.length - 1
+      : -1;
     if (next < 0) return;
     e.preventDefault();
     tab = tabs[next].id;
-    navEl.querySelectorAll<HTMLElement>('[role="tab"]')[next]?.focus();
+    navEl?.querySelectorAll<HTMLElement>('[role="tab"]')[next]?.focus();
   }
 
   // Import
@@ -135,16 +142,26 @@
   $effect(() => { if (tab === "health") recheck(); else if (tab === "keys") loadKeys(); });
 </script>
 
-<Modal title="Tools" size="lg" tall flush {onclose}>
-  <div class="layout">
-    <div class="nav" role="tablist" aria-label="Tools" aria-orientation="vertical" tabindex="-1" bind:this={navEl} onkeydown={onNavKey}>
-      {#each tabs as t}
-        <button type="button" role="tab" id="tools-tab-{t.id}" aria-selected={tab === t.id} aria-controls="tools-panel" tabindex={tab === t.id ? 0 : -1} data-autofocus={tab === t.id ? "" : undefined} class="tab" class:row-hl={tab === t.id} class:row-hover={tab !== t.id} onclick={() => (tab = t.id)}>{t.label}</button>
-      {/each}
-    </div>
-    <div class="content" role="tabpanel" id="tools-panel" aria-labelledby="tools-tab-{tab}" tabindex="-1">
-      {#if tab === "health"}
-        <div class="head">
+{#snippet layout()}
+  <div class="layout" class:drawer-layout={embedded}>
+    {#if embedded}
+      <div class="nav-pills" role="tablist" aria-label="Tools" aria-orientation="horizontal" tabindex="-1" bind:this={navEl} onkeydown={onNavKey}>
+        {#each tabs as t}
+          <button type="button" role="tab" id="tools-tab-{t.id}" aria-selected={tab === t.id} aria-controls="tools-panel" tabindex={tab === t.id ? 0 : -1} class="pill-tab" class:active={tab === t.id} onclick={() => (tab = t.id)}>{t.id === "backup" ? "Backup" : t.label}</button>
+        {/each}
+      </div>
+    {:else}
+      <div class="nav" role="tablist" aria-label="Tools" aria-orientation="vertical" tabindex="-1" bind:this={navEl} onkeydown={onNavKey}>
+        {#each tabs as t}
+          <button type="button" role="tab" id="tools-tab-{t.id}" aria-selected={tab === t.id} aria-controls="tools-panel" tabindex={tab === t.id ? 0 : -1} data-autofocus={tab === t.id ? "" : undefined} class="tab" class:row-hl={tab === t.id} class:row-hover={tab !== t.id} onclick={() => (tab = t.id)}>{t.label}</button>
+        {/each}
+      </div>
+    {/if}
+    <div class="content" class:drawer-content={embedded} role="tabpanel" id="tools-panel" aria-labelledby="tools-tab-{tab}" tabindex="-1">
+      {#key tab}
+        <div class="tab-body anim-fade">
+          {#if tab === "health"}
+        <div class="head" class:drawer-head-col={embedded}>
           <div><h3>Health</h3><p class="hint">Checks that your connections, the generated SSH config and your keys agree.</p></div>
           <div class="actions">
             <button type="button" class="btn" onclick={recheck} disabled={busy}>Re-check</button>
@@ -164,7 +181,7 @@
         <section>
           <h3>Back up</h3>
           <p class="hint">Saves your connections and adopted keys into one file, encrypted with a passphrase. Relay never stores the passphrase: without it the file cannot be opened.</p>
-          <div class="pair">
+          <div class="pair" class:drawer-pair={embedded}>
             <label class="field"><span>Passphrase</span><input type="password" bind:value={pass} autocomplete="off" /></label>
             <label class="field"><span>Confirm passphrase</span><input type="password" bind:value={pass2} autocomplete="off" /></label>
           </div>
@@ -188,7 +205,7 @@
           {#each skipped as s}<div class="notice bad">Skipped {s}</div>{/each}
         {/if}
       {:else if tab === "keys"}
-        <div class="head">
+        <div class="head" class:drawer-head-col={embedded}>
           <div><h3>Keys</h3><p class="hint">Adopted keys are copied into Relay's vault and included in backups. Other keys stay where they are and are not backed up. For a key with a passphrase, adopting also asks for it once so ssh does not ask every time.</p></div>
           <div class="actions">
             <button type="button" class="btn" onclick={adoptOther}>Adopt a key…</button>
@@ -219,41 +236,70 @@
               </li>
             {/each}
           </ul>
-        {:else}
-          <EmptyState icon="key" title="No private keys found" text="Relay looks for keys in ~/.ssh. Generate one or adopt a key from elsewhere." />
+          {:else}
+            <EmptyState icon="key" title="No private keys found" text="Relay looks for keys in ~/.ssh. Generate one or adopt a key from elsewhere." />
+          {/if}
         {/if}
-      {/if}
+        </div>
+      {/key}
     </div>
   </div>
-</Modal>
+{/snippet}
+
+{#if embedded}
+  <div class="drawer-panel">
+    <div class="drawer-head">
+      <span class="title-strong">Tools &amp; Security</span>
+      <button type="button" class="icon-btn dense" aria-label="Close drawer" onclick={onclose}><Icon name="x" size={14} /></button>
+    </div>
+    {@render layout()}
+  </div>
+{:else}
+  <Modal title="Tools" size="lg" tall flush {onclose}>
+    {@render layout()}
+  </Modal>
+{/if}
 {#if restoring}<RestoreBackup path={restorePath} encrypted={needsPass} onrestored={restored} onclose={() => (restoring = false)} />{/if}
 
 <style>
+  .drawer-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); padding: 12px 14px 10px; border-bottom: 1px solid var(--hairline); }
+  .title-strong { font-size: var(--t-sm); font-weight: 600; color: var(--strong); }
   .layout { flex: 1; min-height: 0; display: flex; }
-  .nav { width: 196px; flex: none; display: grid; align-content: start; gap: 2px; padding: var(--s3) var(--s2); background: var(--bar); border-right: 1px solid var(--line); }
+  .layout.drawer-layout { flex-direction: column; }
+  .nav-pills { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 12px 14px 0; padding: 4px; border-radius: 10px; background: var(--field); flex: none; }
+  .pill-tab { height: 28px; border-radius: 7px; font-size: var(--t-xs); color: var(--muted); font-weight: 500; transition: background var(--dur-1) var(--ease), color var(--dur-1) var(--ease); }
+  .pill-tab:hover { color: var(--strong); }
+  .pill-tab.active { background: var(--active); color: var(--strong); }
+  .nav { width: 196px; flex: none; display: grid; align-content: start; gap: 2px; padding: var(--s3) var(--s2); background: var(--rail); border-right: 1px solid var(--hairline); }
   .tab { height: var(--h-md); padding: 0 var(--s3); text-align: left; background: transparent; border: 0; border-radius: var(--r-sm); color: var(--text2); font-size: var(--t-md); }
-  .tab[aria-selected="true"] { font-weight: 500; }
-  .content { flex: 1; min-width: 0; overflow: auto; padding: var(--s5); display: grid; align-content: start; gap: var(--s4); outline: none; }
+  .tab[aria-selected="true"] { font-weight: 500; color: var(--strong); }
+  .content { flex: 1; min-width: 0; overflow: auto; padding: var(--s5); outline: none; }
+  .content.drawer-content { padding: 14px; }
+  .tab-body { display: grid; align-content: start; gap: var(--s4); }
   h3 { margin: 0 0 var(--s1); font-size: var(--t-lg); font-weight: 600; color: var(--strong); }
   p { margin: 0; }
   section { display: grid; gap: var(--s4); }
-  section + section { padding-top: var(--s5); border-top: 1px solid var(--line); }
+  section + section { padding-top: var(--s5); border-top: 1px solid var(--hairline); }
   .head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s4); }
+  .head.drawer-head-col { flex-direction: column; gap: var(--s3); }
   .actions { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
   .head .actions { flex: none; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+  .pair.drawer-pair { grid-template-columns: 1fr; }
   .path { font-size: var(--t-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  .rows { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r-sm); }
-  .rows li { display: flex; align-items: center; gap: var(--s3); min-height: 36px; padding: var(--s2) var(--s3); border-top: 1px solid var(--line); }
+  .rows { list-style: none; margin: 0; padding: 0; background: var(--band); border: 0; border-radius: var(--r-md); overflow: hidden; }
+  .rows li { display: flex; align-items: center; gap: var(--s3); min-height: 38px; padding: var(--s2) var(--s3); border-top: 1px solid var(--hairline); font-size: var(--t-sm); }
   .rows li:first-child { border-top: 0; }
-  .rows b { font-weight: 500; min-width: 140px; }
-  .detail { color: var(--muted); }
+  .rows b { font-weight: 500; min-width: 140px; color: var(--strong); }
+  .drawer-layout .rows b { min-width: 96px; }
+  .detail { color: var(--muted); font-size: var(--t-sm); }
   .rows li.key { display: grid; grid-template-columns: 1fr auto; align-items: center; }
   .info { display: grid; gap: 2px; min-width: 0; }
   .kname { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); }
   .kname b { min-width: 0; }
-  .kmeta { font-size: var(--t-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .kuse { font-size: var(--t-sm); color: var(--text2); }
-  .pass { grid-column: 1 / -1; display: grid; gap: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--line); }
+  .kmeta { font-size: var(--t-xs); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .kuse { font-size: var(--t-xs); color: var(--text2); }
+  .pass { grid-column: 1 / -1; display: grid; gap: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--hairline); }
   .pass .field { max-width: 320px; }
 </style>

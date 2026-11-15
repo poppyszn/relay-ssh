@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
   import type { Session } from "../lib/terminal";
+  import { pop } from "../lib/motion";
   import { settings } from "../state/settings.svelte";
   import Icon from "./Icon.svelte";
 
@@ -41,7 +42,7 @@
 
 <!-- Esc and Enter come from whichever control inside the bar has focus. -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div class="bar" role="search" onkeydown={key}>
+<div class="bar nodrag" role="search" onkeydown={key} in:pop|global={{ duration: 180, y: -6, scale: 0.97 }} out:pop|global={{ duration: 130, y: -4, scale: 0.98 }}>
   <input bind:this={input} bind:value={query} class="mono" placeholder="Find" aria-label="Find in scrollback" />
   <span class="count" class:none={query && count.total === 0}>{label}</span>
   <button type="button" class="icon-btn dense" aria-label="Previous match" title="Previous (⇧↵)" onclick={prev}><Icon name="chevron-up" size={14} /></button>
@@ -51,7 +52,7 @@
 </div>
 
 <style>
-  .bar { position: absolute; top: var(--s3); right: 18px; z-index: 5; display: flex; align-items: center; gap: var(--s1); padding: var(--s1) var(--s2); background: var(--active); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-pop); }
+  .bar { position: absolute; top: var(--s3); right: 18px; z-index: 5; display: flex; align-items: center; gap: var(--s1); padding: var(--s1) var(--s2); background: var(--float); border: 1px solid var(--float-edge); border-radius: var(--r-md); box-shadow: var(--e-pop); }
   input { height: var(--h-sm); min-width: 170px; font-size: var(--t-sm); }
   .count { min-width: 56px; text-align: center; font-size: var(--t-sm); color: var(--muted); }
   .count.none { color: var(--err-text); }

@@ -6,7 +6,9 @@ export { THEMES };
 /** The "system" theme follows the macOS light or dark appearance. */
 export const SYSTEM = "system";
 const SYSTEM_LIGHT = "daylight";
-const SYSTEM_DARK = "midnight";
+const SYSTEM_DARK = "obsidian";
+
+export type StartupMode = "launcher" | "local" | "restore";
 
 export const FONTS: Record<string, { name: string; stack: string }> = {
   jetbrains: { name: "JetBrains Mono", stack: '"JetBrains Mono", "SF Mono", Menlo, Consolas, monospace' },
@@ -24,6 +26,7 @@ interface Saved {
   font: string;
   fontSize: number;
   density: string;
+  startup?: StartupMode;
   copyOnSelect: boolean;
   cursorBlink: boolean;
   autoBlocks: boolean;
@@ -42,10 +45,12 @@ function load(): Partial<Saved> {
 }
 
 class Settings {
-  theme = $state("midnight");
+  theme = $state("obsidian");
   font = $state("jetbrains");
   fontSize = $state(14);
   density = $state("comfortable");
+  /** What Relay opens on launch: calm launch canvas ("launcher"), immediate local shell ("local"), or prior open tabs ("restore"). */
+  startup = $state<StartupMode>("launcher");
   copyOnSelect = $state(false);
   cursorBlink = $state(true);
   /** Set up command blocks by itself in ssh sessions (a connection can override this). */
@@ -64,6 +69,7 @@ class Settings {
     if (s.font && FONTS[s.font]) this.font = s.font;
     if (typeof s.fontSize === "number" && s.fontSize >= 10 && s.fontSize <= 24) this.fontSize = s.fontSize;
     if (s.density && DENSITY[s.density]) this.density = s.density;
+    if (s.startup === "launcher" || s.startup === "local" || s.startup === "restore") this.startup = s.startup;
     if (typeof s.copyOnSelect === "boolean") this.copyOnSelect = s.copyOnSelect;
     if (typeof s.cursorBlink === "boolean") this.cursorBlink = s.cursorBlink;
     if (typeof s.autoBlocks === "boolean") this.autoBlocks = s.autoBlocks;
@@ -75,7 +81,7 @@ class Settings {
   /** Whether macOS is currently in light mode; only consulted for the "system" theme. */
   systemLight = $state(typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: light)").matches);
 
-  /** The theme actually in use: "system" resolves to Daylight or Midnight. */
+  /** The theme actually in use: "system" resolves to Daylight or Obsidian. */
   get resolved(): string {
     return this.theme === SYSTEM ? (this.systemLight ? SYSTEM_LIGHT : SYSTEM_DARK) : this.theme;
   }
@@ -106,6 +112,7 @@ class Settings {
       font: this.font,
       fontSize: this.fontSize,
       density: this.density,
+      startup: this.startup,
       copyOnSelect: this.copyOnSelect,
       cursorBlink: this.cursorBlink,
       autoBlocks: this.autoBlocks,

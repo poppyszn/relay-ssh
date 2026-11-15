@@ -377,7 +377,7 @@
 <style>
   .cols { flex: 1; min-height: 0; display: flex; }
   .left { flex: 1; min-width: 0; overflow: auto; }
-  section { display: grid; gap: var(--s3); padding: var(--s5); border-bottom: 1px solid var(--line); }
+  section { display: grid; gap: var(--s3); padding: var(--s5); border-bottom: 1px solid var(--hairline); }
   section:last-child { border-bottom: 0; }
   h3 { margin: 0; }
   .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
@@ -386,10 +386,10 @@
   .inline { display: flex; gap: var(--s2); }
   .inline select, .inline input { flex: 1; min-width: 0; }
   .hint { margin: 0; }
-  .saved { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s2) var(--s3); background: var(--field); border: 1px solid var(--fieldline); border-radius: var(--r-sm); }
+  .saved { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s2) var(--s3); background: var(--field); border: 0; border-radius: var(--r-sm); }
   .acts { display: flex; gap: var(--s2); }
-  .tags { min-height: var(--h-md); display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1); padding: 3px var(--s2); background: var(--field); border: 1px solid var(--fieldline); border-radius: var(--r-sm); }
-  .tags:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+  .tags { min-height: var(--h-md); display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1); padding: 3px var(--s2); background: var(--field); border: 0; border-radius: var(--r-sm); transition: box-shadow var(--dur-1) var(--ease); }
+  .tags:focus-within { box-shadow: 0 0 0 1px var(--accent), 0 0 0 3px var(--accent-ring); }
   .tags .chip { padding-right: 2px; }
   .tags .chip .icon-btn { width: 16px; height: 16px; border-radius: var(--r-xs); }
   .tags input, .tags input:focus { flex: 1; min-width: 72px; height: 24px; padding: 0 var(--s1); border: 0; background: none; box-shadow: none; }
@@ -400,16 +400,16 @@
   .opt select { flex: none; width: 150px; }
   .head { display: flex; align-items: center; justify-content: space-between; }
   .tun { display: grid; grid-template-columns: 110px 1fr 1.4fr 24px; gap: var(--s2); align-items: center; }
-  aside { width: 300px; flex: none; display: flex; flex-direction: column; gap: var(--s3); padding: var(--s5); overflow: auto; background: var(--bar); border-left: 1px solid var(--line); }
+  aside { width: 320px; flex: none; display: flex; flex-direction: column; gap: var(--s3); padding: var(--s5); overflow: auto; background: var(--rail); border-left: 1px solid var(--hairline); }
   .phead { display: grid; gap: 2px; }
   .proto-switch { margin-left: auto; }
-  .proto-switch button { padding: 2px var(--s3); font-size: var(--t-xs); height: 24px; }
-  .rdp-summary { margin: 0; padding: var(--s3); background: var(--strip); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: var(--t-xs); line-height: 1.7; display: grid; gap: 4px; }
+  .proto-switch button { padding: 2px var(--s3); font-size: var(--t-xs); height: 26px; }
+  .rdp-summary { margin: 0; padding: var(--s3); background: var(--term); border: 0; border-radius: var(--r-md); font-size: var(--t-xs); line-height: 1.7; display: grid; gap: 4px; }
   .rdp-summary p { margin: 0; }
   .rdp-summary strong { color: var(--accent-text); }
-  pre { margin: 0; padding: var(--s3); background: var(--strip); border: 1px solid var(--line); border-radius: var(--r-sm); font-size: var(--t-xs); line-height: 1.7; white-space: pre; overflow-x: auto; }
+  pre { margin: 0; padding: var(--s3); background: var(--term); border: 0; border-radius: var(--r-md); font-size: var(--t-xs); line-height: 1.7; white-space: pre; overflow-x: auto; }
   .k1 { color: var(--accent-text); } .k2 { color: var(--muted); }
   .fail { flex: none; margin: 0 var(--s5) var(--s3); }
   .cli { margin-right: auto; display: flex; align-items: center; gap: var(--s2); }
-  .cli code { padding: 2px var(--s2); background: var(--strip); border: 1px solid var(--line); border-radius: var(--r-xs); color: var(--text2); }
+  .cli code { padding: 2px var(--s2); background: var(--term); border: 0; border-radius: var(--r-xs); font-size: var(--t-xs); color: var(--text2); }
 </style>

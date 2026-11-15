@@ -18,8 +18,8 @@
 
 <style>
   .wrap { padding-right: var(--s3); padding-top: 6px; padding-bottom: var(--s2); }
-  .card { position: relative; background: var(--active); border: 1px solid var(--floatline); border-radius: var(--r-md); box-shadow: var(--e-pop); padding: var(--s3); }
-  .arrow { position: absolute; top: -6px; left: 22px; width: 10px; height: 10px; background: var(--active); border-left: 1px solid var(--floatline); border-top: 1px solid var(--floatline); transform: rotate(45deg); }
+  .card { position: relative; background: var(--float); border: 1px solid var(--float-edge); border-radius: var(--r-md); box-shadow: var(--e-pop); padding: var(--s3); }
+  .arrow { position: absolute; top: -6px; left: 22px; width: 10px; height: 10px; background: var(--float); border-left: 1px solid var(--float-edge); border-top: 1px solid var(--float-edge); transform: rotate(45deg); }
   .text { font-size: var(--t-md); color: var(--text); line-height: 1.45; }
   .sub { font-size: var(--t-sm); color: var(--muted); margin-top: var(--s1); }
   .buttons { display: flex; justify-content: flex-end; gap: var(--s2); margin-top: var(--s3); }

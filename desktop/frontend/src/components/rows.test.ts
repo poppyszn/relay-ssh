@@ -135,4 +135,24 @@ describe("Duplicate in the sidebar tree", () => {
     expect(target.querySelector('button[aria-label="Duplicate web"]')).not.toBeNull();
     unmount(c);
   });
+
+  it("distinguishes active focused sessions from background open and closed rows", () => {
+    const profile = { ...blankProfile(), id: "prod", name: "prod", host: "10.0.0.1", user: "ops" };
+    const activeEl = document.createElement("div");
+    const c1 = mount(ConnRow, { target: activeEl, props: { profile, depth: 0, live: true, current: true, onconnect: () => {}, onedit: () => {} } });
+    expect(activeEl.querySelector(".row.live.current")).not.toBeNull();
+    expect(activeEl.querySelector(".state-badge.is-active")?.textContent).toBe("Active");
+    unmount(c1);
+
+    const openEl = document.createElement("div");
+    const c2 = mount(ConnRow, { target: openEl, props: { profile, depth: 0, live: true, current: false, onconnect: () => {}, onedit: () => {} } });
+    expect(openEl.querySelector(".row.live:not(.current)")).not.toBeNull();
+    expect(openEl.querySelector(".state-badge.is-open")?.textContent).toBe("Open");
+    unmount(c2);
+
+    const closedEl = document.createElement("div");
+    const c3 = mount(ConnRow, { target: closedEl, props: { profile, depth: 0, live: false, current: false, onconnect: () => {}, onedit: () => {} } });
+    expect(closedEl.querySelector(".state-badge")).toBeNull();
+    unmount(c3);
+  });
 });

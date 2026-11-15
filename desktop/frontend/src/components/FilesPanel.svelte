@@ -5,7 +5,7 @@
   import Icon from "./Icon.svelte";
   import Modal from "./Modal.svelte";
 
-  let { target, name = "", onclose }: { target: string; name?: string; onclose: () => void } = $props();
+  let { target, name = "", embedded = false, onclose }: { target: string; name?: string; embedded?: boolean; onclose: () => void } = $props();
 
   let path = $state("");
   let pathInput = $state("");
@@ -120,16 +120,24 @@
   $effect(() => { load(""); });
 </script>
 
-<Modal title="Files" subtitle={name || target} size="lg" tall flush {onclose}>
-  <div class="bar">
+{#snippet inner()}
+  <div class="bar" class:embedded-pad={embedded}>
     <button type="button" class="icon-btn" aria-label="Up one folder" title="Up one folder" onclick={() => load(parent(path))} disabled={path === "/" || !!busy}><Icon name="arrow-up" /></button>
     <button type="button" class="icon-btn" aria-label="Refresh" title="Refresh" onclick={() => load()} disabled={!!busy}><Icon name="refresh" /></button>
     <input class="mono path" bind:value={pathInput} aria-label="Folder path" onkeydown={(e) => e.key === "Enter" && load(pathInput)} />
-    <label class="check"><input type="checkbox" bind:checked={showHidden} />Show hidden</label>
+    {#if !embedded}
+      <label class="check"><input type="checkbox" bind:checked={showHidden} />Show hidden</label>
+    {:else}
+      <button type="button" class="btn sm primary" onclick={pickUpload} disabled={!!busy}>Upload</button>
+    {/if}
   </div>
 
-  <div class="tools">
-    <button type="button" class="btn sm" onclick={pickUpload} disabled={!!busy}><Icon name="import" size={14} />Upload</button>
+  <div class="tools" class:embedded-pad={embedded}>
+    {#if !embedded}
+      <button type="button" class="btn sm" onclick={pickUpload} disabled={!!busy}><Icon name="import" size={14} />Upload</button>
+    {:else}
+      <label class="check"><input type="checkbox" bind:checked={showHidden} />Dotfiles</label>
+    {/if}
     <button type="button" class="btn sm" onclick={() => { creating = true; newName = ""; }} disabled={!!busy}><Icon name="folder-plus" size={14} />New folder</button>
     <span class="sp"></span>
     {#if sel}
@@ -139,26 +147,40 @@
     {/if}
   </div>
 
-  {#if error}<div class="strip"><div class="notice bad" role="alert">{error}</div></div>{/if}
-  {#if note && !error}<div class="strip"><div class="notice good">{note}</div></div>{/if}
+  {#if error}<div class="strip" class:embedded-pad={embedded}><div class="notice bad" role="alert">{error}</div></div>{/if}
+  {#if note && !error}<div class="strip" class:embedded-pad={embedded}><div class="notice good">{note}</div></div>{/if}
 
-  <div class="row head" aria-hidden="true"><span class="label">Name</span><span class="label num">Size</span><span class="label num">Modified</span><span class="label num">Permissions</span></div>
+  {#if !embedded}
+    <div class="row head" aria-hidden="true"><span class="label">Name</span><span class="label num">Size</span><span class="label num">Modified</span><span class="label num">Permissions</span></div>
+  {/if}
   <div class="list" role="listbox" aria-label="Files" tabindex="-1" bind:this={listEl} onkeydown={listKey}>
     {#if creating}
-      <div class="row">
+      <div class="row" class:compact={embedded}>
         <span class="n"><span class="ico dir"><Icon name="folder" /></span><input class="mono edit" bind:value={newName} data-autofocus aria-label="New folder name" placeholder="Folder name" onkeydown={(k) => fieldKey(k, mkdir, () => (creating = false))} /></span>
       </div>
     {/if}
     {#each shown as e, i (e.name)}
       <!-- svelte-ignore a11y_click_events_have_key_events (arrows and Enter are handled on the listbox) -->
-      <div class="row item row-hover" class:row-hl={selected === e.name} role="option" aria-selected={selected === e.name} data-i={i} tabindex={stop(e.name, i) ? 0 : -1} onclick={() => (selected = e.name)} ondblclick={() => open(e)}>
+      <div class="row item row-hover" class:compact={embedded} class:row-hl={selected === e.name} role="option" aria-selected={selected === e.name} data-i={i} tabindex={stop(e.name, i) ? 0 : -1} onclick={() => (selected = e.name)} ondblclick={() => open(e)}>
         <span class="n">
           <span class="ico" class:dir={e.dir}><Icon name={e.dir ? "folder" : "files"} /></span>
           {#if renaming === e.name}
             <input class="mono edit" bind:value={renameTo} data-autofocus aria-label="New name" onclick={(ev) => ev.stopPropagation()} onkeydown={(k) => fieldKey(k, rename, () => (renaming = ""))} />
-          {:else}<span class="name">{e.name}</span>{#if e.link}<span class="chip">link</span>{/if}{/if}
+          {:else}
+            <div class="name-stack">
+              <span class="name">{e.name}</span>
+              {#if embedded}
+                <span class="mono meta-sub">{e.perm}{#if !e.dir} · {size(e.size, e.dir)}{/if}</span>
+              {/if}
+            </div>
+            {#if e.link}<span class="chip">link</span>{/if}
+          {/if}
         </span>
-        <span class="mono dim num">{size(e.size, e.dir)}</span><span class="mono dim num">{e.modified}</span><span class="mono dim num">{e.perm}</span>
+        {#if embedded}
+          <span class="mono dim num">{e.dir ? "Open ›" : ""}</span>
+        {:else}
+          <span class="mono dim num">{size(e.size, e.dir)}</span><span class="mono dim num">{e.modified}</span><span class="mono dim num">{e.perm}</span>
+        {/if}
       </div>
     {:else}
       {#if !busy && !error && !creating}
@@ -168,12 +190,35 @@
       {/if}
     {/each}
   </div>
+{/snippet}
 
-  {#snippet footer()}
-    <span class="status">{#if busy}<span class="spinner"></span>{/if}{busy || `${shown.length} item${shown.length === 1 ? "" : "s"}`}</span>
-    <span class="hint">Enter or double-click opens a folder or downloads a file</span>
-  {/snippet}
-</Modal>
+{#snippet foot()}
+  <span class="status">{#if busy}<span class="spinner"></span>{/if}{busy || `${shown.length} item${shown.length === 1 ? "" : "s"}`}</span>
+  <span class="hint">{embedded ? "Click to select · Double-click to open" : "Enter or double-click opens a folder or downloads a file"}</span>
+{/snippet}
+
+{#if embedded}
+  <div class="drawer-panel">
+    <div class="drawer-head">
+      <div class="drawer-title">
+        <span class="title-strong">SFTP · {name || target}</span>
+        <span class="sub-ok">Connected via multiplexed SSH</span>
+      </div>
+      <button type="button" class="icon-btn dense" aria-label="Close drawer" onclick={onclose}><Icon name="x" size={14} /></button>
+    </div>
+    {@render inner()}
+    <div class="drawer-foot">
+      {@render foot()}
+    </div>
+  </div>
+{:else}
+  <Modal title="Files" subtitle={name || target} size="lg" tall flush {onclose}>
+    {@render inner()}
+    {#snippet footer()}
+      {@render foot()}
+    {/snippet}
+  </Modal>
+{/if}
 
 {#if confirm}
   {@const c = confirm}
@@ -195,19 +240,29 @@
 {/if}
 
 <style>
-  .bar { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line); }
-  .path { flex: 1; }
+  .drawer-panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); padding: 12px 14px 10px; border-bottom: 1px solid var(--hairline); }
+  .drawer-title { display: grid; gap: 2px; min-width: 0; }
+  .title-strong { font-size: var(--t-sm); font-weight: 600; color: var(--strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sub-ok { font-size: 11px; color: var(--ok); }
+  .drawer-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); padding: 10px 14px; border-top: 1px solid var(--hairline); }
+  .bar { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s5); border-bottom: 1px solid var(--hairline); }
+  .bar.embedded-pad, .tools.embedded-pad, .strip.embedded-pad { padding-left: 14px; padding-right: 14px; }
+  .path { flex: 1; min-width: 0; }
   .check { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); color: var(--muted); white-space: nowrap; }
-  .tools { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line); }
+  .tools { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s5); border-bottom: 1px solid var(--hairline); flex-wrap: wrap; }
   .sp { flex: 1; }
   .strip { padding: var(--s3) var(--s5) 0; }
-  .row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 150px 100px; gap: var(--s3); align-items: center; padding: 0 var(--s5); height: 36px; border-bottom: 1px solid var(--line); }
-  .row.head { flex: none; height: 32px; background: var(--bar); }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 150px 100px; gap: var(--s3); align-items: center; padding: 0 var(--s5); height: 36px; border-bottom: 1px solid var(--hairline); font-size: var(--t-md); }
+  .row.compact { grid-template-columns: minmax(0, 1fr) auto; padding: 6px 14px; height: auto; min-height: 44px; font-size: var(--t-sm); }
+  .row.head { flex: none; height: 32px; background: var(--term); font-size: var(--t-xs); }
   .num { text-align: right; }
   .list { flex: 1; min-height: 0; overflow: auto; outline: none; }
   .item { cursor: default; outline-offset: -2px; }
   .n { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
-  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name-stack { display: grid; min-width: 0; }
+  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--strong); }
+  .meta-sub { font-size: 11px; color: var(--dim); }
   .ico { display: grid; color: var(--dim); flex: none; }
   .ico.dir { color: var(--accent-text); }
   .dim { color: var(--muted); font-size: var(--t-sm); white-space: nowrap; }

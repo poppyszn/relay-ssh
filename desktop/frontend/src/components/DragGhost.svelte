@@ -12,7 +12,7 @@
 {/if}
 
 <style>
-  .ghost { position: fixed; z-index: var(--z-drag); pointer-events: none; display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3) var(--s2) var(--s2); background: var(--active); border: 1px solid var(--accent); border-radius: var(--r-sm); box-shadow: var(--e-pop); color: var(--muted); }
+  .ghost { position: fixed; z-index: var(--z-drag); pointer-events: none; display: flex; align-items: center; gap: var(--s2); padding: var(--s2) var(--s3) var(--s2) var(--s2); background: var(--float); border: 1px solid var(--accent-edge); border-radius: var(--r-md); box-shadow: var(--e-pop); color: var(--muted); font-size: var(--t-sm); }
   .ghost b { color: var(--strong); font-weight: 600; }
   .ghost.bad { border-color: var(--err); }
   .ghost span { font-size: var(--t-xs); color: var(--err-text); }
