@@ -58,7 +58,7 @@ jobs:
           make desktop-check
       - name: Open Pull Request
         if: steps.check_release.outputs.updated == 'true'
-        uses: peter-evans/create-pull-request@5e914681df9dc83aa4e4905692ca88beb2f9e91f # v7.0.5
+        uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # v8.1.2
         with:
           commit-message: "chore(deps): bump IronRDP to ${{ steps.check_release.outputs.latest_tag }}"
           title: "Update IronRDP to ${{ steps.check_release.outputs.latest_tag }}"
