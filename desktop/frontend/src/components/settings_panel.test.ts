@@ -22,13 +22,13 @@ const click = (el: Element | null | undefined) => { (el as HTMLElement).click();
 const button = (t: HTMLElement, text: string) => [...t.querySelectorAll("button")].find((b) => b.textContent?.trim() === text);
 
 describe("SettingsPanel", () => {
-  it("is a Settings dialog with Appearance, Terminal, Remote desktop and Vault sections", () => {
+  it("is a Settings dialog with Appearance, Terminal, Remote desktop, Updates and Vault sections", () => {
     vault.exists = false;
     vault.unlocked = false;
     const t = show();
     expect(t.querySelector("h2")?.textContent).toBe("Settings");
     const labels = [...t.querySelectorAll("h3.label")].map((h) => h.textContent);
-    expect(labels).toEqual(["Appearance", "Terminal", "Remote desktop", "Vault"]);
+    expect(labels).toEqual(["Appearance", "Terminal", "Remote desktop", "Updates", "Vault"]);
     expect(t.querySelector("#settings-vault .chip")?.textContent).toBe("Not set up");
     expect(button(t, "Create vault")).toBeTruthy();
   });

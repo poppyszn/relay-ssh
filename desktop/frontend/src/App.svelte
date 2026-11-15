@@ -1,5 +1,6 @@
 <script lang="ts">
   import { startPolling } from "./lib/poll";
+  import { updates } from "./state/updates.svelte";
   import { onMount, tick } from "svelte";
   import { Clipboard, Events } from "@wailsio/runtime";
   import { Toaster, toast as sonner } from "svelte-sonner";
@@ -362,6 +363,19 @@
     }));
     const idx = Math.max(0, ws.tabs.findIndex((t) => t.id === ws.activeId));
     ui.saveSession(saved, idx);
+  });
+
+  // A few seconds after launch, look for a newer release and say so once.
+  onMount(() => {
+    if (!settings.autoUpdateCheck) return;
+    const t = setTimeout(async () => {
+      if (!(await updates.checkOnLaunch())) return;
+      sonner(`Relay ${updates.latest} is available`, {
+        description: "Install it from Settings.",
+        action: { label: "Open Settings", onClick: () => { settingsSection = undefined; settingsOpen = true; } },
+      });
+    }, 15_000);
+    return () => clearTimeout(t);
   });
 
   onMount(() => {

@@ -46,7 +46,8 @@ tasks:
     vars:
       # Shown in the status bar: the commit this build was made from ("-dirty" when it had uncommitted changes).
       APP_VERSION:
-        sh: git describe --tags --always --dirty 2>/dev/null || echo unknown
+        # A release build sets APP_VERSION (for example 1.2.0); anything else is stamped from git.
+        sh: echo "${APP_VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo unknown)}"
       BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s -X main.version={{.APP_VERSION}}"{{end}}'
       DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.APP_NAME}}'
       OUTPUT: '{{ .OUTPUT | default .DEFAULT_OUTPUT }}'

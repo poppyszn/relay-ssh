@@ -32,7 +32,7 @@ check: fmt vet race guardrails ## Everything CI runs. This is the gate before an
 desktop-check: ## Gate for the Relay desktop module (guardrails, typecheck, frontend tests, build, Go tests)
 	./desktop/scripts/guardrails.sh
 	cd desktop/frontend && npm run check -- --output machine 2>&1 | tee /dev/stderr | grep -q " 0 ERRORS " && npm test && npm run build
-	cd desktop && go vet . ./vault && go test . ./vault
+	cd desktop && go vet . ./vault ./internal/... ./cmd/... && go test . ./vault ./internal/... ./cmd/...
 
 rdp-client: ## Build the IronRDP remote desktop client (WebAssembly) into desktop/frontend/vendor/
 	./desktop/scripts/build-ironrdp.sh

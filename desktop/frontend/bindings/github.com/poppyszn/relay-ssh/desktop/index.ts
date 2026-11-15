@@ -8,6 +8,7 @@ import * as RdpService from "./rdpservice.js";
 import * as SnippetsService from "./snippetsservice.js";
 import * as TerminalService from "./terminalservice.js";
 import * as ToolsService from "./toolsservice.js";
+import * as UpdateService from "./updateservice.js";
 import * as VaultService from "./vaultservice.js";
 export {
     FilesService,
@@ -17,6 +18,7 @@ export {
     SnippetsService,
     TerminalService,
     ToolsService,
+    UpdateService,
     VaultService
 };
 
@@ -35,5 +37,6 @@ export type {
     RdpSessionInfo,
     Snippet,
     TunnelDTO,
+    UpdateInfo,
     VaultStatus
 } from "./models.js";

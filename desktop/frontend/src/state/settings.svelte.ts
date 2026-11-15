@@ -33,6 +33,7 @@ interface Saved {
   rdpClipboard?: boolean;
   clickToMove?: boolean;
   vaultTimeout?: number;
+  autoUpdateCheck?: boolean;
 }
 const KEY = "relay.settings.v1";
 
@@ -61,6 +62,8 @@ class Settings {
   rdpClipboard = $state(true);
   /** Inactivity timeout in minutes before auto-locking the secret vault (0 = lock on quit). */
   vaultTimeout = $state(15);
+  /** Look for a new release shortly after launch (one request to GitHub; nothing is sent about you). */
+  autoUpdateCheck = $state(true);
   private sentVaultTimeout = -1;
 
   constructor() {
@@ -75,6 +78,7 @@ class Settings {
     if (typeof s.autoBlocks === "boolean") this.autoBlocks = s.autoBlocks;
     if (typeof s.rdpClipboard === "boolean") this.rdpClipboard = s.rdpClipboard;
     if (typeof s.clickToMove === "boolean") this.clickToMove = s.clickToMove;
+    if (typeof s.autoUpdateCheck === "boolean") this.autoUpdateCheck = s.autoUpdateCheck;
     if (typeof s.vaultTimeout === "number" && s.vaultTimeout >= 0) this.vaultTimeout = s.vaultTimeout;
   }
 
@@ -119,6 +123,7 @@ class Settings {
       rdpClipboard: this.rdpClipboard,
       clickToMove: this.clickToMove,
       vaultTimeout: this.vaultTimeout,
+      autoUpdateCheck: this.autoUpdateCheck,
     };
     try {
       localStorage.setItem(KEY, JSON.stringify(saved));
