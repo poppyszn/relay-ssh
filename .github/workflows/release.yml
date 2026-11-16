@@ -90,7 +90,9 @@ jobs:
         if: matrix.goos == 'linux'
         run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
       - name: Install the Wails CLI
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
+        # Wails builds for GTK 4 on Linux unless told otherwise; the gtk3 tag matches the libraries above
+        # (GTK 3, webkit2gtk 4.1), which more distributions ship.
+        run: go install -tags gtk3 github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0
       - run: npm ci
         working-directory: desktop/frontend
 
@@ -115,7 +117,7 @@ jobs:
         if: matrix.goos == 'linux'
         working-directory: desktop
         run: |
-          wails3 task linux:build
+          wails3 task linux:build EXTRA_TAGS=gtk3
           tar -czf "Relay-${{ matrix.name }}.tar.gz" -C bin relay
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
