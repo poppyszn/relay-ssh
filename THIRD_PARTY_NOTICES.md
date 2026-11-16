@@ -23,7 +23,6 @@ carry their own licenses, which their packages include.
 | [@wailsio/runtime](https://github.com/wailsapp/wails) | MIT |
 | [Svelte](https://github.com/sveltejs/svelte) | MIT |
 | [PaneForge](https://github.com/svecosystem/paneforge) | MIT |
-| [Lucide for Svelte (`@lucide/svelte`)](https://github.com/lucide-icons/lucide) | ISC |
 
 ## WebAssembly (bundled into the desktop app for RDP sessions)
 
@@ -31,14 +30,13 @@ carry their own licenses, which their packages include.
 | --- | --- |
 | [Devolutions/IronRDP](https://github.com/Devolutions/IronRDP) (`ironrdp-web`, `iron-remote-desktop`, `iron-remote-desktop-rdp`), built from the commit in `desktop/rdp-client/ironrdp.pin` | MIT OR Apache-2.0 (copies of both licences are placed next to the built client) |
 
-## Fonts (bundled into the desktop app)
+## Icons and fonts (bundled into the desktop app)
 
-The fonts are licensed under the SIL Open Font License 1.1, which permits
-bundling and redistribution provided the license text accompanies them. Both
-texts are in [`licenses/`](licenses/).
+The inlined icons use SVG path data from Lucide (ISC License; portions derived from Feather, MIT License), and the fonts are licensed under the SIL Open Font License 1.1. All license texts are in [`licenses/`](licenses/).
 
-| Font | Source | License text |
+| Asset | Source | License text |
 | --- | --- | --- |
+| Lucide icons | [lucide-icons/lucide](https://github.com/lucide-icons/lucide) | [`licenses/ISC-Lucide.txt`](licenses/ISC-Lucide.txt) |
 | JetBrains Mono | [JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono), packaged by [Fontsource](https://fontsource.org) | [`licenses/OFL-JetBrainsMono.txt`](licenses/OFL-JetBrainsMono.txt) |
 | Inter | [rsms/inter](https://github.com/rsms/inter), packaged by [Fontsource](https://fontsource.org) | [`licenses/OFL-Inter.txt`](licenses/OFL-Inter.txt) |
 
