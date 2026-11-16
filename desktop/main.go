@@ -10,6 +10,7 @@ import (
 
 	"github.com/poppyszn/relay-ssh/internal/paths"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/updater"
 )
 
 // Wails uses Go's `embed` package to embed the frontend files into the binary.
@@ -21,11 +22,14 @@ import (
 var assets embed.FS
 
 func main() {
+	// Relaunching after an update re-runs this binary as a short-lived helper; it must not start the app.
+	updater.HandleHelperMode()
 	prepareDirs()
 	if os.Getenv("RELAY_BENCH") != "" {
 		keychainEnabled = false // test runs must never write to the real Keychain
 	}
 	var app *application.App
+	updates := newUpdateService(nil, version)
 	term, err := newTerminalService(func(res string) {
 		fmt.Println("RELAY_BENCH_RESULT " + res)
 		app.Quit()
@@ -66,10 +70,14 @@ func main() {
 			application.NewService(&SnippetsService{}),
 			application.NewService(&VaultService{}),
 			application.NewService(rdpService),
+			application.NewService(updates),
 		},
 		Assets: application.AssetOptions{Handler: application.AssetFileServerFS(assets)},
 		Mac:    application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: true},
 	})
+	if err := updates.attach(app.Updater); err != nil {
+		log.Printf("updates are off: %v", err)
+	}
 	app.OnShutdown(func() {
 		getVault().Lock()
 		rdpService.CloseAll()

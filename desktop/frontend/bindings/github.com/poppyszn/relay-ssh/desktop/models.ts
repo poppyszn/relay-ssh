@@ -151,6 +151,17 @@ export interface TunnelDTO {
 }
 
 /**
+ * UpdateInfo is what the UI shows about updates.
+ */
+export interface UpdateInfo {
+    "current": string;
+    "latest": string;
+    "available": boolean;
+    "notes": string;
+    "enabled": boolean;
+}
+
+/**
  * VaultStatus describes the presence and unlock state of the vault.
  */
 export interface VaultStatus {

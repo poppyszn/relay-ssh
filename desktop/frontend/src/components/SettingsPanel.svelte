@@ -5,6 +5,7 @@
   import { DENSITY, FONTS, SYSTEM, THEMES, settings, type StartupMode } from "../state/settings.svelte";
   import { vault } from "../state/vault.svelte";
   import Modal from "./Modal.svelte";
+  import UpdatesSection from "./UpdatesSection.svelte";
   import VaultPanel from "./VaultPanel.svelte";
 
   let { onclose, section }: { onclose: () => void; section?: "vault" } = $props();
@@ -166,6 +167,8 @@
       <Switch.Root class="switch" bind:checked={settings.rdpClipboard} aria-labelledby="set-rdpclip" />
     </div>
   </section>
+
+  <UpdatesSection />
 
   <section id="settings-vault" aria-labelledby="set-vault" bind:this={vaultEl}>
     <div class="head">

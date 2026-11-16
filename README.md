@@ -12,9 +12,10 @@ cobble together around SSH: jump hosts and port forwards you set once, a file br
 key management, and Windows remote desktop. It ships with **`relay-ssh`**, a small command-line companion
 that reads and writes the same data.
 
-> **Status: early, macOS first.** Relay is developed and tested on macOS (Apple silicon). There are no
-> signed releases or installers yet, so for now you build it from source (see [Install](#install-and-build)).
-> Windows and Linux builds are planned. See the [Roadmap](#roadmap).
+> **Status: early, macOS first.** Relay is developed and tested on macOS (Apple silicon). Releases are
+> published for macOS (Apple silicon and Intel) and Linux (x86-64, builds only so far; not yet run by
+> hand). They are not notarized yet (see [Install](#install-and-build)). A Windows build needs terminal
+> support that is not written yet. See the [Roadmap](#roadmap).
 
 ## The problem
 
@@ -88,7 +89,17 @@ bare name matches several connections, it lists the `Folder/name` forms that wou
 
 ## Install and build
 
-There are no prebuilt releases yet. You need [Go](https://go.dev) 1.27+ and, for the desktop app,
+**Download a release.** Each release on the [Releases page](https://github.com/poppyszn/relay-ssh/releases)
+has `Relay-darwin-arm64.zip` (Apple silicon), `Relay-darwin-amd64.zip` (Intel) and `Relay-linux-amd64.tar.gz`,
+with a `SHA256SUMS` file. On macOS, unzip it and drag `Relay.app` to Applications. The app is not notarized
+yet, so the first time, right-click it and choose Open (or run `xattr -cr /Applications/Relay.app` once). The
+Linux build needs `libgtk-3` and `libwebkit2gtk-4.1` installed.
+
+**Updates.** Relay checks for a new release a few seconds after it starts (turn this off in Settings, Updates)
+and installs it when you ask. Every update is signed; Relay verifies the signature against a key built into
+the app and refuses anything else. How releases are made: [docs/releasing.md](docs/releasing.md).
+
+**Build from source.** You need [Go](https://go.dev) 1.27+ and, for the desktop app,
 [Node.js](https://nodejs.org) 22 or newer and the [Wails 3](https://v3.wails.io) CLI.
 
 **CLI**
@@ -235,7 +246,8 @@ Moved from the old `sssh` tool? Relay migrates `~/.config/sssh` and `~/.ssh/sssh
 - [x] CLI: vault, generated OpenSSH config, backup, doctor, import
 - [x] Desktop: connections, tabs, split panes, command blocks, search, themes
 - [x] Desktop: tools (health, backup, import, keys), file browser, port forwards
-- [ ] Windows (ConPTY, no connection sharing) and Linux builds
+- [x] Release builds for macOS (Apple silicon and Intel) and Linux, with signed in-app updates
+- [ ] Windows build (needs ConPTY terminal support) and a Linux install package (AppImage or deb)
 - [x] CI for the desktop app (macOS, on GitHub)
 - [ ] Signed and notarized macOS releases, installers
 - [ ] DevOps: environment tags with coloured tabs; AWS SSM (SSH over SSM and EC2 import); Kubernetes contexts
