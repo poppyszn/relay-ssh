@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Switch } from "bits-ui";
+  import Switch from "./Switch.svelte";
   import { settings } from "../state/settings.svelte";
   import { updates } from "../state/updates.svelte";
 
@@ -45,7 +45,7 @@
 
   <div class="opt">
     <div class="txt"><span id="set-autoupdate">Check for updates on launch</span><span class="hint">One request to GitHub a few seconds after Relay starts. Nothing about you or your connections is sent.</span></div>
-    <Switch.Root class="switch" bind:checked={settings.autoUpdateCheck} aria-labelledby="set-autoupdate" />
+    <Switch class="switch" bind:checked={settings.autoUpdateCheck} aria-labelledby="set-autoupdate" />
   </div>
 </section>
 

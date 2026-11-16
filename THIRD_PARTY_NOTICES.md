@@ -22,11 +22,9 @@ carry their own licenses, which their packages include.
 | [@xterm/xterm](https://github.com/xtermjs/xterm.js) and its fit, search and WebGL addons | MIT |
 | [@wailsio/runtime](https://github.com/wailsapp/wails) | MIT |
 | [Svelte](https://github.com/sveltejs/svelte) | MIT |
-| [Bits UI](https://github.com/huntabyte/bits-ui) | MIT |
 | [PaneForge](https://github.com/svecosystem/paneforge) | MIT |
 | [svelte-sonner](https://github.com/wobsoriano/svelte-sonner) | MIT |
 | [Lucide for Svelte (`@lucide/svelte`)](https://github.com/lucide-icons/lucide) | ISC |
-| [@internationalized/date](https://github.com/adobe/react-spectrum) (pulled in by Bits UI) | Apache-2.0 |
 | [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) (its generated styles ship in the app) | MIT |
 
 ## WebAssembly (bundled into the desktop app for RDP sessions)
