@@ -24,7 +24,6 @@ carry their own licenses, which their packages include.
 | [Svelte](https://github.com/sveltejs/svelte) | MIT |
 | [PaneForge](https://github.com/svecosystem/paneforge) | MIT |
 | [Lucide for Svelte (`@lucide/svelte`)](https://github.com/lucide-icons/lucide) | ISC |
-| [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) (its generated styles ship in the app) | MIT |
 
 ## WebAssembly (bundled into the desktop app for RDP sessions)
 
