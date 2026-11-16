@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Switch } from "bits-ui";
+  import Switch from "./Switch.svelte";
   import { VaultService } from "../../bindings/github.com/poppyszn/relay-ssh/desktop";
   import { DENSITY, FONTS, SYSTEM, THEMES, settings, type StartupMode } from "../state/settings.svelte";
   import { vault } from "../state/vault.svelte";
@@ -144,19 +144,19 @@
     </div>
     <div class="opt">
       <div class="txt"><span id="set-copy">Copy on select</span><span class="hint">Selecting text copies it to the clipboard.</span></div>
-      <Switch.Root class="switch" bind:checked={settings.copyOnSelect} aria-labelledby="set-copy" />
+      <Switch class="switch" bind:checked={settings.copyOnSelect} aria-labelledby="set-copy" />
     </div>
     <div class="opt">
       <div class="txt"><span id="set-click">Click to move the cursor</span><span class="hint">Click in the command you are typing to move the cursor there. Works at the prompt of a shell that has command blocks set up (it needs their prompt markers), never while a program is running.</span></div>
-      <Switch.Root class="switch" bind:checked={settings.clickToMove} aria-labelledby="set-click" />
+      <Switch class="switch" bind:checked={settings.clickToMove} aria-labelledby="set-click" />
     </div>
     <div class="opt">
       <div class="txt"><span id="set-blink">Blinking cursor</span></div>
-      <Switch.Root class="switch" bind:checked={settings.cursorBlink} aria-labelledby="set-blink" />
+      <Switch class="switch" bind:checked={settings.cursorBlink} aria-labelledby="set-blink" />
     </div>
     <div class="opt">
       <div class="txt"><span id="set-blocks">Automatic command blocks over SSH</span><span class="hint">Types a short setup line into the remote bash or zsh after login. Each connection can override this. When off, you are offered it instead.</span></div>
-      <Switch.Root class="switch" bind:checked={settings.autoBlocks} aria-labelledby="set-blocks" />
+      <Switch class="switch" bind:checked={settings.autoBlocks} aria-labelledby="set-blocks" />
     </div>
   </section>
 
@@ -164,7 +164,7 @@
     <h3 class="label" id="set-rdp">Remote desktop</h3>
     <div class="opt">
       <div class="txt"><span id="set-rdpclip">Share the clipboard with remote desktops</span><span class="hint">While a remote desktop is focused, what you copy on this Mac is sent to it, and what it copies replaces your clipboard. Turn this off for servers you do not fully trust. Each remote desktop tab also has its own switch.</span></div>
-      <Switch.Root class="switch" bind:checked={settings.rdpClipboard} aria-labelledby="set-rdpclip" />
+      <Switch class="switch" bind:checked={settings.rdpClipboard} aria-labelledby="set-rdpclip" />
     </div>
   </section>
 
