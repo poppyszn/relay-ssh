@@ -23,7 +23,6 @@ carry their own licenses, which their packages include.
 | [@wailsio/runtime](https://github.com/wailsapp/wails) | MIT |
 | [Svelte](https://github.com/sveltejs/svelte) | MIT |
 | [PaneForge](https://github.com/svecosystem/paneforge) | MIT |
-| [svelte-sonner](https://github.com/wobsoriano/svelte-sonner) | MIT |
 | [Lucide for Svelte (`@lucide/svelte`)](https://github.com/lucide-icons/lucide) | ISC |
 | [Tailwind CSS](https://github.com/tailwindlabs/tailwindcss) (its generated styles ship in the app) | MIT |
 

@@ -3,7 +3,8 @@
   import { updates } from "./state/updates.svelte";
   import { onMount, tick } from "svelte";
   import { Clipboard, Events } from "@wailsio/runtime";
-  import { Toaster, toast as sonner } from "svelte-sonner";
+  import Toaster from "./components/Toaster.svelte";
+  import { toast } from "./state/toasts.svelte";
   import { blankProfile, duplicateProfile, nextSession } from "./lib/lib";
   import { ws } from "./state/workspace.svelte";
   import { leaves } from "./lib/panes";
@@ -73,8 +74,8 @@
   let customChrome = $state(false);
   async function copied(what: string, text: string) {
     const ok = await copyText(text);
-    if (ok) sonner.success(`Copied ${what}`);
-    else sonner.error("Could not copy to the clipboard");
+    if (ok) toast.success(`Copied ${what}`);
+    else toast.error("Could not copy to the clipboard");
   }
 
   const open = $derived(new Set(ws.tabs.flatMap((t) => leaves(t.root).map((id) => ws.panes[id]?.target ?? "")).filter(Boolean)));
@@ -370,7 +371,7 @@
     if (!settings.autoUpdateCheck) return;
     const t = setTimeout(async () => {
       if (!(await updates.checkOnLaunch())) return;
-      sonner(`Relay ${updates.latest} is available`, {
+      toast(`Relay ${updates.latest} is available`, {
         description: "Install it from Settings.",
         action: { label: "Open Settings", onClick: () => { settingsSection = undefined; settingsOpen = true; } },
       });
@@ -1369,7 +1370,7 @@
 {#if toolsOpen}{#await import("./components/ToolsPanel.svelte") then { default: ToolsPanel }}<ToolsPanel initial={toolsTab} onclose={() => (toolsOpen = false)} onchanged={refresh} ongenerate={generateKey} />{/await}{/if}
 
 {#if ws.blockMenu}<BlockMenu block={ws.blockMenu.block} rect={ws.blockMenu.rect} oncopy={copied} onclose={() => (ws.blockMenu = null)} />{/if}
-<Toaster theme={settings.resolved === "light" ? "light" : "dark"} position="bottom-center" toastOptions={{ class: "toast" }} />
+<Toaster theme={settings.resolved === "light" ? "light" : "dark"} position="bottom-center" />
 {#if settingsOpen && SettingsPanel}<SettingsPanel section={settingsSection} onclose={() => { settingsOpen = false; settingsSection = undefined; }} />{/if}
 <DragGhost />
 {#if palette && Palette}<Palette {profiles} active={open} {actions} tabs={paletteTabs} onconnect={connect} onselecttab={(tabId) => { palette = false; selectTab(tabId); }} onnew={(t) => { palette = false; form = { initial: { ...blankProfile(), name: t.host, ...t }, oldId: "" }; }} onaction={run} onclose={() => (palette = false)} />{/if}
